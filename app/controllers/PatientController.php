@@ -140,15 +140,12 @@ function booking_confirm_page()
 {
     if (session_status() === PHP_SESSION_NONE) session_start();
 
-    $appointment = $_SESSION['booking_confirmation'] ?? [
-        'reference_number' => 'DBK-STUB-001',
-        'doctor_name'      => 'Dr. Sarah Lim',
-        'specialty'        => 'General Physician',
-        'date'             => '2025-03-25',
-        'time'             => '10:00 AM',
-        'fee'              => '50.00',
-        'status'           => 'Pending',
-    ];
+    if (empty($_SESSION['booking_confirmation'])) {
+        redirect('/categories');
+    }
+
+    $appointment = $_SESSION['booking_confirmation'];
+    unset($_SESSION['booking_confirmation']); // clear after viewing so refreshing also redirects
 
     render('booking-confirm', [
         'user'        => current_user(),
@@ -175,7 +172,103 @@ function api_get_doctors()
     json_response(['success' => true, 'data' => $doctors]);
 }
 
-// ── API stubs (other devs) ────────────────────────────────────────────────────
+// ── API stubs ─────────────────────────────────────────────────────────────────
 function api_reschedule_appointment($id) {}
 function api_cancel_appointment($id)    {}
-function api_book_appointment()         {}
+
+// ── API: POST /api/appointments ───────────────────────────────────────────────
+function api_book_appointment()
+{
+    if (session_status() === PHP_SESSION_NONE) session_start();
+
+    $patient_id = $_SESSION['user_id'] ?? 1;
+    $body       = json_decode(file_get_contents('php://input'), true) ?? [];
+
+    $doctor_id  = (int) ($body['doctor_id']   ?? 0);
+    $date       = trim($body['date']           ?? '');
+    $start_time = trim($body['start_time']     ?? '');
+    $end_time   = trim($body['end_time']       ?? '');
+    $reason     = trim($body['visit_reason']   ?? '');
+
+    if (!$doctor_id || !$date || !$start_time || !$end_time) {
+        json_response(['success' => false, 'message' => 'Missing required fields.'], 422);
+    }
+
+    $pdo = db_connect();
+
+    // Generate unique reference number
+    do {
+        $ref = 'DBK-' . date('Y') . '-' . str_pad(random_int(1, 9999), 4, '0', STR_PAD_LEFT);
+        $chk = $pdo->prepare("SELECT id FROM appointments WHERE reference_number = :r");
+        $chk->execute([':r' => $ref]);
+    } while ($chk->fetch());
+
+    $stmt = $pdo->prepare("
+        INSERT INTO appointments
+            (patient_id, doctor_id, appointment_date, start_time, end_time, reference_number, status, visit_reason)
+        VALUES
+            (:pid, :did, :date, :start, :end, :ref, 'Pending', :reason)
+    ");
+    $stmt->execute([
+        ':pid'    => $patient_id,
+        ':did'    => $doctor_id,
+        ':date'   => $date,
+        ':start'  => $start_time,
+        ':end'    => $end_time,
+        ':ref'    => $ref,
+        ':reason' => $reason ?: null,
+    ]);
+
+    $doc = get_doctor_by_id($doctor_id);
+
+    $h    = (int) substr($start_time, 0, 2);
+    $m    = substr($start_time, 3, 2);
+    $ampm = $h >= 12 ? 'PM' : 'AM';
+    $h12  = $h % 12 ?: 12;
+    $timeFormatted = "{$h12}:{$m} {$ampm}";
+
+    $_SESSION['booking_confirmation'] = [
+        'reference_number' => $ref,
+        'doctor_name'      => $doc['name']      ?? 'Unknown',
+        'specialty'        => $doc['specialty']  ?? '',
+        'date'             => $date,
+        'time'             => $timeFormatted,
+        'fee'              => number_format((float)($doc['fee'] ?? 0), 2),
+        'status'           => 'Pending',
+    ];
+
+    json_response(['success' => true, 'redirect' => '/booking/confirm']);
+}
+// ── Page: /doctors/{id} ───────────────────────────────────────────────────────
+function doctor_booking_page(int $doctor_id)
+{
+    $doctor = get_doctor_by_id($doctor_id);
+
+    if (!$doctor) {
+        http_response_code(404);
+        echo '<h1>Doctor not found.</h1>';
+        exit;
+    }
+
+    $availability = get_doctor_availability($doctor_id);
+
+    render('doctor-booking', [
+        'user'         => current_user(),
+        'doctor'       => $doctor,
+        'availability' => $availability,
+    ]);
+}
+
+// ── API: GET /api/slots?doctor_id=X&date=YYYY-MM-DD ──────────────────────────
+function api_get_slots()
+{
+    $doctor_id = (int) ($_GET['doctor_id'] ?? 0);
+    $date      = trim($_GET['date']        ?? '');
+
+    if (!$doctor_id || !$date) {
+        json_response(['success' => false, 'booked' => []]);
+    }
+
+    $booked = get_booked_slots($doctor_id, $date);
+    json_response(['success' => true, 'booked' => $booked]);
+}

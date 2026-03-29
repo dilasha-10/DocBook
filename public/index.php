@@ -5,6 +5,13 @@ session_start();
 // BASE_PATH = the project root (one level up from public/)
 define('BASE_PATH', realpath(__DIR__ . '/..'));
 
+// BASE_URL = the URL prefix for assets (handles any subfolder or server setup)
+$scheme   = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+$host     = $_SERVER['HTTP_HOST'] ?? 'localhost';
+$script   = $_SERVER['SCRIPT_NAME'] ?? '/index.php';       // e.g. /subdir/index.php
+$base     = rtrim(dirname($script), '/');                  // e.g. /subdir  or ''
+define('BASE_URL', $scheme . '://' . $host . $base);       // e.g. http://localhost:8000
+
 require_once BASE_PATH . '/config/database.php';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -63,6 +70,7 @@ if ($uri === '/categories'      && $method === 'GET')  { categories_page();     
 if ($uri === '/dashboard'       && $method === 'GET')  { dashboard_page();       }
 if ($uri === '/profile'         && $method === 'GET')  { profile_page();         }
 if ($uri === '/booking/confirm' && $method === 'GET')  { booking_confirm_page(); }
+if (preg_match('#^/doctors/(\d+)$#', $uri, $m) && $method === 'GET') { doctor_booking_page((int)$m[1]); }
 
 // Doctor pages
 if ($uri === '/doctor/dashboard' && $method === 'GET') { doctor_dashboard_page(); }
@@ -70,6 +78,7 @@ if ($uri === '/doctor/profile'   && $method === 'GET') { doctor_profile_page(); 
 
 // API routes
 if ($uri === '/api/categories'        && $method === 'GET')  { api_get_categories();  }
+if ($uri === '/api/slots'             && $method === 'GET')  { api_get_slots();        }
 if ($uri === '/api/doctors'           && $method === 'GET')  { api_get_doctors();      }
 if ($uri === '/api/appointments'      && $method === 'POST') { api_book_appointment(); }
 if ($uri === '/api/profile'           && $method === 'POST') { api_update_profile();   }

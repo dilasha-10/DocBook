@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DocBook <?php echo isset($title) ? htmlspecialchars($title) : 'Doctor Appointment Booking'; ?></title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="<?= BASE_URL ?>/css/style.css">
     <?php if (isset($extra_styles)) echo $extra_styles; ?>
 </head>
 <body>
@@ -80,7 +80,7 @@
     </div>
 </footer>
 
-<script src="/js/main.js"></script>
+<script src="<?= BASE_URL ?>/js/main.js"></script>
 <script>
 (function(){
     var btn = document.getElementById('hamburgerBtn');

@@ -101,7 +101,7 @@ async function apiCall(url, method = "GET", body = null) {
       : `<span class="badge badge-cancelled">Unavailable</span>`;
 
     const action = doctor.next_available_date
-      ? `<a href="/booking/confirm" class="btn-primary" style="padding:7px 18px;font-size:13px;">Book</a>`
+      ? `<a href="/doctors/${doctor.id}" class="btn-primary" style="padding:7px 18px;font-size:13px;">Book</a>`
       : `<button class="btn-secondary" disabled style="padding:7px 18px;font-size:13px;opacity:0.4;cursor:not-allowed;">Unavailable</button>`;
 
     return `
