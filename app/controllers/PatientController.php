@@ -172,9 +172,56 @@ function api_get_doctors()
     json_response(['success' => true, 'data' => $doctors]);
 }
 
-// ── API stubs ─────────────────────────────────────────────────────────────────
-function api_reschedule_appointment($id) {}
-function api_cancel_appointment($id)    {}
+// ── API: POST /api/appointments/:id/reschedule ────────────────────────────────
+function api_reschedule_appointment($id)
+{
+    if (session_status() === PHP_SESSION_NONE) session_start();
+    $patient_id = $_SESSION['user_id'] ?? 1;
+    $body       = json_decode(file_get_contents('php://input'), true) ?? [];
+
+    $new_date  = trim($body['date']       ?? '');
+    $new_start = trim($body['start_time'] ?? '');
+    $new_end   = trim($body['end_time']   ?? '');
+
+    // Validate required fields
+    if (!$new_date || !$new_start || !$new_end) {
+        json_response(['success' => false, 'message' => 'Missing required fields: date, start_time, end_time.'], 422);
+    }
+
+    // Validate date format (YYYY-MM-DD)
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $new_date) || !strtotime($new_date)) {
+        json_response(['success' => false, 'message' => 'Invalid date format. Use YYYY-MM-DD.'], 422);
+    }
+
+    // Must not be in the past
+    if ($new_date < date('Y-m-d')) {
+        json_response(['success' => false, 'message' => 'Cannot reschedule to a past date.'], 422);
+    }
+
+    // Validate time format (HH:MM or HH:MM:SS)
+    if (!preg_match('/^\d{2}:\d{2}(:\d{2})?$/', $new_start) || !preg_match('/^\d{2}:\d{2}(:\d{2})?$/', $new_end)) {
+        json_response(['success' => false, 'message' => 'Invalid time format. Use HH:MM.'], 422);
+    }
+
+    $result = reschedule_appointment((int)$id, $new_date, $new_start, $new_end, $patient_id);
+
+    $status = $result['status'] ?? ($result['success'] ? 200 : 500);
+    unset($result['status']);
+    json_response($result, $status);
+}
+
+// ── API: PATCH /api/appointments/:id/cancel ───────────────────────────────────
+function api_cancel_appointment($id)
+{
+    if (session_status() === PHP_SESSION_NONE) session_start();
+    $patient_id = $_SESSION['user_id'] ?? 1;
+
+    $result = cancel_appointment((int)$id, $patient_id);
+
+    $status = $result['status'] ?? ($result['success'] ? 200 : 500);
+    unset($result['status']);
+    json_response($result, $status);
+}
 
 // ── API: POST /api/appointments ───────────────────────────────────────────────
 function api_book_appointment()
@@ -239,6 +286,35 @@ function api_book_appointment()
 
     json_response(['success' => true, 'redirect' => '/booking/confirm']);
 }
+// ── Page: /appointments/{id}/reschedule ───────────────────────────────────────
+function reschedule_page(int $appt_id)
+{
+    if (session_status() === PHP_SESSION_NONE) session_start();
+    $patient_id = $_SESSION['user_id'] ?? 1;
+
+    $appt = get_appointment_by_id($appt_id);
+
+    if (!$appt || (int)$appt['patient_id'] !== $patient_id) {
+        http_response_code(404);
+        echo '<h1>Appointment not found.</h1>';
+        exit;
+    }
+
+    if (in_array($appt['status'], ['Cancelled', 'Completed', 'Rescheduled'])) {
+        redirect('/dashboard');
+    }
+
+    $doctor       = get_doctor_by_id((int)$appt['doctor_id']);
+    $availability = get_doctor_availability((int)$appt['doctor_id']);
+
+    render('reschedule', [
+        'user'         => current_user(),
+        'appt'         => $appt,
+        'doctor'       => $doctor,
+        'availability' => $availability,
+    ]);
+}
+
 // ── Page: /doctors/{id} ───────────────────────────────────────────────────────
 function doctor_booking_page(int $doctor_id)
 {

@@ -3,9 +3,9 @@ $title = 'Profile & Settings';
 
 $extra_styles = <<<CSS
 <style>
-.page-layout  { display:flex; min-height:calc(100vh - 60px); }
+.page-layout  { display:flex; height:calc(100vh - 60px - 48px); overflow:hidden; }
 .sidebar      { width:220px; flex-shrink:0; background:var(--surface); border-right:1px solid var(--border);
-                padding:24px 0; position:sticky; top:60px; height:calc(100vh - 60px); overflow:hidden; align-self:flex-start; }
+                padding:24px 0; overflow-y:auto; }
 .sidebar-label { display:block; font-size:10px; font-weight:700; letter-spacing:.1em; text-transform:uppercase;
                  color:var(--hint); padding:18px 22px 6px; }
 .sidebar-link  { display:flex; align-items:center; gap:10px; padding:10px 22px; font-size:14px;
@@ -13,10 +13,10 @@ $extra_styles = <<<CSS
 .sidebar-link:hover  { color:var(--text); background:rgba(255,255,255,.04); }
 .sidebar-link.active { color:#818cf8; border-left-color:#818cf8; background:rgba(99,102,241,.08); font-weight:600; }
 .sidebar-link i      { width:16px; text-align:center; font-size:13px; }
-.page-content { flex:1; padding:32px 36px; overflow:auto; max-width:720px; }
+.page-content { flex:1; padding:32px 36px; overflow-y:auto; }
 
 .section-card { background:var(--surface); border:1px solid var(--border); border-radius:12px;
-                padding:28px; margin-bottom:24px; }
+                padding:28px; margin-bottom:24px; max-width:860px; }
 .section-card h2 { font-size:16px; font-weight:700; margin-bottom:4px; }
 .section-card .sub { font-size:13px; color:var(--muted); margin-bottom:24px; }
 
@@ -29,7 +29,7 @@ $extra_styles = <<<CSS
 .avatar-lg   { width:72px; height:72px; border-radius:50%; background:var(--accent);
                display:flex; align-items:center; justify-content:center;
                font-size:26px; font-weight:700; color:#fff; flex-shrink:0; }
-.profile-hero { display:flex; align-items:center; gap:20px; margin-bottom:28px; }
+.profile-hero { display:flex; align-items:center; gap:20px; margin-bottom:28px; max-width:860px; }
 .profile-hero .meta { display:flex; flex-direction:column; gap:4px; }
 .profile-hero .meta strong { font-size:18px; font-weight:700; }
 .profile-hero .meta span   { font-size:13px; color:var(--muted); }

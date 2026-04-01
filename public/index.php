@@ -71,6 +71,7 @@ if ($uri === '/dashboard'       && $method === 'GET')  { dashboard_page();      
 if ($uri === '/profile'         && $method === 'GET')  { profile_page();         }
 if ($uri === '/booking/confirm' && $method === 'GET')  { booking_confirm_page(); }
 if (preg_match('#^/doctors/(\d+)$#', $uri, $m) && $method === 'GET') { doctor_booking_page((int)$m[1]); }
+if (preg_match('#^/appointments/(\d+)/reschedule$#', $uri, $m) && $method === 'GET') { reschedule_page((int)$m[1]); }
 
 // Doctor pages
 if ($uri === '/doctor/dashboard' && $method === 'GET') { doctor_dashboard_page(); }

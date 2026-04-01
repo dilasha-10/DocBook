@@ -69,13 +69,6 @@
 
 <footer class="footer">
     <div class="footer-inner">
-        <span class="footer-logo">Doc<span>Book</span></span>
-        <div class="footer-links">
-            <a href="/about">About</a>
-            <a href="/contact">Contact</a>
-            <a href="#">Privacy</a>
-            <a href="#">Terms</a>
-        </div>
         <span class="footer-copy">&copy; 2026 DocBook</span>
     </div>
 </footer>

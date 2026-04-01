@@ -26,12 +26,18 @@ $extra_styles = <<<CSS
 .count-badge   { background:var(--accent); color:#fff; border-radius:999px;
                  font-size:11px; font-weight:700; padding:2px 8px; }
 
-.appt-table         { width:100%; border-collapse:collapse; }
+.appt-table         { width:100%; border-collapse:collapse; table-layout:fixed; }
 .appt-table th      { text-align:left; padding:11px 22px; font-size:11px; font-weight:600;
                       letter-spacing:.06em; text-transform:uppercase; color:var(--hint); }
-.appt-table td      { padding:14px 22px; font-size:14px; border-top:1px solid var(--border); vertical-align:middle; }
+.appt-table td      { padding:14px 22px; font-size:14px; border-top:1px solid var(--border); vertical-align:middle; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .appt-table tr:hover td { background:rgba(255,255,255,.025); }
 .appt-actions       { display:flex; gap:8px; }
+/* Fixed column widths shared across both upcoming and past tables */
+.appt-table col.col-doctor  { width:22%; }
+.appt-table col.col-spec    { width:20%; }
+.appt-table col.col-date    { width:24%; }
+.appt-table col.col-status  { width:14%; }
+.appt-table col.col-actions { width:20%; }
 .btn-sm             { padding:5px 13px; font-size:12px; font-weight:600; border-radius:6px;
                       border:none; cursor:pointer; text-decoration:none; transition:opacity .15s; }
 .btn-sm:hover       { opacity:.8; }
@@ -80,6 +86,30 @@ $extra_styles = <<<CSS
 @media (max-width: 480px) {
   .stats-grid { grid-template-columns: 1fr !important; }
 }
+/* ── Cancel modal ───────────────────────────────────────────────────────── */
+.modal-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.55);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+}
+.modal-backdrop.open { display: flex; }
+.modal-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 28px 28px 24px;
+    width: 100%;
+    max-width: 380px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.5);
+}
+.modal-box h3 { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
+.modal-box p  { font-size: 14px; color: var(--muted); margin-bottom: 24px; line-height: 1.5; }
+.modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+.modal-actions .btn-sm { padding: 8px 18px; font-size: 13px; }
 </style>
 CSS;
 
@@ -163,6 +193,13 @@ ob_start();
 
             <?php if (count($upcoming) > 0): ?>
             <table class="appt-table">
+                <colgroup>
+                    <col class="col-doctor">
+                    <col class="col-spec">
+                    <col class="col-date">
+                    <col class="col-status">
+                    <col class="col-actions">
+                </colgroup>
                 <thead>
                     <tr>
                         <th>Doctor</th>
@@ -227,6 +264,13 @@ ob_start();
                 </div>
                 <div class="month-body">
                     <table class="appt-table">
+                        <colgroup>
+                            <col class="col-doctor">
+                            <col class="col-spec">
+                            <col class="col-date">
+                            <col class="col-status">
+                            <col class="col-actions">
+                        </colgroup>
                         <tbody>
                             <?php foreach ($appts as $appt):
                                 $s    = strtolower($appt['status'] ?? 'completed');
@@ -235,11 +279,11 @@ ob_start();
                                 $spec = $appt['specialty'] ?? $appt['category'] ?? '—';
                             ?>
                             <tr>
-                                <td style="font-weight:500;width:220px;"><?php echo htmlspecialchars($appt['doctor_name']); ?></td>
-                                <td style="color:var(--muted);width:180px;"><?php echo htmlspecialchars($spec); ?></td>
+                                <td style="font-weight:500;"><?php echo htmlspecialchars($appt['doctor_name']); ?></td>
+                                <td style="color:var(--muted);"><?php echo htmlspecialchars($spec); ?></td>
                                 <td style="color:var(--muted);"><?php echo $date; ?> &middot; <?php echo $time; ?></td>
-                                <td style="width:120px;"><span class="badge badge-<?php echo $s; ?>"><?php echo ucfirst($s); ?></span></td>
-                                <td style="width:120px;">
+                                <td><span class="badge badge-<?php echo $s; ?>"><?php echo ucfirst($s); ?></span></td>
+                                <td>
                                     <a href="/categories" class="btn-sm btn-reschedule">Book again</a>
                                 </td>
                             </tr>
@@ -260,23 +304,85 @@ ob_start();
 
     </div>
 </div>
+
+<!-- Cancel confirmation modal -->
+<div class="modal-backdrop" id="cancelModal">
+    <div class="modal-box">
+        <h3>Cancel appointment?</h3>
+        <p>This action cannot be undone. The slot will be released and you'll need to book again if needed.</p>
+        <div class="modal-actions">
+            <button class="btn-sm btn-reschedule" onclick="closeCancelModal()">Keep it</button>
+            <button class="btn-sm btn-cancel" id="modalConfirmBtn" onclick="confirmCancel()">Yes, cancel</button>
+        </div>
+    </div>
+</div>
 <?php
 $content = ob_get_clean();
 
 $extra_scripts = <<<JS
 <script>
+var _cancelId = null;
+
 function toggleMonth(el) {
     el.classList.toggle('open');
     el.nextElementSibling.classList.toggle('collapsed');
 }
 
-function cancelAppt(id) {
-    if (!id || !confirm('Cancel this appointment?')) return;
-    fetch('/api/appointments/' + id + '/cancel', { method: 'PATCH' })
-        .then(r => r.json())
-        .then(d => { if (d.success) location.reload(); else alert('Could not cancel. Try again.'); })
-        .catch(() => alert('Network error.'));
+function showToast(msg, type) {
+    var t = document.getElementById('dashToast');
+    if (!t) {
+        t = document.createElement('div');
+        t.id = 'dashToast';
+        t.style.cssText = 'position:fixed;bottom:28px;right:28px;padding:14px 20px;border-radius:10px;'
+            + 'font-size:14px;font-weight:500;color:#fff;z-index:9999;opacity:0;'
+            + 'transform:translateY(10px);transition:opacity .25s,transform .25s;pointer-events:none;max-width:340px;';
+        document.body.appendChild(t);
+    }
+    t.textContent = msg;
+    t.style.background = (type === 'error') ? '#dc2626' : '#059669';
+    t.style.opacity = '1';
+    t.style.transform = 'translateY(0)';
+    setTimeout(function () { t.style.opacity = '0'; t.style.transform = 'translateY(10px)'; }, 3500);
 }
+
+function cancelAppt(id) {
+    if (!id) return;
+    _cancelId = id;
+    document.getElementById('cancelModal').classList.add('open');
+}
+
+function closeCancelModal() {
+    document.getElementById('cancelModal').classList.remove('open');
+    _cancelId = null;
+}
+
+function confirmCancel() {
+    if (!_cancelId) return;
+    var btn = document.getElementById('modalConfirmBtn');
+    btn.disabled = true;
+    btn.textContent = 'Cancelling\u2026';
+
+    fetch('/api/appointments/' + _cancelId + '/cancel', { method: 'PATCH' })
+        .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+        .then(function (res) {
+            closeCancelModal();
+            if (res.data.success) {
+                showToast('Appointment cancelled.', 'success');
+                setTimeout(function () { location.reload(); }, 900);
+            } else {
+                showToast(res.data.message || 'Could not cancel. Try again.', 'error');
+            }
+        })
+        .catch(function () {
+            closeCancelModal();
+            showToast('Network error. Please try again.', 'error');
+        });
+}
+
+// Close modal on backdrop click
+document.getElementById('cancelModal').addEventListener('click', function (e) {
+    if (e.target === this) closeCancelModal();
+});
 </script>
 JS;
 
