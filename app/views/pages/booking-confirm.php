@@ -153,7 +153,6 @@ $doctorName = htmlspecialchars($appt['doctor_name']      ?? '—');
 $specialty  = htmlspecialchars($appt['specialty']        ?? '—');
 $apptDate   = htmlspecialchars($appt['date']             ?? '—');
 $apptTime   = htmlspecialchars($appt['time']             ?? '—');
-$fee        = htmlspecialchars($appt['fee']              ?? '—');
 $refNumber  = htmlspecialchars($appt['reference_number'] ?? '—');
 $status     = htmlspecialchars($appt['status']           ?? 'Pending');
 
@@ -197,11 +196,6 @@ $statusClass = strtolower($status) === 'confirmed' ? 'status-confirmed' : 'statu
                 <div>
                     <div class="summary-field-label">Status</div>
                     <div class="summary-field-value <?= $statusClass ?>"><?= $status ?></div>
-                </div>
-
-                <div>
-                    <div class="summary-field-label">Consultation fee</div>
-                    <div class="summary-field-value">NPR <?= $fee ?></div>
                 </div>
 
                 <div>

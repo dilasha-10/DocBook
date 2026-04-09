@@ -3,17 +3,7 @@ $title = 'Profile & Settings';
 
 $extra_styles = <<<CSS
 <style>
-.page-layout  { display:flex; height:calc(100vh - 60px - 48px); overflow:hidden; }
-.sidebar      { width:220px; flex-shrink:0; background:var(--surface); border-right:1px solid var(--border);
-                padding:24px 0; overflow-y:auto; }
-.sidebar-label { display:block; font-size:10px; font-weight:700; letter-spacing:.1em; text-transform:uppercase;
-                 color:var(--hint); padding:18px 22px 6px; }
-.sidebar-link  { display:flex; align-items:center; gap:10px; padding:10px 22px; font-size:14px;
-                 color:var(--muted); text-decoration:none; border-left:3px solid transparent; transition:all .15s; }
-.sidebar-link:hover  { color:var(--text); background:rgba(255,255,255,.04); }
-.sidebar-link.active { color:#818cf8; border-left-color:#818cf8; background:rgba(99,102,241,.08); font-weight:600; }
-.sidebar-link i      { width:16px; text-align:center; font-size:13px; }
-.page-content { flex:1; padding:32px 36px; overflow-y:auto; }
+.page-content { padding:0; max-width:900px; }
 
 .section-card { background:var(--surface); border:1px solid var(--border); border-radius:12px;
                 padding:28px; margin-bottom:24px; max-width:860px; }
@@ -26,15 +16,19 @@ $extra_styles = <<<CSS
 .form-group .input { width:100%; box-sizing:border-box; }
 .form-group .input:disabled { opacity:.45; cursor:not-allowed; }
 
-.avatar-lg   { width:72px; height:72px; border-radius:50%; background:var(--accent);
+.avatar-lg   { width:72px; height:72px; border-radius:50%; background:var(--blue);
                display:flex; align-items:center; justify-content:center;
-               font-size:26px; font-weight:700; color:#fff; flex-shrink:0; }
-.profile-hero { display:flex; align-items:center; gap:20px; margin-bottom:28px; max-width:860px; }
-.profile-hero .meta { display:flex; flex-direction:column; gap:4px; }
-.profile-hero .meta strong { font-size:18px; font-weight:700; }
-.profile-hero .meta span   { font-size:13px; color:var(--muted); }
-.role-badge  { display:inline-block; padding:2px 10px; border-radius:999px; font-size:11px;
-               font-weight:700; background:rgba(99,102,241,.18); color:#818cf8; text-transform:capitalize; }
+               font-size:26px; font-weight:700; color:#fff; flex-shrink:0;
+               box-shadow: 0 4px 12px rgba(37,99,235,0.3); }
+.profile-hero { display:flex; align-items:center; gap:20px; margin-bottom:28px; max-width:860px;
+                background:#fff; border:1px solid var(--border); border-radius:var(--radius-lg);
+                padding:24px 28px; }
+.profile-hero .meta { display:flex; flex-direction:column; gap:6px; }
+.profile-hero .meta strong { font-size:20px; font-weight:700; color:var(--text); }
+.profile-hero .meta span   { font-size:14px; color:var(--muted); }
+.role-badge  { display:inline-block; padding:4px 14px; border-radius:999px; font-size:12px;
+               font-weight:700; background:#dbeafe; color:#1e40af; text-transform:capitalize;
+               border:1px solid #bfdbfe; }
 
 .save-row    { display:flex; align-items:center; gap:12px; margin-top:8px; }
 .msg         { font-size:13px; display:none; }
@@ -53,26 +47,7 @@ CSS;
 
 ob_start();
 ?>
-<div class="page-layout">
-
-    <aside class="sidebar">
-        <span class="sidebar-label">Menu</span>
-        <a href="/dashboard" class="sidebar-link">
-            <i class="fa fa-th-large"></i> Dashboard
-        </a>
-        <a href="/dashboard#upcoming" class="sidebar-link">
-            <i class="fa fa-calendar-check"></i> Appointments
-        </a>
-        <a href="/dashboard#past" class="sidebar-link">
-            <i class="fa fa-clock-rotate-left"></i> History
-        </a>
-        <span class="sidebar-label">Account</span>
-        <a href="/profile" class="sidebar-link active">
-            <i class="fa fa-user"></i> Profile &amp; Settings
-        </a>
-    </aside>
-
-    <div class="page-content">
+<div class="page-content">
 
         <div class="profile-hero">
             <div class="avatar-lg"><?php echo strtoupper(substr($user['name'], 0, 2)); ?></div>
@@ -142,7 +117,7 @@ ob_start();
 
         <!-- Danger Zone -->
         <div class="section-card danger-zone">
-            <h2><i class="fa fa-triangle-exclamation"></i> Danger Zone</h2>
+            <h2>Delete Account</h2>
             <p class="sub">These actions are permanent and cannot be undone.</p>
             <button class="btn-primary"
                 style="background:rgba(239,68,68,.15);color:#f87171;border:1px solid rgba(239,68,68,.3);"
@@ -151,7 +126,6 @@ ob_start();
             </button>
         </div>
 
-    </div>
 </div>
 <?php
 $content = ob_get_clean();

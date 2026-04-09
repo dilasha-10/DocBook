@@ -95,7 +95,13 @@ async function apiCall(url, method = "GET", body = null) {
 
   // ── Build a doctor card from API data
   function buildCard(doctor) {
-    const initials = doctor.name.substring(4, 6).toUpperCase();
+    const nameParts = doctor.name
+      .replace(/^Dr\.?\s*/i, "")
+      .trim()
+      .split(/\s+/);
+    const initials =
+      (nameParts[0]?.[0] ?? "") +
+      (nameParts[1]?.[0] ?? nameParts[0]?.[1] ?? "");
     const availBadge = doctor.next_available_date
       ? `<span class="badge badge-confirmed">Available</span>`
       : `<span class="badge badge-cancelled">Unavailable</span>`;
@@ -103,6 +109,18 @@ async function apiCall(url, method = "GET", body = null) {
     const action = doctor.next_available_date
       ? `<a href="/doctors/${doctor.id}" class="btn-primary" style="padding:7px 18px;font-size:13px;">Book</a>`
       : `<button class="btn-secondary" disabled style="padding:7px 18px;font-size:13px;opacity:0.4;cursor:not-allowed;">Unavailable</button>`;
+
+    const expText = doctor.experience_years
+      ? ` · ${doctor.experience_years} years experience`
+      : "";
+
+    const fullBio =
+      doctor.bio ??
+      `Specialist in ${doctor.category_name}. Available for appointments.`;
+    const shortBio =
+      fullBio.length > 100
+        ? fullBio.substring(0, 100).trimEnd() + "…"
+        : fullBio;
 
     return `
       <div class="card" style="display:flex;flex-direction:column;gap:12px;">
@@ -112,16 +130,13 @@ async function apiCall(url, method = "GET", body = null) {
           </div>
           <div style="flex:1;min-width:0;">
             <div style="font-weight:600;font-size:15px;">${doctor.name}</div>
-            <div style="font-size:12px;color:var(--muted);margin-top:2px;">${doctor.category_name}</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:2px;">${doctor.category_name}${expText}</div>
           </div>
           ${availBadge}
         </div>
-        <div style="display:flex;align-items:center;justify-content:space-between;padding-top:10px;border-top:1px solid var(--border);">
-          <div style="display:flex;gap:16px;">
-            <span style="font-size:13px;color:var(--muted);"><i class="fa fa-star" style="color:var(--yellow);"></i> ${doctor.avg_rating ?? "—"}</span>
-            <span style="font-size:13px;color:var(--muted);">NPR ${parseFloat(doctor.fee).toFixed(2)}</span>
-          </div>
-          ${action}
+        <div style="padding-top:10px;border-top:1px solid var(--border);">
+          <p style="font-size:12px;color:var(--muted);margin:0 0 12px;line-height:1.5;white-space:normal;word-break:break-word;">${shortBio}</p>
+          <div style="display:flex;justify-content:flex-end;">${action}</div>
         </div>
       </div>`;
   }

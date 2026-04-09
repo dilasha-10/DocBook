@@ -12,8 +12,8 @@ function get_filtered_doctors(?string $category = null, ?string $search = null):
             u.name                              AS name,
             d.photo,
             d.specialty,
-            d.avg_rating,
-            d.fee,
+            d.bio,
+            d.experience_years,
             c.name                              AS category_name,
             c.slug                              AS category_slug,
             MIN(
@@ -48,9 +48,9 @@ function get_filtered_doctors(?string $category = null, ?string $search = null):
 
     $sql .= "
         GROUP BY
-            d.id, u.name, d.photo, d.specialty, d.avg_rating, d.fee,
+            d.id, u.name, d.photo, d.specialty, d.bio, d.experience_years,
             c.name, c.slug
-        ORDER BY d.avg_rating DESC, u.name ASC
+        ORDER BY u.name ASC
     ";
 
     $stmt = $pdo->prepare($sql);
@@ -58,9 +58,7 @@ function get_filtered_doctors(?string $category = null, ?string $search = null):
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     foreach ($rows as &$row) {
-        $row['id']         = (int)   $row['id'];
-        $row['fee']        = (float) $row['fee'];
-        $row['avg_rating'] = $row['avg_rating'] !== null ? (float) $row['avg_rating'] : null;
+        $row['id'] = (int) $row['id'];
     }
     unset($row);
 
@@ -77,9 +75,6 @@ function get_doctor_by_id(int $id): ?array
             d.bio,
             d.specialty,
             d.experience_years,
-            d.fee,
-            d.avg_rating,
-            d.review_count,
             d.photo,
             u.name          AS name,
             c.name          AS category_name,
@@ -119,7 +114,7 @@ function get_booked_slots(int $doctor_id, string $date): array
         FROM   appointments
         WHERE  doctor_id        = :did
           AND  appointment_date = :date
-          AND  status NOT IN ('Cancelled')
+          AND  status NOT IN ('Cancelled', 'Rescheduled')
     ");
     $stmt->execute([':did' => $doctor_id, ':date' => $date]);
     return array_column($stmt->fetchAll(PDO::FETCH_ASSOC), 'start_time');

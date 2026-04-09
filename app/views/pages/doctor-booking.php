@@ -8,9 +8,6 @@ $doctorName    = htmlspecialchars($doc['name']    ?? 'Doctor');
 $specialty     = htmlspecialchars($doc['specialty']    ?? '');
 $category      = htmlspecialchars($doc['category_name'] ?? '');
 $experience    = (int) ($doc['experience_years']  ?? 0);
-$fee           = number_format((float)($doc['fee'] ?? 0), 2);
-$rating        = $doc['avg_rating'] ? number_format((float)$doc['avg_rating'], 1) : null;
-$reviewCount   = (int) ($doc['review_count']      ?? 0);
 $bio           = htmlspecialchars($doc['bio']      ?? '');
 $slotMins      = (int) ($doc['avg_slot_minutes']   ?? 30);
 
@@ -370,20 +367,6 @@ ob_start();
             <div class="doctor-info">
                 <h1><?= $doctorName ?></h1>
                 <div class="doctor-meta"><?= $category ?> &middot; <?= $experience ?> years experience</div>
-                <?php if ($rating): ?>
-                <div class="doctor-stars">
-                    <?php
-                    $full  = floor((float)$rating);
-                    $half  = ((float)$rating - $full) >= 0.5;
-                    for ($i = 1; $i <= 5; $i++) {
-                        if ($i <= $full)      echo '<i class="fa fa-star"></i>';
-                        elseif ($i == $full+1 && $half) echo '<i class="fa fa-star-half-stroke"></i>';
-                        else  echo '<i class="fa fa-star" style="opacity:.25"></i>';
-                    }
-                    ?>
-                    <span><?= $rating ?> (<?= $reviewCount ?> reviews)</span>
-                </div>
-                <?php endif; ?>
             </div>
         </div>
 
@@ -395,10 +378,6 @@ ob_start();
         <?php endif; ?>
 
         <div class="stats-row">
-            <div class="stat-box">
-                <div class="stat-num"><?= $reviewCount ?></div>
-                <div class="stat-lbl">Reviews</div>
-            </div>
             <div class="stat-box">
                 <div class="stat-num"><?= $experience ?> yrs</div>
                 <div class="stat-lbl">Experience</div>
@@ -457,7 +436,6 @@ $doctorJson = json_encode([
     'id'        => $doctorId,
     'name'      => $doc['name']      ?? '',
     'specialty' => $doc['specialty'] ?? '',
-    'fee'       => $fee,
     'slot_mins' => $slotMins,
 ], JSON_HEX_TAG | JSON_HEX_APOS);
 

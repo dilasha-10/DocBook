@@ -16,8 +16,7 @@ function get_upcoming_appointments($patient_id) {
             a.reference_number,
             u.name               AS doctor_name,
             d.specialty,
-            c.name               AS category,
-            d.fee
+            c.name               AS category
         FROM appointments a
         JOIN doctors    d ON a.doctor_id   = d.id
         JOIN users     u ON d.user_id     = u.id
@@ -45,8 +44,7 @@ function get_past_appointments($patient_id) {
             a.reference_number,
             u.name               AS doctor_name,
             d.specialty,
-            c.name               AS category,
-            d.fee
+            c.name               AS category
         FROM appointments a
         JOIN doctors    d ON a.doctor_id   = d.id
         JOIN users     u ON d.user_id     = u.id
@@ -54,7 +52,7 @@ function get_past_appointments($patient_id) {
         WHERE a.patient_id = :pid
           AND (
               a.appointment_date < CURDATE()
-              OR a.status IN ('Completed', 'Cancelled')
+              OR a.status IN ('Completed', 'Cancelled', 'Rescheduled')
           )
         ORDER BY a.appointment_date DESC, a.start_time DESC
     ");
@@ -78,8 +76,7 @@ function get_appointment_by_id(int $id): ?array
             a.visit_reason,
             a.reference_number,
             u.name              AS doctor_name,
-            d.specialty,
-            d.fee
+            d.specialty
         FROM appointments a
         JOIN doctors  d ON a.doctor_id = d.id
         JOIN users    u ON d.user_id   = u.id
@@ -113,7 +110,7 @@ function reschedule_appointment(int $id, string $new_date, string $new_start, st
             WHERE doctor_id        = :did
               AND appointment_date = :date
               AND start_time       = :start
-              AND status NOT IN ('Cancelled')
+              AND status NOT IN ('Cancelled', 'Rescheduled')
               AND id != :id
         ");
         $chk->execute([
@@ -128,9 +125,9 @@ function reschedule_appointment(int $id, string $new_date, string $new_start, st
         }
 
         // Generate unique reference number for new appointment
+        $refChk = $pdo->prepare("SELECT id FROM appointments WHERE reference_number = :r");
         do {
             $ref = 'DBK-' . date('Y') . '-' . str_pad(random_int(1, 9999), 4, '0', STR_PAD_LEFT);
-            $refChk = $pdo->prepare("SELECT id FROM appointments WHERE reference_number = :r");
             $refChk->execute([':r' => $ref]);
         } while ($refChk->fetch());
 
@@ -214,7 +211,7 @@ function get_appointment_stats($patient_id) {
     $stmt = $pdo->prepare("
         SELECT
             SUM(CASE WHEN appointment_date >= CURDATE()
-                      AND status NOT IN ('Cancelled','Completed') THEN 1 ELSE 0 END) AS upcoming,
+                      AND status NOT IN ('Cancelled','Completed','Rescheduled') THEN 1 ELSE 0 END) AS upcoming,
             COUNT(*)                                                                   AS total,
             SUM(CASE WHEN status = 'Pending'                      THEN 1 ELSE 0 END) AS pending
         FROM appointments
@@ -222,4 +219,120 @@ function get_appointment_stats($patient_id) {
     ");
     $stmt->execute([':pid' => $patient_id]);
     return $stmt->fetch(PDO::FETCH_ASSOC) ?: ['upcoming' => 0, 'total' => 0, 'pending' => 0];
+}
+// ── GET /api/appointments/:id — detail with doctor's latest comment ────────────
+function get_appointment_detail_with_comment(int $id): ?array
+{
+    $pdo  = db_connect();
+    $stmt = $pdo->prepare("
+        SELECT
+            a.id,
+            a.patient_id,
+            a.appointment_date  AS date,
+            a.start_time        AS time,
+            a.end_time,
+            a.status,
+            a.visit_reason,
+            a.reference_number,
+            u.name              AS doctor_name,
+            d.specialty,
+            c.name              AS category
+            (SELECT ac.message
+               FROM appointment_comments ac
+               JOIN doctors dx ON dx.user_id = ac.user_id
+              WHERE ac.appointment_id = a.id
+                AND dx.id = a.doctor_id
+              ORDER BY ac.created_at DESC
+              LIMIT 1)          AS doctor_comment
+        FROM appointments a
+        JOIN doctors    d ON a.doctor_id   = d.id
+        JOIN users      u ON d.user_id     = u.id
+        JOIN categories c ON d.category_id = c.id
+        WHERE a.id = :id
+    ");
+    $stmt->execute([':id' => $id]);
+    return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+}
+
+// ── GET /api/appointments/:id/comments — full chat thread ─────────────────────
+function get_appointment_comments(int $appointment_id): array
+{
+    $pdo  = db_connect();
+    $stmt = $pdo->prepare("
+        SELECT ac.id, ac.message, ac.created_at, u.name, u.role
+        FROM appointment_comments ac
+        JOIN users u ON ac.user_id = u.id
+        WHERE ac.appointment_id = :id
+        ORDER BY ac.created_at ASC
+    ");
+    $stmt->execute([':id' => $appointment_id]);
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+// ── POST /api/appointments/:id/comments — patient posts a message ─────────────
+function create_appointment_comment(int $appointment_id, int $user_id, string $message): array
+{
+    $pdo  = db_connect();
+    $stmt = $pdo->prepare("
+        INSERT INTO appointment_comments (appointment_id, user_id, message)
+        VALUES (:appt_id, :user_id, :msg)
+    ");
+    $stmt->execute([':appt_id' => $appointment_id, ':user_id' => $user_id, ':msg' => $message]);
+    $new_id = $pdo->lastInsertId();
+
+    // Return the newly created comment with user info
+    $fetch = $pdo->prepare("
+        SELECT ac.id, ac.message, ac.created_at, u.name, u.role
+        FROM appointment_comments ac
+        JOIN users u ON ac.user_id = u.id
+        WHERE ac.id = :id
+    ");
+    $fetch->execute([':id' => $new_id]);
+    return $fetch->fetch(PDO::FETCH_ASSOC) ?: [];
+}
+
+// ── GET /api/patient/appointments — list with doctor name and status ──────────
+function get_patient_appointments_list(int $patient_id): array
+{
+    $pdo  = db_connect();
+    $stmt = $pdo->prepare("
+        SELECT
+            a.id,
+            a.appointment_date  AS date,
+            a.start_time        AS time,
+            a.end_time,
+            a.status,
+            a.visit_reason,
+            a.reference_number,
+            u.name              AS doctor_name,
+            d.specialty,
+            c.name              AS category,
+            CASE
+                WHEN a.appointment_date >= CURDATE()
+                 AND a.status NOT IN ('Cancelled','Completed','Rescheduled')
+                THEN 'upcoming'
+                ELSE 'past'
+            END AS list_type
+        FROM appointments a
+        JOIN doctors    d ON a.doctor_id   = d.id
+        JOIN users      u ON d.user_id     = u.id
+        JOIN categories c ON d.category_id = c.id
+        WHERE a.patient_id = :pid
+        ORDER BY
+            CASE WHEN a.appointment_date >= CURDATE()
+                  AND a.status NOT IN ('Cancelled','Completed','Rescheduled')
+                 THEN 0 ELSE 1 END ASC,
+            a.appointment_date ASC,
+            a.start_time ASC
+    ");
+    $stmt->execute([':pid' => $patient_id]);
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $upcoming = array_filter($rows, fn($r) => $r['list_type'] === 'upcoming');
+    $past     = array_filter($rows, fn($r) => $r['list_type'] === 'past');
+
+    return [
+        'upcoming' => array_values($upcoming),
+        'past'     => array_values($past),
+    ];
 }

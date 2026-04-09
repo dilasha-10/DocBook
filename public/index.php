@@ -5,12 +5,12 @@ session_start();
 // BASE_PATH = the project root (one level up from public/)
 define('BASE_PATH', realpath(__DIR__ . '/..'));
 
-// BASE_URL = the URL prefix for assets (handles any subfolder or server setup)
-$scheme   = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-$host     = $_SERVER['HTTP_HOST'] ?? 'localhost';
-$script   = $_SERVER['SCRIPT_NAME'] ?? '/index.php';       // e.g. /subdir/index.php
-$base     = rtrim(dirname($script), '/');                  // e.g. /subdir  or ''
-define('BASE_URL', $scheme . '://' . $host . $base);       // e.g. http://localhost:8000
+// BASE_URL = the URL prefix for assets
+$scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+$host   = $_SERVER['HTTP_HOST'] ?? 'localhost';
+$script = $_SERVER['SCRIPT_NAME'] ?? '/index.php';
+$base   = rtrim(dirname($script), '/');
+define('BASE_URL', $scheme . '://' . $host . $base);
 
 require_once BASE_PATH . '/config/database.php';
 
@@ -56,14 +56,14 @@ $uri    = rtrim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/') ?: '/';
 $method = $_SERVER['REQUEST_METHOD'];
 
 // Home
-if ($uri === '/')                              { redirect('/categories'); }
+if ($uri === '/')                              { redirect('/dashboard'); }
 
 // Auth
-if ($uri === '/login'           && $method === 'GET')  { render('login');  }
-if ($uri === '/login'           && $method === 'POST') { login_post();      }
-if ($uri === '/signup'          && $method === 'GET')  { render('signup'); }
-if ($uri === '/signup'          && $method === 'POST') { signup_post();     }
-if ($uri === '/logout'          && $method === 'GET')  { logout();          }
+if ($uri === '/login'  && $method === 'GET')  { login_get();    }
+if ($uri === '/login'  && $method === 'POST') { login_post();   }
+if ($uri === '/signup' && $method === 'GET')  { signup_get();   }
+if ($uri === '/signup' && $method === 'POST') { signup_post();  }
+if ($uri === '/logout' && $method === 'GET')  { logout();       }
 
 // Patient pages
 if ($uri === '/categories'      && $method === 'GET')  { categories_page();      }
@@ -72,6 +72,7 @@ if ($uri === '/profile'         && $method === 'GET')  { profile_page();        
 if ($uri === '/booking/confirm' && $method === 'GET')  { booking_confirm_page(); }
 if (preg_match('#^/doctors/(\d+)$#', $uri, $m) && $method === 'GET') { doctor_booking_page((int)$m[1]); }
 if (preg_match('#^/appointments/(\d+)/reschedule$#', $uri, $m) && $method === 'GET') { reschedule_page((int)$m[1]); }
+if (preg_match('#^/chat/(\d+)$#', $uri, $m) && $method === 'GET') { chat_page((int)$m[1]); }
 
 // Doctor pages
 if ($uri === '/doctor/dashboard' && $method === 'GET') { doctor_dashboard_page(); }
@@ -85,8 +86,15 @@ if ($uri === '/api/appointments'      && $method === 'POST') { api_book_appointm
 if ($uri === '/api/profile'           && $method === 'POST') { api_update_profile();   }
 if ($uri === '/api/settings/password' && $method === 'POST') { api_change_password();  }
 
-if (preg_match('#^/api/appointments/(\d+)/cancel$#',     $uri, $m) && $method === 'PATCH') { api_cancel_appointment($m[1]);     }
-if (preg_match('#^/api/appointments/(\d+)/reschedule$#', $uri, $m) && $method === 'POST')  { api_reschedule_appointment($m[1]); }
+if (preg_match('#^/api/appointments/(\d+)/cancel$#',     $uri, $m) && $method === 'PATCH') { api_cancel_appointment((int)$m[1]);     }
+if (preg_match('#^/api/appointments/(\d+)/reschedule$#', $uri, $m) && $method === 'POST')  { api_reschedule_appointment((int)$m[1]); }
+if (preg_match('#^/api/appointments/(\d+)/comments$#',   $uri, $m) && $method === 'GET')   { api_get_comments((int)$m[1]);           }
+if (preg_match('#^/api/appointments/(\d+)/comments$#',   $uri, $m) && $method === 'POST')  { api_post_comment((int)$m[1]);            }
+if (preg_match('#^/api/appointments/(\d+)$#',            $uri, $m) && $method === 'GET')   { api_get_appointment_detail((int)$m[1]); }
+if ($uri === '/api/patient/appointments'                 && $method === 'GET') { api_patient_appointments(); }
+
+if (preg_match('#^/api/messages/(\d+)$#', $uri, $m) && $method === 'GET')  { api_get_messages((int)$m[1]); }
+if (preg_match('#^/api/messages/(\d+)$#', $uri, $m) && $method === 'POST') { api_send_message((int)$m[1]); }
 
 // 404
 http_response_code(404);

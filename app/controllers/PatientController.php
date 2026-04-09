@@ -4,22 +4,16 @@ require_once __DIR__ . '/../models/CategoryModel.php';
 require_once __DIR__ . '/../models/DoctorModel.php';
 require_once __DIR__ . '/../models/AppointmentModel.php';
 
-// ── Helper: get current logged-in user for navbar ─────────────────────────────
+// ── Helper: get current logged-in user for navbar (delegates to AuthController) ─
 function current_user(): ?array
 {
-    if (session_status() === PHP_SESSION_NONE) session_start();
-
-    $id = $_SESSION['user_id'] ?? 1; // default to patient id=1 while auth is stubbed
-
-    $pdo  = db_connect();
-    $stmt = $pdo->prepare("SELECT id, name, email, phone, role, created_at FROM users WHERE id = :id");
-    $stmt->execute([':id' => $id]);
-    return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    return auth_user();
 }
 
 // ── Page: /categories ─────────────────────────────────────────────────────────
 function categories_page()
 {
+    $user = require_auth();
     $categories = get_all_categories();
 
     $category = isset($_GET['category']) && $_GET['category'] !== '' ? $_GET['category'] : null;
@@ -33,15 +27,13 @@ function categories_page()
             'photo'     => $d['photo'],
             'specialty' => $d['specialty'],
             'category'  => $d['category_name'],
-            'rating'    => $d['avg_rating'] ?? '—',
-            'fee'       => number_format($d['fee'], 2),
             'available' => !empty($d['next_available_date']),
             'next_date' => $d['next_available_date'] ?? null,
         ];
     }, $raw);
 
     render('categories', [
-        'user'       => current_user(),
+        'user'       => $user,
         'categories' => $categories,
         'doctors'    => $doctors,
         'selected'   => $_GET['category'] ?? 'all',
@@ -52,10 +44,9 @@ function categories_page()
 // ── Page: /dashboard ──────────────────────────────────────────────────────────
 function dashboard_page()
 {
-    if (session_status() === PHP_SESSION_NONE) session_start();
-
-    $patient_id   = $_SESSION['user_id']   ?? 1;
-    $patient_name = $_SESSION['user_name'] ?? 'Patient';
+    $user = require_auth();
+    $patient_id   = (int) $user['id'];
+    $patient_name = $user['name'];
 
     $upcoming = get_upcoming_appointments($patient_id);
     $past     = get_past_appointments($patient_id);
@@ -83,8 +74,8 @@ function profile_page()
 // ── API: POST /api/profile ────────────────────────────────────────────────────
 function api_update_profile()
 {
-    if (session_status() === PHP_SESSION_NONE) session_start();
-    $id   = $_SESSION['user_id'] ?? 1;
+    user_api();
+    $id   = (int) $user['id'];
     $body = json_decode(file_get_contents('php://input'), true) ?? [];
 
     $name  = trim($body['name']  ?? '');
@@ -104,8 +95,8 @@ function api_update_profile()
 // ── API: POST /api/settings/password ─────────────────────────────────────────
 function api_change_password()
 {
-    if (session_status() === PHP_SESSION_NONE) session_start();
-    $id   = $_SESSION['user_id'] ?? 1;
+    user_api();
+    $id   = (int) $user['id'];
     $body = json_decode(file_get_contents('php://input'), true) ?? [];
 
     $current = $body['current_password'] ?? '';
@@ -176,7 +167,8 @@ function api_get_doctors()
 function api_reschedule_appointment($id)
 {
     if (session_status() === PHP_SESSION_NONE) session_start();
-    $patient_id = $_SESSION['user_id'] ?? 1;
+    $authUser   = require_auth_api();
+    $patient_id = (int) $authUser['id'];
     $body       = json_decode(file_get_contents('php://input'), true) ?? [];
 
     $new_date  = trim($body['date']       ?? '');
@@ -214,7 +206,8 @@ function api_reschedule_appointment($id)
 function api_cancel_appointment($id)
 {
     if (session_status() === PHP_SESSION_NONE) session_start();
-    $patient_id = $_SESSION['user_id'] ?? 1;
+    $authUser   = require_auth_api();
+    $patient_id = (int) $authUser['id'];
 
     $result = cancel_appointment((int)$id, $patient_id);
 
@@ -228,7 +221,8 @@ function api_book_appointment()
 {
     if (session_status() === PHP_SESSION_NONE) session_start();
 
-    $patient_id = $_SESSION['user_id'] ?? 1;
+    $authUser   = require_auth_api();
+    $patient_id = (int) $authUser['id'];
     $body       = json_decode(file_get_contents('php://input'), true) ?? [];
 
     $doctor_id  = (int) ($body['doctor_id']   ?? 0);
@@ -280,7 +274,6 @@ function api_book_appointment()
         'specialty'        => $doc['specialty']  ?? '',
         'date'             => $date,
         'time'             => $timeFormatted,
-        'fee'              => number_format((float)($doc['fee'] ?? 0), 2),
         'status'           => 'Pending',
     ];
 
@@ -290,7 +283,8 @@ function api_book_appointment()
 function reschedule_page(int $appt_id)
 {
     if (session_status() === PHP_SESSION_NONE) session_start();
-    $patient_id = $_SESSION['user_id'] ?? 1;
+    $authUser   = require_auth();
+    $patient_id = (int) $authUser['id'];
 
     $appt = get_appointment_by_id($appt_id);
 
@@ -318,6 +312,7 @@ function reschedule_page(int $appt_id)
 // ── Page: /doctors/{id} ───────────────────────────────────────────────────────
 function doctor_booking_page(int $doctor_id)
 {
+    $authUser = require_auth();
     $doctor = get_doctor_by_id($doctor_id);
 
     if (!$doctor) {
@@ -329,7 +324,7 @@ function doctor_booking_page(int $doctor_id)
     $availability = get_doctor_availability($doctor_id);
 
     render('doctor-booking', [
-        'user'         => current_user(),
+        'user'         => $authUser,
         'doctor'       => $doctor,
         'availability' => $availability,
     ]);
@@ -347,4 +342,150 @@ function api_get_slots()
 
     $booked = get_booked_slots($doctor_id, $date);
     json_response(['success' => true, 'booked' => $booked]);
+}
+// ── API: GET /api/patient/appointments ────────────────────────────────────────
+function api_patient_appointments()
+{
+    $authUser   = require_auth_api();
+    $patient_id = (int) $authUser['id'];
+    $data = get_patient_appointments_list($patient_id);
+    json_response(['success' => true, 'data' => $data]);
+}
+
+// ── API: GET /api/appointments/:id ────────────────────────────────────────────
+function api_get_appointment_detail(int $id)
+{
+    $authUser   = require_auth_api();
+    $patient_id = (int) $authUser['id'];
+    $appt = get_appointment_detail_with_comment($id);
+    if (!$appt) {
+        json_response(['success' => false, 'message' => 'Not found.'], 404);
+    }
+    if ((int)$appt['patient_id'] !== (int)$patient_id) {
+        json_response(['success' => false, 'message' => 'Forbidden.'], 403);
+    }
+    json_response(['success' => true, 'data' => $appt]);
+}
+
+// ── API: GET /api/appointments/:id/comments ───────────────────────────────────
+function api_get_comments(int $id)
+{
+    $authUser   = require_auth_api();
+    $patient_id = (int) $authUser['id'];
+
+    // Verify ownership
+    $appt = get_appointment_by_id($id);
+    if (!$appt || (int)$appt['patient_id'] !== (int)$patient_id) {
+        json_response(['success' => false, 'message' => 'Forbidden.'], 403);
+    }
+    $comments = get_appointment_comments($id);
+    json_response(['success' => true, 'data' => $comments]);
+}
+
+// ── API: POST /api/appointments/:id/comments ──────────────────────────────────
+function api_post_comment(int $id)
+{
+    $authUser   = require_auth_api();
+    $patient_id = (int) $authUser['id'];
+
+    // Verify ownership
+    $appt = get_appointment_by_id($id);
+    if (!$appt || (int)$appt['patient_id'] !== (int)$patient_id) {
+        json_response(['success' => false, 'message' => 'Forbidden.'], 403);
+    }
+    $body    = json_decode(file_get_contents('php://input'), true) ?? [];
+    $message = trim($body['message'] ?? '');
+    if ($message === '') {
+        json_response(['success' => false, 'message' => 'Message cannot be empty.'], 422);
+    }
+    $comment = create_appointment_comment($id, (int)$patient_id, $message);
+    json_response(['success' => true, 'data' => $comment], 201);
+}
+
+// ── API: GET /api/messages/:appointment_id ────────────────────────────────────
+function api_get_messages(int $appointment_id): void
+{
+    $authUser   = require_auth_api();
+    $patient_id = (int) $authUser['id'];
+
+    $appt = get_appointment_by_id($appointment_id);
+    if (!$appt || (int)$appt['patient_id'] !== $patient_id) {
+        json_response(['success' => false, 'message' => 'Forbidden.'], 403);
+    }
+
+    $pdo  = db_connect();
+    $stmt = $pdo->prepare(
+        "SELECT m.id, m.sender_id, m.sender_role, m.message, m.is_read,
+                m.created_at, u.name AS sender_name
+         FROM messages m
+         JOIN users u ON u.id = m.sender_id
+         WHERE m.appointment_id = :appt_id
+         ORDER BY m.created_at ASC"
+    );
+    $stmt->execute([':appt_id' => $appointment_id]);
+    $messages = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Mark unread messages as read for this patient
+    $pdo->prepare(
+        "UPDATE messages SET is_read = 1
+         WHERE appointment_id = :appt_id AND sender_role = 'doctor' AND is_read = 0"
+    )->execute([':appt_id' => $appointment_id]);
+
+    json_response(['success' => true, 'data' => $messages]);
+}
+
+// ── API: POST /api/messages/:appointment_id ───────────────────────────────────
+function api_send_message(int $appointment_id): void
+{
+    $authUser   = require_auth_api();
+    $patient_id = (int) $authUser['id'];
+
+    $appt = get_appointment_by_id($appointment_id);
+    if (!$appt || (int)$appt['patient_id'] !== $patient_id) {
+        json_response(['success' => false, 'message' => 'Forbidden.'], 403);
+    }
+
+    $body    = json_decode(file_get_contents('php://input'), true) ?? [];
+    $message = trim($body['message'] ?? '');
+    if ($message === '') {
+        json_response(['success' => false, 'message' => 'Message cannot be empty.'], 422);
+    }
+
+    $pdo  = db_connect();
+    $stmt = $pdo->prepare(
+        "INSERT INTO messages (appointment_id, sender_id, sender_role, message)
+         VALUES (:appt_id, :sender_id, 'patient', :message)"
+    );
+    $stmt->execute([
+        ':appt_id'   => $appointment_id,
+        ':sender_id' => $patient_id,
+        ':message'   => $message,
+    ]);
+    $new_id = (int) $pdo->lastInsertId();
+
+    $row = $pdo->prepare(
+        "SELECT m.id, m.sender_id, m.sender_role, m.message, m.is_read,
+                m.created_at, u.name AS sender_name
+         FROM messages m JOIN users u ON u.id = m.sender_id
+         WHERE m.id = :id"
+    );
+    $row->execute([':id' => $new_id]);
+    $msg = $row->fetch(PDO::FETCH_ASSOC);
+
+    json_response(['success' => true, 'data' => $msg], 201);
+}
+
+// ── Page: /chat/:appointment_id ───────────────────────────────────────────────
+function chat_page(int $appointment_id): void
+{
+    $user = require_auth();
+
+    $appt = get_appointment_by_id($appointment_id);
+    if (!$appt || (int)$appt['patient_id'] !== (int)$user['id']) {
+        http_response_code(403);
+        echo '<h1>Forbidden</h1>';
+        exit;
+    }
+
+    render('chat', compact('user', 'appt'));
 }
