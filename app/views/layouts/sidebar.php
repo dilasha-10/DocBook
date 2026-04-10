@@ -4,7 +4,7 @@ $current = $_GET['page'] ?? 'dashboard';
 
 <aside class="sidebar">
     <div class="logo">
-             Doc<span>Book</span>
+            Doc<span>Book</span>
      </div>
     <div class="menu-section">
         <div class="menu-title">Doctor Menu</div>
@@ -20,7 +20,7 @@ $current = $_GET['page'] ?? 'dashboard';
         </a>
 
         <a href="index.php?page=patients"
-           class="nav-item <?= $current == 'patient' ? 'active' : '' ?>">
+           class="nav-item <?= $current == 'patients' ? 'active' : '' ?>">
             <i class="fas fa-users"></i> Patients
         </a>
 

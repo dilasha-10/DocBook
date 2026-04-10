@@ -228,31 +228,48 @@ let previewSlots = [];
 
 async function initAvailability() {
     try {
-        const response = await fetch('../app/controllers/availability.php');
+        const response = await fetch('../api/availability.php');
         const data = await response.json();
         
+        // Create a map of saved days for quick lookup
+        const savedDays = {};
         if (data.success && data.schedule) {
             data.schedule.forEach(dayConfig => {
-                const day = dayConfig.day; // e.g. "monday"
-                const checkbox = document.getElementById(day + '-toggle');
-                const startInput = document.getElementById(day + '-start');
-                const endInput = document.getElementById(day + '-end');
-                const configEl = document.querySelector(`[data-day="${day}"]`);
-                const settingsEl = document.getElementById(day + '-settings');
-                
-                if (checkbox) checkbox.checked = dayConfig.is_active;
-                if (startInput) startInput.value = dayConfig.start_time.substring(0, 5);
-                if (endInput) endInput.value = dayConfig.end_time.substring(0, 5);
-                
-                if (dayConfig.is_active && configEl && settingsEl) {
-                    configEl.classList.add('active');
-                    settingsEl.classList.remove('hidden');
-                } else if (!dayConfig.is_active && configEl && settingsEl) {
-                    configEl.classList.remove('active');
-                    settingsEl.classList.add('hidden');
-                }
+                savedDays[dayConfig.day] = dayConfig;
             });
         }
+        
+        // Process all 7 days
+        ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].forEach(day => {
+            const checkbox = document.getElementById(day + '-toggle');
+            const startInput = document.getElementById(day + '-start');
+            const endInput = document.getElementById(day + '-end');
+            const configEl = document.querySelector(`[data-day="${day}"]`);
+            const settingsEl = document.getElementById(day + '-settings');
+            
+            // Check if this day is in the saved schedule
+            const isActive = savedDays.hasOwnProperty(day);
+            
+            if (checkbox) checkbox.checked = isActive;
+            
+            if (isActive && savedDays[day]) {
+                // Day is saved - populate its times
+                const times = savedDays[day].start_time.substring(0, 5);
+                const timee = savedDays[day].end_time.substring(0, 5);
+                if (startInput) startInput.value = times;
+                if (endInput) endInput.value = timee;
+                
+                if (configEl) configEl.classList.add('active');
+                if (settingsEl) settingsEl.classList.remove('hidden');
+            } else {
+                // Day is not saved - set defaults and hide
+                if (startInput) startInput.value = '09:00';
+                if (endInput) endInput.value = '17:00';
+                
+                if (configEl) configEl.classList.remove('active');
+                if (settingsEl) settingsEl.classList.add('hidden');
+            }
+        });
     } catch(e) {
         console.error("Failed to fetch availability:", e);
     }
@@ -398,6 +415,7 @@ async function saveAvailability() {
         if (settings.isActive) {
             availability.push({
                 day,
+                is_active: true,
                 start_time: settings.startTime,
                 end_time: settings.endTime,
                 break_minutes: getBreakDuration()
@@ -406,7 +424,7 @@ async function saveAvailability() {
     });
     
     try {
-        const response = await fetch('../app/controllers/availability.php', {
+        const response = await fetch('../api/availability.php', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({ schedule: availability })
@@ -415,11 +433,16 @@ async function saveAvailability() {
         
         if(data.success) {
             showToast('Availability saved successfully!', 'success');
+            // Reload after successful save to ensure UI matches saved data
+            setTimeout(() => {
+                initAvailability();
+            }, 500);
         } else {
             showToast('Error saving availability: ' + data.message, 'danger');
         }
     } catch (e) {
         showToast('Error communicating with server', 'danger');
+        console.error('Save error:', e);
     }
 }
 
@@ -443,7 +466,6 @@ function showToast(message, type = 'info') {
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
-    initTheme();
     initAvailability();
     loadDashboardAppointments();
 
@@ -456,6 +478,8 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Load Patient Directory
+let currentPatientId = null;
+
 async function loadPatientList() {
     const list = document.getElementById('patient-list-container');
     list.innerHTML = '<p>Loading patients...</p>';
@@ -467,7 +491,7 @@ async function loadPatientList() {
                 list.innerHTML = '<p>No patients found.</p>';
             } else {
                 list.innerHTML = data.patients.map(p => `
-                    <div style="background:white; padding: 20px; border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,0.05); display:flex; flex-direction:column; gap:10px;">
+                    <div class="patient-card" data-patient-id="${p.id}" onclick="openPatientDetail(${p.id}, this)" style="background:white; padding: 20px; border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,0.05); display:flex; flex-direction:column; gap:10px; cursor:pointer; transition:all 0.3s ease;">
                         <h3 style="color:#2c3e50; margin:0;">${p.name}</h3>
                         <div style="font-size:14px; color:#7f8c8d;"><i class="fas fa-envelope"></i> ${p.email}</div>
                         <div style="font-size:14px; color:#7f8c8d;"><i class="fas fa-phone"></i> ${p.phone}</div>
@@ -478,6 +502,115 @@ async function loadPatientList() {
         }
     } catch (e) {
         list.innerHTML = '<p>Error loading patients.</p>';
+    }
+}
+
+async function openPatientDetail(patientId, element) {
+    currentPatientId = patientId;
+    
+    try {
+        const response = await fetch('../app/controllers/patient.php?id=' + patientId);
+        const data = await response.json();
+        
+        if (data.success && data.patient) {
+            const patient = data.patient;
+            
+            // Update panel content
+            document.getElementById('detail-patient-name').textContent = patient.name;
+            document.getElementById('detail-patient-email').textContent = '📧 ' + patient.email;
+            document.getElementById('detail-patient-phone').textContent = '📞 ' + patient.phone;
+            document.getElementById('detail-patient-dob').textContent = '📅 DOB: ' + patient.date_of_birth;
+            
+            // Render comments from comment_history
+            renderPatientComments(data.comment_history);
+            
+            // Show panel
+            const panel = document.getElementById('patient-detail-panel');
+            panel.classList.remove('hidden');
+            
+            // Highlight selected patient card
+            document.querySelectorAll('.patient-card').forEach(el => el.classList.remove('selected'));
+            element.classList.add('selected');
+        }
+    } catch (e) {
+        console.error("Failed to fetch patient detail:", e);
+        alert('Error loading patient details');
+    }
+}
+
+function closePatientDetailPanel() {
+    const panel = document.getElementById('patient-detail-panel');
+    panel.classList.add('hidden');
+    currentPatientId = null;
+    
+    // Remove selection highlight
+    document.querySelectorAll('.patient-card').forEach(el => el.classList.remove('selected'));
+}
+
+function renderPatientComments(comments) {
+    const commentList = document.getElementById('detail-comment-list');
+    
+    if (comments.length === 0) {
+        commentList.innerHTML = '<p style="color: var(--text-muted); font-size: 14px;">No comments yet.</p>';
+        return;
+    }
+    
+    commentList.innerHTML = comments.map(comment => `
+        <div class="comment-item">
+            <div class="comment-header">
+                <span class="comment-author">${comment.author}</span>
+                <span class="comment-date">${comment.date}</span>
+            </div>
+            <p class="comment-text"><strong>${comment.visit_reason}</strong> - ${comment.appointment_date} at ${comment.appointment_time}</p>
+            <p class="comment-text">${comment.text}</p>
+        </div>
+    `).join('');
+}
+
+async function savePatientComment() {
+    const input = document.getElementById('detail-comment-input');
+    const commentText = input.value.trim();
+    
+    if (!commentText) {
+        alert('Please enter a comment');
+        return;
+    }
+    
+    if (!currentPatientId) return;
+    
+    // For patient comments, we need the most recent appointment for this patient
+    try {
+        // First fetch patient appointments to get the latest one
+        const response = await fetch('../app/controllers/patient.php?id=' + currentPatientId);
+        const patientData = await response.json();
+        
+        if (patientData.success && patientData.appointments && patientData.appointments.length > 0) {
+            // Use the first appointment (most recent, since API returns sorted DESC)
+            const latestAppt = patientData.appointments[0];
+            
+            const fd = new FormData();
+            fd.append('appointment_id', latestAppt.id);
+            fd.append('comment_text', commentText);
+
+            const commentResponse = await fetch('../app/controllers/comment.php', {
+                method: 'POST',
+                body: fd
+            });
+
+            const commentData = await commentResponse.json();
+            if (commentData.success) {
+                // Clear input and reload the current patient panel to get updated comments
+                input.value = '';
+                openPatientDetail(currentPatientId, document.querySelector(`[data-patient-id="${currentPatientId}"]`));
+            } else {
+                alert('Error adding comment: ' + commentData.message);
+            }
+        } else {
+            alert('No appointments found for this patient.');
+        }
+    } catch (e) {
+        console.error("Failed to add comment:", e);
+        alert('Error adding comment');
     }
 }
 
@@ -546,6 +679,123 @@ function toggleBio() {
     bio.classList.toggle('truncated');
     btn.textContent = bio.classList.contains('truncated') ? 'Read More' : 'Show Less';
 }
+
+// Profile Editing Functions
+async function loadProfileData() {
+    try {
+        const response = await fetch('../app/controllers/profile.php');
+        const data = await response.json();
+        
+        if (data.success) {
+            const doctor = data.doctor;
+            
+            // Populate view mode
+            document.getElementById('doctor-name').textContent = 'Dr. ' + doctor.name;
+            document.getElementById('view-specialty').textContent = doctor.specialty;
+            document.getElementById('view-experience').textContent = doctor.years_experience + ' years exp.';
+            document.getElementById('view-rating').textContent = doctor.rating + ' (' + doctor.review_count + ' reviews)';
+            document.getElementById('doctor-fee').textContent = doctor.fee;
+            document.getElementById('doctor-bio').textContent = doctor.bio || 'No bio provided';
+            
+            // Update photo in view mode
+            if (doctor.photo_url) {
+                const photoDiv = document.getElementById('view-profile-photo');
+                photoDiv.innerHTML = '<img src="' + doctor.photo_url + '" alt="Profile">';
+            }
+        }
+    } catch (e) {
+        console.error('Failed to load profile data:', e);
+    }
+}
+
+function enterEditMode() {
+    const viewMode = document.getElementById('profile-view-mode');
+    const editMode = document.getElementById('profile-edit-mode');
+    
+    if (!viewMode || !editMode) return;
+    
+    // Get current values from view mode
+    const name = document.getElementById('doctor-name').textContent.replace('Dr. ', '');
+    const specialty = document.getElementById('view-specialty').textContent;
+    const experience = document.getElementById('view-experience').textContent.split(' ')[0];
+    const fee = document.getElementById('doctor-fee').textContent;
+    const bio = document.getElementById('doctor-bio').textContent;
+    
+    // Populate form
+    document.getElementById('name-input').value = name;
+    document.getElementById('specialty-input').value = specialty;
+    document.getElementById('experience-input').value = experience;
+    document.getElementById('fee-input').value = fee;
+    document.getElementById('bio-input').value = bio;
+    
+    // Hide view mode, show edit mode
+    viewMode.classList.add('hidden');
+    editMode.classList.remove('hidden');
+}
+
+function exitEditMode() {
+    const viewMode = document.getElementById('profile-view-mode');
+    const editMode = document.getElementById('profile-edit-mode');
+    
+    if (!viewMode || !editMode) return;
+    
+    viewMode.classList.remove('hidden');
+    editMode.classList.add('hidden');
+    
+    // Reset form
+    document.getElementById('profile-form').reset();
+    document.getElementById('edit-photo-preview').innerHTML = '<i class="fas fa-user"></i>';
+}
+
+function previewPhoto(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const preview = document.getElementById('edit-photo-preview');
+        preview.innerHTML = '<img src="' + e.target.result + '" alt="Preview">';
+    };
+    reader.readAsDataURL(file);
+}
+
+async function saveProfileChanges(event) {
+    event.preventDefault();
+    
+    const form = document.getElementById('profile-form');
+    const formData = new FormData(form);
+    
+    try {
+        const response = await fetch('../app/controllers/profile.php', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            showToast('Profile updated successfully!', 'success');
+            
+            // Reload profile data and exit edit mode
+            await loadProfileData();
+            exitEditMode();
+        } else {
+            showToast('Error: ' + (data.message || 'Failed to update profile'), 'danger');
+        }
+    } catch (e) {
+        console.error('Error saving profile:', e);
+        showToast('Error saving profile', 'danger');
+    }
+}
+
+// Initialize profile on page load
+document.addEventListener('DOMContentLoaded', function() {
+    const profileForm = document.getElementById('profile-form');
+    if (profileForm) {
+        loadProfileData();
+        profileForm.addEventListener('submit', saveProfileChanges);
+    }
+});
 
 function loadSlots() {
     const grid = document.getElementById('slots-grid');
@@ -663,29 +913,3 @@ async function bookAppointment() {
 }
 
 // Theme Toggle Logic
-function initTheme() {
-    const themeBtn = document.getElementById('theme-toggle');
-    const root = document.documentElement;
-    let savedTheme = localStorage.getItem('theme') || 'dark';
-    root.setAttribute('data-theme', savedTheme);
-    updateThemeIcon(savedTheme, themeBtn);
-
-    if(themeBtn) {
-        themeBtn.addEventListener('click', () => {
-            const currentTheme = root.getAttribute('data-theme');
-            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-            root.setAttribute('data-theme', newTheme);
-            localStorage.setItem('theme', newTheme);
-            updateThemeIcon(newTheme, themeBtn);
-        });
-    }
-}
-
-function updateThemeIcon(theme, btn) {
-    if(!btn) return;
-    if(theme === 'dark') {
-        btn.innerHTML = '<i class="fas fa-sun" style="color:#f1c40f;"></i>';
-    } else {
-        btn.innerHTML = '<i class="fas fa-moon" style="color:#2c3e50;"></i>';
-    }
-}

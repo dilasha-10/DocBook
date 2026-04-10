@@ -44,7 +44,7 @@ try {
     $stmt = $pdo->prepare("
         SELECT start_time, end_time, break_minutes
         FROM doctor_availability
-        WHERE doctor_id = ? AND day_of_week = ? AND is_active = 1
+        WHERE doctor_id = ? AND day_of_week = ?
     ");
     $stmt->execute([$doctorId, $dayOfWeek]);
     $availability = $stmt->fetch();
@@ -87,7 +87,7 @@ try {
 
     // ================= GET BOOKED APPOINTMENTS =================
     $stmt = $pdo->prepare("
-        SELECT appointment_time, duration_minutes
+        SELECT start_time, end_time
         FROM appointments
         WHERE doctor_id = ? AND appointment_date = ? 
         AND status IN ('Pending', 'Confirmed')
@@ -98,12 +98,13 @@ try {
     $bookedTimes = [];
 
     foreach ($bookedAppointments as $appt) {
-        $apptTime = strtotime($appt['appointment_time']);
-        $duration = (int)$appt['duration_minutes'];
+        $apptStartTime = strtotime($appt['start_time']);
+        $apptEndTime = strtotime($appt['end_time']);
+        $duration = ($apptEndTime - $apptStartTime) / 60; // duration in minutes
         $slotsCount = ceil($duration / 30);
 
         for ($i = 0; $i < $slotsCount; $i++) {
-            $bookedTimes[] = date('H:i:s', $apptTime + ($i * 30 * 60));
+            $bookedTimes[] = date('H:i:s', $apptStartTime + ($i * 30 * 60));
         }
     }
 
