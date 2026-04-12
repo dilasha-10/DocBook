@@ -10,11 +10,14 @@ $patient_id = (int) $user['id'];
 
 $extra_styles = <<<CSS
 <style>
-/* ── Chat page layout ───────────────────────────────────── */
+/* ── Chat page layout: fills entire remaining viewport, no scroll ── */
 .chat-page-wrap {
     display: flex;
-    height: calc(100vh - 60px);
+    height: calc(100vh - 64px);
     background: var(--bg);
+    /* Prevent the parent main-wrap from adding extra padding/scroll */
+    margin: -32px -36px;
+    overflow: hidden;
 }
 
 /* ── Chat main area ───────────────────────────────────────── */
@@ -23,12 +26,12 @@ $extra_styles = <<<CSS
     display: flex;
     flex-direction: column;
     min-width: 0;
-    background: #f8fbff;
+    background: var(--bg);
 }
 
 /* ── Chat header ─────────────────────────────────────────── */
 .chat-header {
-    background: #fff;
+    background: var(--surface);
     border-bottom: 1px solid var(--border);
     padding: 16px 28px;
     display: flex;
@@ -42,7 +45,7 @@ $extra_styles = <<<CSS
     font-size: 14px; font-weight: 600; color: var(--blue);
     text-decoration: none; padding: 6px 12px;
     border: 1px solid var(--border2); border-radius: 8px;
-    background: #fff; transition: background .15s;
+    background: var(--surface); transition: background .15s;
 }
 .chat-back-btn:hover { background: var(--bg); color: var(--blue); }
 .chat-doctor-avatar {
@@ -56,8 +59,8 @@ $extra_styles = <<<CSS
 .chat-header-info p  { font-size: 13px; color: var(--muted); margin-top: 2px; }
 .chat-ref-badge {
     font-size: 11px; font-weight: 700; padding: 3px 10px;
-    background: #dbeafe; color: #1e40af;
-    border-radius: 999px; border: 1px solid #bfdbfe; white-space: nowrap;
+    background: rgba(77,166,232,0.15); color: var(--blue);
+    border-radius: 999px; border: 1px solid rgba(77,166,232,0.3); white-space: nowrap;
 }
 
 /* ── Messages area ─────────────────────────────────────────── */
@@ -99,7 +102,7 @@ $extra_styles = <<<CSS
     font-size: 11px; font-weight: 700; flex-shrink: 0;
 }
 .msg-avatar.doctor-av  { background: var(--blue); color: #fff; }
-.msg-avatar.patient-av { background: #e0eaff; color: var(--blue); }
+.msg-avatar.patient-av { background: rgba(77,166,232,0.18); color: var(--blue); }
 
 .msg-content { display: flex; flex-direction: column; gap: 3px; max-width: 65%; }
 .msg-row.patient .msg-content { align-items: flex-end; }
@@ -118,7 +121,7 @@ $extra_styles = <<<CSS
     border-bottom-right-radius: 4px;
 }
 .msg-row.doctor .msg-bubble {
-    background: #fff;
+    background: var(--surface);
     color: var(--text);
     border: 1px solid var(--border);
     border-bottom-left-radius: 4px;
@@ -144,7 +147,7 @@ $extra_styles = <<<CSS
 
 /* ── Input bar ─────────────────────────────────────────────── */
 .chat-input-bar {
-    background: #fff;
+    background: var(--surface);
     border-top: 1px solid var(--border);
     padding: 14px 28px;
     display: flex;
@@ -168,7 +171,7 @@ $extra_styles = <<<CSS
     line-height: 1.5;
     transition: border-color .15s;
 }
-.chat-textarea:focus { border-color: var(--blue); background: #fff; }
+.chat-textarea:focus { border-color: var(--blue); background: var(--surface); }
 .chat-textarea::placeholder { color: var(--hint); }
 .chat-send-btn {
     width: 44px; height: 44px; border-radius: 12px;
@@ -186,6 +189,10 @@ $extra_styles = <<<CSS
     .chat-input-bar     { padding: 12px 16px; }
     .chat-header        { padding: 12px 16px; }
     .msg-content        { max-width: 82%; }
+}
+@media (max-width: 767px) {
+    /* On mobile, account for the sidebar being hidden, reclaim that margin */
+    .chat-page-wrap { margin: -20px -16px; height: calc(100vh - 64px); }
 }
 </style>
 CSS;
@@ -223,7 +230,7 @@ ob_start();
                 placeholder="Type your message…" rows="1"
                 onkeydown="handleKey(event)"></textarea>
             <button class="chat-send-btn" id="sendBtn" onclick="sendMessage()" title="Send">
-                <i class="fa fa-paper-plane"></i>
+                <i class="fa fa-circle-arrow-right"></i>
             </button>
         </div>
 

@@ -65,7 +65,7 @@ function get_filtered_doctors(?string $category = null, ?string $search = null):
     return $rows;
 }
 
-// ── Fetch a single doctor by their doctors.id ────────────────────────────────
+// Fetch a single doctor by their doctors.id 
 function get_doctor_by_id(int $id): ?array
 {
     $pdo  = db_connect();
@@ -91,7 +91,7 @@ function get_doctor_by_id(int $id): ?array
     return $row ?: null;
 }
 
-// ── Fetch availability days for a doctor ─────────────────────────────────────
+//  Fetch availability days for a doctor 
 function get_doctor_availability(int $doctor_id): array
 {
     $pdo  = db_connect();
@@ -105,7 +105,7 @@ function get_doctor_availability(int $doctor_id): array
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
-// ── Fetch already-booked slots for a doctor on a specific date ───────────────
+//  Fetch already-booked slots for a doctor on a specific date 
 function get_booked_slots(int $doctor_id, string $date): array
 {
     $pdo  = db_connect();

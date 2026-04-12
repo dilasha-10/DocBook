@@ -10,41 +10,56 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="<?= BASE_URL ?>/css/style.css">
     <?php if (isset($extra_styles)) echo $extra_styles; ?>
+    <script>
+        (function(){
+            if(localStorage.getItem('docbook-theme')==='dark'){
+                document.documentElement.setAttribute('data-theme','dark');
+            }
+        })();
+    </script>
 </head>
 <body>
 
 <!-- ══ TOP NAVBAR ══════════════════════════════════════════ -->
 <nav class="navbar">
     <div class="navbar-inner">
-        <!-- Sidebar toggle (visible always) -->
-        <button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">
+        <!-- Sidebar toggle (desktop only — collapses sidebar) -->
+        <button class="sidebar-toggle desktop-only" id="sidebarToggle" aria-label="Toggle sidebar">
             <i class="fa fa-bars"></i>
         </button>
 
-        <a href="/categories" class="nav-logo">Doc<span>Book</span></a>
+        <a href="/" class="nav-brand">Doc<span>Book</span></a>
 
+        <!-- Desktop nav links -->
         <div class="nav-links">
+            <a href="/about"      class="nav-link <?php echo request_is('/about')      ? 'active' : ''; ?>">About</a>
             <a href="/dashboard"  class="nav-link <?php echo request_is('/dashboard')  ? 'active' : ''; ?>">My Appointments</a>
             <a href="/categories" class="nav-link <?php echo request_is('/categories') ? 'active' : ''; ?>">Find Doctors</a>
-            <a href="/about"      class="nav-link <?php echo request_is('/about')      ? 'active' : ''; ?>">About</a>
             <a href="/contact"    class="nav-link <?php echo request_is('/contact')    ? 'active' : ''; ?>">Contact</a>
         </div>
+
+        <!-- Right actions (always visible) -->
         <div class="nav-actions">
+            <!-- Theme toggle (single, always in navbar) -->
+            <button class="theme-toggle" id="themeToggleBtn" aria-label="Toggle dark mode" title="Toggle dark mode">
+                <i class="fa fa-moon" id="themeIcon"></i>
+            </button>
             <?php if (isset($user)): ?>
                 <a href="/profile" class="user-chip" style="text-decoration:none;cursor:pointer;">
                     <div class="avatar-circle"><?php echo strtoupper(substr($user['name'] ?? 'U', 0, 2)); ?></div>
-                    <span><?php echo htmlspecialchars($user['name'] ?? ''); ?></span>
+                    <span class="user-chip-name"><?php echo htmlspecialchars($user['name'] ?? ''); ?></span>
                 </a>
                 <a href="/logout" class="btn-signout">Sign out</a>
             <?php else: ?>
                 <a href="/login"  class="btn-signin">Sign in</a>
                 <a href="/signup" class="btn-signup">Sign up</a>
             <?php endif; ?>
-        </div>
 
-        <button class="hamburger" id="hamburgerBtn" aria-label="Toggle menu">
-            <span></span><span></span><span></span>
-        </button>
+            <!-- Hamburger (mobile only — opens nav drawer on RIGHT) -->
+            <button class="hamburger" id="hamburgerBtn" aria-label="Toggle menu">
+                <span></span><span></span><span></span>
+            </button>
+        </div>
     </div>
 </nav>
 
@@ -53,9 +68,6 @@
 
     <!-- ── SIDEBAR ─────────────────────────────────────────── -->
     <aside class="sidebar" id="sidebar">
-        <div class="sidebar-header">
-            <span class="sidebar-brand">Doc<span>Book</span></span>
-        </div>
         <nav class="sidebar-nav">
             <div class="sidebar-section-label">Main</div>
             <a href="/dashboard" class="sidebar-link <?php echo request_is('/dashboard') ? 'active' : ''; ?>">
@@ -70,10 +82,6 @@
                 <i class="fa fa-clock-rotate-left sidebar-icon"></i>
                 <span>History</span>
             </a>
-            <a href="/categories" class="sidebar-link <?php echo request_is('/categories') ? 'active' : ''; ?>">
-                <i class="fa fa-stethoscope sidebar-icon"></i>
-                <span>Find Doctors</span>
-            </a>
             <?php if (isset($user)): ?>
             <div class="sidebar-section-label">Account</div>
             <a href="/profile" class="sidebar-link <?php echo request_is('/profile') ? 'active' : ''; ?>">
@@ -82,6 +90,19 @@
             </a>
             <?php endif; ?>
         </nav>
+        <!-- Sidebar footer: NO theme toggle here — only one toggle lives in the navbar -->
+        <div class="sidebar-footer">
+            <?php if (isset($user)): ?>
+            <div class="sidebar-user">
+                <div class="avatar-circle"><?php echo strtoupper(substr($user['name'] ?? 'U', 0, 2)); ?></div>
+                <div class="sidebar-user-info">
+                    <div class="sidebar-user-name"><?php echo htmlspecialchars($user['name'] ?? ''); ?></div>
+                    <div class="sidebar-user-role">Patient</div>
+                </div>
+            </div>
+            <a href="/logout" class="sidebar-logout" title="Sign out"><i class="fa fa-right-from-bracket"></i></a>
+            <?php endif; ?>
+        </div>
     </aside>
 
     <!-- Sidebar overlay (mobile) -->
@@ -94,12 +115,18 @@
 
 </div><!-- /.page-shell -->
 
-<!-- Mobile menu drawer (kept for hamburger fallback) -->
-<div class="mobile-menu" id="mobileMenu">
+<!-- ══ MOBILE NAV DRAWER (slides from RIGHT) ══════════════ -->
+<div class="mobile-drawer" id="mobileDrawer">
+    <div class="mobile-drawer-header">
+        <span class="mobile-drawer-brand">Doc<span>Book</span></span>
+        <button class="mobile-drawer-close" id="mobileDrawerClose" aria-label="Close menu">
+            <i class="fa fa-xmark"></i>
+        </button>
+    </div>
     <ul class="mobile-nav-links">
+        <li><a href="/about"      class="<?php echo request_is('/about')      ? 'active' : ''; ?>"><i class="fa fa-circle-info"></i> About</a></li>
         <li><a href="/dashboard"  class="<?php echo request_is('/dashboard')  ? 'active' : ''; ?>"><i class="fa fa-th-large"></i> My Appointments</a></li>
         <li><a href="/categories" class="<?php echo request_is('/categories') ? 'active' : ''; ?>"><i class="fa fa-stethoscope"></i> Find Doctors</a></li>
-        <li><a href="/about"      class="<?php echo request_is('/about')      ? 'active' : ''; ?>"><i class="fa fa-circle-info"></i> About</a></li>
         <li><a href="/contact"    class="<?php echo request_is('/contact')    ? 'active' : ''; ?>"><i class="fa fa-envelope"></i> Contact</a></li>
         <?php if (isset($user)): ?>
         <li><a href="/profile"    class="<?php echo request_is('/profile')    ? 'active' : ''; ?>"><i class="fa fa-user"></i> Profile &amp; Settings</a></li>
@@ -123,34 +150,60 @@
 <script src="<?= BASE_URL ?>/js/main.js"></script>
 <script>
 (function(){
-    // ── Hamburger (mobile)
-    var btn     = document.getElementById('hamburgerBtn');
-    var menu    = document.getElementById('mobileMenu');
-    var overlay = document.getElementById('mobileOverlay');
-    function closeMobile() {
-        btn.classList.remove('open');
-        menu.classList.remove('open');
-        overlay.classList.remove('open');
-        document.body.style.overflow = '';
-    }
-    if (btn) {
-        btn.addEventListener('click', function(){
-            var isOpen = menu.classList.contains('open');
-            if (isOpen) { closeMobile(); }
-            else {
-                btn.classList.add('open'); menu.classList.add('open');
-                overlay.classList.add('open'); document.body.style.overflow = 'hidden';
-            }
-        });
-        overlay.addEventListener('click', closeMobile);
+    // ── Single theme toggle (navbar only)
+    var themeBtn  = document.getElementById('themeToggleBtn');
+    var themeIcon = document.getElementById('themeIcon');
+
+    function applyTheme(dark) {
+        if (dark) {
+            document.documentElement.setAttribute('data-theme', 'dark');
+            if (themeIcon) themeIcon.className = 'fa fa-sun';
+            if (themeBtn)  themeBtn.setAttribute('title', 'Switch to light mode');
+        } else {
+            document.documentElement.removeAttribute('data-theme');
+            if (themeIcon) themeIcon.className = 'fa fa-moon';
+            if (themeBtn)  themeBtn.setAttribute('title', 'Switch to dark mode');
+        }
     }
 
-    // ── Sidebar toggle
+    applyTheme(localStorage.getItem('docbook-theme') === 'dark');
+
+    if (themeBtn) {
+        themeBtn.addEventListener('click', function() {
+            var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            localStorage.setItem('docbook-theme', isDark ? 'light' : 'dark');
+            applyTheme(!isDark);
+        });
+    }
+
+    // ── Mobile drawer (slides from RIGHT) — hamburger in nav-actions
+    var hamburger    = document.getElementById('hamburgerBtn');
+    var drawer       = document.getElementById('mobileDrawer');
+    var drawerClose  = document.getElementById('mobileDrawerClose');
+    var mobileOvly   = document.getElementById('mobileOverlay');
+
+    function openDrawer() {
+        drawer.classList.add('open');
+        mobileOvly.classList.add('open');
+        hamburger && hamburger.classList.add('open');
+        document.body.style.overflow = 'hidden';
+    }
+    function closeDrawer() {
+        drawer.classList.remove('open');
+        mobileOvly.classList.remove('open');
+        hamburger && hamburger.classList.remove('open');
+        document.body.style.overflow = '';
+    }
+
+    if (hamburger)   hamburger.addEventListener('click', function(){ drawer.classList.contains('open') ? closeDrawer() : openDrawer(); });
+    if (drawerClose) drawerClose.addEventListener('click', closeDrawer);
+    if (mobileOvly)  mobileOvly.addEventListener('click', closeDrawer);
+
+    // ── Sidebar toggle (desktop: collapse/expand)
     var sidebarToggle  = document.getElementById('sidebarToggle');
     var sidebar        = document.getElementById('sidebar');
     var sidebarOverlay = document.getElementById('sidebarOverlay');
 
-    // Restore sidebar state
     var collapsed = localStorage.getItem('sidebarCollapsed') === 'true';
     if (collapsed) { document.body.classList.add('sidebar-collapsed'); }
 
@@ -167,12 +220,7 @@
                 localStorage.setItem('sidebarCollapsed', document.body.classList.contains('sidebar-collapsed'));
             } else {
                 var isOpen = sidebar.classList.contains('open');
-                if (isOpen) { closeSidebarMobile(); }
-                else {
-                    sidebar.classList.add('open');
-                    sidebarOverlay.classList.add('open');
-                    document.body.style.overflow = 'hidden';
-                }
+                isOpen ? closeSidebarMobile() : (sidebar.classList.add('open'), sidebarOverlay.classList.add('open'), document.body.style.overflow='hidden');
             }
         });
         sidebarOverlay.addEventListener('click', closeSidebarMobile);

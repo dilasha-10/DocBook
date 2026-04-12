@@ -21,14 +21,14 @@ $extra_styles = <<<CSS
                font-size:26px; font-weight:700; color:#fff; flex-shrink:0;
                box-shadow: 0 4px 12px rgba(37,99,235,0.3); }
 .profile-hero { display:flex; align-items:center; gap:20px; margin-bottom:28px; max-width:860px;
-                background:#fff; border:1px solid var(--border); border-radius:var(--radius-lg);
+                background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg);
                 padding:24px 28px; }
 .profile-hero .meta { display:flex; flex-direction:column; gap:6px; }
 .profile-hero .meta strong { font-size:20px; font-weight:700; color:var(--text); }
 .profile-hero .meta span   { font-size:14px; color:var(--muted); }
 .role-badge  { display:inline-block; padding:4px 14px; border-radius:999px; font-size:12px;
-               font-weight:700; background:#dbeafe; color:#1e40af; text-transform:capitalize;
-               border:1px solid #bfdbfe; }
+               font-weight:700; background:rgba(77,166,232,0.15); color:var(--blue); text-transform:capitalize;
+               border:1px solid rgba(77,166,232,0.3); }
 
 .save-row    { display:flex; align-items:center; gap:12px; margin-top:8px; }
 .msg         { font-size:13px; display:none; }

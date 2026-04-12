@@ -3,9 +3,9 @@
 function db_connect() {
     $host = "127.0.0.1";
     $port = "3306";
-    $dbname = "docbook_test";
+    $dbname = "docbook";
     $user = "root";
-    $pass = "";
+    $pass = "root";
     $charset = "utf8mb4";
 
     $dsn = "mysql:host=$host;port=$port;dbname=$dbname;charset=$charset";

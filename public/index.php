@@ -49,14 +49,17 @@ function request_is($path) {
 require_once BASE_PATH . '/app/controllers/AuthController.php';
 require_once BASE_PATH . '/app/controllers/PatientController.php';
 require_once BASE_PATH . '/app/controllers/DoctorController.php';
+require_once BASE_PATH . '/app/controllers/PageController.php';
 
 // ── Routing ───────────────────────────────────────────────────────────────────
 
 $uri    = rtrim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/') ?: '/';
 $method = $_SERVER['REQUEST_METHOD'];
 
-// Home
-if ($uri === '/')                              { redirect('/dashboard'); }
+// Home — show about/home page by default
+if ($uri === '/')                              { about_page(); }
+if ($uri === '/about'   && $method === 'GET') { about_page(); }
+if ($uri === '/contact' && $method === 'GET') { contact_page(); }
 
 // Auth
 if ($uri === '/login'  && $method === 'GET')  { login_get();    }
