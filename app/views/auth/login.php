@@ -13,11 +13,11 @@ $oldEmail = htmlspecialchars(trim($_POST['email'] ?? ''));
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <style>
         :root {
-            --brand:       #B8D4EE;
-            --brand-dark:  #8CB8DF;
-            --brand-deep:  #5A9AC8;
-            --brand-light: #E8F3FB;
-            --brand-pale:  #F2F8FD;
+            --brand:       #cce8f0;
+            --brand-dark:  #5ab8d0;
+            --brand-deep:  #2a8fa8;
+            --brand-light: #ddf3f8;
+            --brand-pale:  #eef8fc;
             --text-dark:   #1a2a3a;
             --text-mid:    #4a6070;
             --text-light:  #8aa3b8;
@@ -38,6 +38,9 @@ $oldEmail = htmlspecialchars(trim($_POST['email'] ?? ''));
             display: flex; align-items: center; justify-content: space-between;
             padding: 0 32px;
             border-bottom: 1px solid var(--brand-dark);
+        }
+        .auth-nav-right {
+            display: flex; align-items: center; gap: 8px;
         }
         .auth-navbar .nav-logo {
             font-size: 1.35rem; font-weight: 800; color: var(--text-dark); text-decoration: none; letter-spacing: -0.5px;
@@ -149,15 +152,15 @@ $oldEmail = htmlspecialchars(trim($_POST['email'] ?? ''));
 
         .login-btn {
             width: 100%; height: 52px;
-            background: linear-gradient(135deg, var(--brand-dark), var(--brand-deep));
-            color: var(--text-dark); border: none;
+            background: linear-gradient(135deg, #3aadcc, #1f8ca0);
+            color: #ffffff; border: none;
             border-radius: var(--radius); font-size: 1.05rem; font-weight: 700;
             cursor: pointer; margin-top: 6px;
             transition: opacity .2s, transform .15s, box-shadow .2s;
             font-family: inherit;
-            box-shadow: 0 4px 16px rgba(140,184,223,0.4); letter-spacing: 0.02em;
+            box-shadow: 0 4px 16px rgba(42,143,168,0.30); letter-spacing: 0.02em;
         }
-        .login-btn:hover { opacity: .9; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(140,184,223,0.5); }
+        .login-btn:hover { opacity: .9; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(42,143,168,0.40); }
         .login-btn:active { transform: translateY(0); }
 
         .forgot-pass { display: block; margin-top: 16px; color: var(--brand-deep); text-decoration: none; font-size: .92rem; text-align: center; font-weight: 600; }
@@ -173,16 +176,171 @@ $oldEmail = htmlspecialchars(trim($_POST['email'] ?? ''));
 
         @media (max-width: 1024px) { .brand-panel { display: none; } }
         @media (max-width: 480px) { .form-panel { padding: 24px 20px; } }
+    
+        /* ── Dark mode ── */
+        [data-theme="dark"] {
+            --brand:       #1e1e1e;
+            --brand-dark:  #4a8fc4;
+            --brand-deep:  #4a8fc4;
+            --brand-light: #1a1a1a;
+            --brand-pale:  #161616;
+            --text-dark:   #f0f0f0;
+            --text-mid:    #888888;
+            --text-light:  #555555;
+            --white:       #111111;
+            --error:       #d06060;
+            --success:     #50a878;
+        }
+        [data-theme="dark"] html,
+        [data-theme="dark"] body { background: #111111; }
+
+        [data-theme="dark"] .auth-navbar {
+            background: #0a0a0a;
+            border-bottom-color: rgba(255,255,255,0.07);
+        }
+        [data-theme="dark"] .auth-navbar .nav-logo { color: #f0f0f0; }
+        [data-theme="dark"] .auth-navbar .nav-links a { color: #888888; }
+        [data-theme="dark"] .auth-navbar .nav-links a:hover { background: rgba(255,255,255,0.06); color: #f0f0f0; }
+
+        [data-theme="dark"] .brand-panel,
+        [data-theme="dark"] .left-panel {
+            background: #161616;
+            color: #f0f0f0;
+        }
+        [data-theme="dark"] .brand-panel h2,
+        [data-theme="dark"] .hero-title { color: #f0f0f0; }
+        [data-theme="dark"] .brand-panel p.subtext,
+        [data-theme="dark"] .hero-subtitle { color: #888888; }
+        [data-theme="dark"] .feature-list li,
+        [data-theme="dark"] .benefit { color: #d0d0d0; }
+        [data-theme="dark"] .feature-list li .check,
+        [data-theme="dark"] .benefit .check {
+            background: rgba(74,143,196,0.15);
+            color: #4a8fc4;
+        }
+
+        [data-theme="dark"] .form-panel,
+        [data-theme="dark"] .right-panel { background: #111111; }
+
+        [data-theme="dark"] .logo,
+        [data-theme="dark"] .auth-content h1,
+        [data-theme="dark"] .form-title { color: #f0f0f0; }
+        [data-theme="dark"] .auth-content p.sign-in-prompt,
+        [data-theme="dark"] .form-subtitle { color: #888888; }
+        [data-theme="dark"] .input-label { color: #777777; }
+
+        [data-theme="dark"] .input-group input,
+        [data-theme="dark"] .input {
+            background: #1a1a1a;
+            border-color: #2e2e2e;
+            color: #f0f0f0;
+        }
+        [data-theme="dark"] .input-group input:focus,
+        [data-theme="dark"] .input:focus {
+            border-color: #4a8fc4;
+            box-shadow: 0 0 0 3px rgba(74,143,196,0.12);
+            background: #1e1e1e;
+        }
+        [data-theme="dark"] .input-group input::placeholder,
+        [data-theme="dark"] .input::placeholder { color: #555555; }
+        [data-theme="dark"] input[type="date"].input { color: #f0f0f0; }
+        [data-theme="dark"] input[type="date"].input::-webkit-calendar-picker-indicator { filter: invert(0.6); }
+
+        [data-theme="dark"] .login-btn,
+        [data-theme="dark"] .signup-btn {
+            background: #4a8fc4;
+            box-shadow: none;
+            color: #ffffff;
+        }
+        [data-theme="dark"] .login-btn:hover,
+        [data-theme="dark"] .signup-btn:hover:not(:disabled) {
+            background: #5a9fd4;
+            opacity: 1;
+            transform: translateY(-1px);
+        }
+        [data-theme="dark"] .signup-btn:disabled { background: #2a2a2a; color: #555555; opacity: 1; }
+
+        [data-theme="dark"] .forgot-pass { color: #4a8fc4; }
+        [data-theme="dark"] .divider { color: #444444; }
+        [data-theme="dark"] .divider::before,
+        [data-theme="dark"] .divider::after { border-bottom-color: #2a2a2a; }
+        [data-theme="dark"] .signup-link,
+        [data-theme="dark"] .already { color: #888888; }
+        [data-theme="dark"] .signup-link a,
+        [data-theme="dark"] .already a { color: #4a8fc4; }
+
+        [data-theme="dark"] .alert-danger {
+            background: rgba(208,96,96,0.10);
+            border-color: rgba(208,96,96,0.28);
+            color: #d08080;
+        }
+        [data-theme="dark"] .alert-success {
+            background: rgba(80,168,120,0.10);
+            border-color: rgba(80,168,120,0.28);
+            color: #70b890;
+        }
+        [data-theme="dark"] .pw-req {
+            background: #1a1a1a;
+            color: #555555;
+        }
+        [data-theme="dark"] .pw-req.met { background: rgba(80,168,120,0.12); color: #70b890; }
+        [data-theme="dark"] .pw-strength-bar { background: #2a2a2a; }
+        [data-theme="dark"] .checkbox-group { color: #888888; }
+        [data-theme="dark"] .checkbox-group a { color: #4a8fc4; }
+        [data-theme="dark"] .modal-content {
+            background: #1a1a1a;
+            color: #f0f0f0;
+        }
+        [data-theme="dark"] .modal-content h3 { color: #f0f0f0; }
+        [data-theme="dark"] .modal-content p,
+        [data-theme="dark"] .modal-content ul { color: #888888; }
+        [data-theme="dark"] .modal-close { color: #555555; }
+        [data-theme="dark"] .modal-close:hover { color: #888888; }
+
+        [data-theme="dark"] .password-toggle,
+        [data-theme="dark"] .toggle-btn { color: #4a8fc4; }
+
+        /* ── Theme toggle button ── */
+        .auth-theme-toggle {
+            display: flex; align-items: center; justify-content: center;
+            width: 34px; height: 34px; border-radius: 50%;
+            border: 1.5px solid rgba(0,0,0,0.15);
+            background: rgba(255,255,255,0.30);
+            color: var(--text-dark); font-size: 15px;
+            cursor: pointer; transition: all .18s;
+        }
+        .auth-theme-toggle:hover { background: rgba(255,255,255,0.50); }
+        [data-theme="dark"] .auth-theme-toggle {
+            border-color: #2e2e2e;
+            background: rgba(255,255,255,0.03);
+            color: #888888;
+        }
+        [data-theme="dark"] .auth-theme-toggle:hover {
+            background: rgba(74,143,196,0.10);
+            border-color: #4a8fc4;
+            color: #4a8fc4;
+        }
     </style>
+
+<script>
+(function(){
+    if(localStorage.getItem('docbook-theme')==='dark'){
+        document.documentElement.setAttribute('data-theme','dark');
+    }
+})();
+</script>
 </head>
 <body>
 
 <nav class="auth-navbar">
     <a href="/login" class="nav-logo">Doc<span>Book</span></a>
-    <ul class="nav-links">
-        <li><a href="/about">About</a></li>
-        <li><a href="/contact">Contact</a></li>
-    </ul>
+    <div class="auth-nav-right">
+        <ul class="nav-links">
+            <li><a href="/about">About</a></li>
+            <li><a href="/contact">Contact</a></li>
+        </ul>
+        <button class="auth-theme-toggle" id="authThemeBtn" aria-label="Toggle dark mode"><i class="fa fa-moon" id="authThemeIcon"></i></button>
+    </div>
 </nav>
 
 <div class="split-container">
@@ -299,5 +457,32 @@ document.getElementById('loginForm').addEventListener('submit', function(e) {
     if (eErr || pErr) e.preventDefault();
 });
 </script>
+
+<script>
+// ── Font Awesome for auth pages
+(function(){
+    var link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css';
+    document.head.appendChild(link);
+})();
+
+// ── Theme toggle
+(function(){
+    var btn  = document.getElementById('authThemeBtn');
+    var icon = document.getElementById('authThemeIcon');
+    function applyTheme(dark){
+        if(dark){ document.documentElement.setAttribute('data-theme','dark'); icon.className='fa fa-sun'; }
+        else    { document.documentElement.removeAttribute('data-theme');      icon.className='fa fa-moon'; }
+    }
+    applyTheme(localStorage.getItem('docbook-theme')==='dark');
+    btn.addEventListener('click',function(){
+        var isDark = document.documentElement.getAttribute('data-theme')==='dark';
+        localStorage.setItem('docbook-theme', isDark ? 'light' : 'dark');
+        applyTheme(!isDark);
+    });
+})();
+</script>
+
 </body>
 </html>
