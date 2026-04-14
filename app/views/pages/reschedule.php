@@ -147,7 +147,7 @@ ob_start();
             btn.disabled = isBooked;
             if (!isBooked) btn.addEventListener('click', onSlotClick);
             grid.appendChild(btn);
-            cur += DOCTOR.slot_minutes + breakMins;
+            cur += DOCTOR.slot_minutes;
         }
         wrap.innerHTML = '';
         wrap.appendChild(grid);

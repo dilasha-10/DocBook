@@ -11,6 +11,8 @@ ob_start();
     height: calc(100vh - 64px);
     overflow: hidden;
     padding: 0;
+    /* Pull back main-wrap's padding so we own the full area */
+    margin: -32px -36px;
 }
 .contact-inner {
     flex: 1;
@@ -19,10 +21,8 @@ ob_start();
     align-items: center;
     justify-content: center;
     padding: 24px 32px;
-    overflow-y: auto;
+    overflow: hidden;
     gap: 20px;
-    max-width: 1080px;
-    margin: 0 auto;
     width: 100%;
     box-sizing: border-box;
 }
@@ -35,6 +35,7 @@ ob_start();
     font-weight: 800;
     color: var(--text);
     margin-bottom: 6px;
+    text-align: center;
 }
 .contact-heading p {
     font-size: 14.5px;
@@ -127,8 +128,8 @@ ob_start();
 .contact-faq-hint > i { color: var(--blue); font-size: 18px; flex-shrink: 0; margin-top: 1px; }
 
 @media (max-width: 820px) {
-    .contact-page-wrap { height: auto; overflow: visible; }
-    .contact-inner     { padding: 20px 16px; justify-content: flex-start; }
+    .contact-page-wrap { height: auto; overflow: visible; margin: -20px -16px; }
+    .contact-inner     { padding: 20px 16px; justify-content: flex-start; overflow-y: auto; }
     .contact-body-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 600px) {
