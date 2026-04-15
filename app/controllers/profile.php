@@ -113,7 +113,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             // Move uploaded file
             if (move_uploaded_file($file['tmp_name'], $filepath)) {
-                $photo = '/uploads/profiles/' . $filename;
+                $photo = 'uploads/profiles/' . $filename;
             } else {
                 http_response_code(500);
                 echo json_encode(['error' => true, 'message' => 'Failed to upload file']);
@@ -121,65 +121,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
         
-        // Update users table (name, email, phone)
-        if (!empty($name) || !empty($email) || !empty($phone)) {
-            $user_fields = [];
-            $user_params = [];
-            
-            if (!empty($name)) {
-                $user_fields[] = 'name = ?';
-                $user_params[] = $name;
-            }
-            if (!empty($email)) {
-                $user_fields[] = 'email = ?';
-                $user_params[] = $email;
-            }
-            if (!empty($phone)) {
-                $user_fields[] = 'phone = ?';
-                $user_params[] = $phone;
-            }
-            
-            if (!empty($user_fields)) {
-                // First get user_id from doctors table
-                $stmt = $pdo->prepare("SELECT user_id FROM doctors WHERE id = ?");
-                $stmt->execute([$doctorId]);
-                $doctor_row = $stmt->fetch();
-                
-                if ($doctor_row) {
-                    $user_id = $doctor_row['user_id'];
-                    $user_params[] = $user_id;
-                    $query = "UPDATE users SET " . implode(', ', $user_fields) . " WHERE id = ?";
-                    $pdo->prepare($query)->execute($user_params);
-                }
-            }
+        // Update users table (name, email, phone) — always write all provided fields
+        $stmt = $pdo->prepare("SELECT user_id FROM doctors WHERE id = ?");
+        $stmt->execute([$doctorId]);
+        $doctor_row = $stmt->fetch();
+
+        if ($doctor_row) {
+            $user_id = $doctor_row['user_id'];
+            $pdo->prepare("UPDATE users SET name = ?, email = ?, phone = ? WHERE id = ?")
+                ->execute([$name, $email ?: null, $phone ?: null, $user_id]);
         }
-        
+
         // Update doctors table (specialty, experience_years, bio, photo)
-        $doctor_fields = [];
-        $doctor_params = [];
-        
-        if (!empty($specialty)) {
-            $doctor_fields[] = 'specialty = ?';
-            $doctor_params[] = $specialty;
-        }
-        if ($experience_years >= 0) {
-            $doctor_fields[] = 'experience_years = ?';
-            $doctor_params[] = $experience_years;
-        }
-        if (!empty($bio)) {
-            $doctor_fields[] = 'bio = ?';
-            $doctor_params[] = $bio;
-        }
+        $doctor_fields  = ['specialty = ?', 'experience_years = ?', 'bio = ?'];
+        $doctor_params  = [$specialty, $experience_years, $bio ?: null];
+
         if ($photo) {
             $doctor_fields[] = 'photo = ?';
             $doctor_params[] = $photo;
         }
-        
-        if (!empty($doctor_fields)) {
-            $doctor_params[] = $doctorId;
-            $query = "UPDATE doctors SET " . implode(', ', $doctor_fields) . " WHERE id = ?";
-            $pdo->prepare($query)->execute($doctor_params);
-        }
+
+        $doctor_params[] = $doctorId;
+        $query = "UPDATE doctors SET " . implode(', ', $doctor_fields) . " WHERE id = ?";
+        $pdo->prepare($query)->execute($doctor_params);
         
         // Fetch updated doctor data
         $stmt = $pdo->prepare("

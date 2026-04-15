@@ -183,6 +183,26 @@ try {
 
     $appointmentId = (int)$pdo->lastInsertId();
 
+    // Populate doctor_slots table for each booked slot
+    $slotStmt = $pdo->prepare("
+        INSERT INTO doctor_slots (doctor_id, date, start_time, end_time, status)
+        VALUES (?, ?, ?, ?, 'booked')
+    ");
+
+    foreach ($slots as $slotTime) {
+        // Calculate individual slot end time (each slot is 30 mins)
+        $slotStart = strtotime($date . " " . $slotTime);
+        $slotEnd = $slotStart + (30 * 60); // 30 minutes
+        $slotEndTime = date('H:i:s', $slotEnd);
+        
+        $slotStmt->execute([
+            $doctorId,
+            $date,
+            $slotTime,
+            $slotEndTime
+        ]);
+    }
+
     $pdo->commit();
 
     // Get doctor info (from users table via doctors table)

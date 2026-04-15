@@ -1,3 +1,64 @@
+// ===== SECURITY: HTML Escape Function =====
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// ===== MOBILE MENU TOGGLE =====
+function initMobileMenu() {
+    const sidebar = document.querySelector('.sidebar');
+    if (!sidebar) return;
+
+    // Check if already has toggle
+    if (document.querySelector('.menu-toggle')) return;
+
+    // Create and add toggle button to header
+    const toggleBtn = document.createElement('button');
+    toggleBtn.className = 'menu-toggle';
+    toggleBtn.innerHTML = '<i class="fas fa-bars"></i>';
+    toggleBtn.setAttribute('title', 'Toggle Menu');
+    
+    const header = document.querySelector('.top-header');
+    if (header) {
+        header.insertBefore(toggleBtn, header.firstChild);
+    }
+
+    // Toggle sidebar on button click
+    toggleBtn.addEventListener('click', () => {
+        sidebar.classList.toggle('mobile-open');
+        toggleBtn.innerHTML = sidebar.classList.contains('mobile-open') 
+            ? '<i class="fas fa-times"></i>' 
+            : '<i class="fas fa-bars"></i>';
+    });
+
+    // Close sidebar when clicking nav items
+    const navItems = sidebar.querySelectorAll('.nav-item');
+    navItems.forEach(item => {
+        item.addEventListener('click', () => {
+            if (window.innerWidth <= 768) {
+                sidebar.classList.remove('mobile-open');
+                toggleBtn.innerHTML = '<i class="fas fa-bars"></i>';
+            }
+        });
+    });
+
+    // Close sidebar when window is resized to desktop size
+    window.addEventListener('resize', () => {
+        if (window.innerWidth > 768) {
+            sidebar.classList.remove('mobile-open');
+            toggleBtn.style.display = 'none';
+        } else {
+            toggleBtn.style.display = 'block';
+        }
+    });
+
+    // Hide toggle button if desktop
+    if (window.innerWidth > 768) {
+        toggleBtn.style.display = 'none';
+    }
+}
+
 // View Switching Logic
 function switchView(viewId, navElement) {
     // Hide all views
@@ -12,6 +73,20 @@ function switchView(viewId, navElement) {
         document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
         navElement.classList.add('active');
     }
+}
+
+// Initialize Top Nav Active State
+function initTopNavActive() {
+    const currentPage = new URLSearchParams(window.location.search).get('page') || 'dashboard';
+    const topNavLinks = document.querySelectorAll('.top-nav a');
+    
+    topNavLinks.forEach(link => {
+        link.classList.remove('active');
+        const href = link.getAttribute('href');
+        if(href && href.includes('page=' + currentPage)) {
+            link.classList.add('active');
+        }
+    });
 }
 
 // Appointment Actions
@@ -95,8 +170,8 @@ function renderDashboardAppointments(appointments) {
                 <div class="appt-details">
                     <div class="appt-icon"><i class="fas fa-user"></i></div>
                     <div class="appt-info">
-                        <h4>${appt.patient_name}</h4>
-                        <p>${appt.visit_reason} &middot; ${appt.duration_minutes} min</p>
+                        <h4>${escapeHtml(appt.patient_name)}</h4>
+                        <p>${escapeHtml(appt.visit_reason)} &middot; ${appt.duration_minutes} min</p>
                     </div>
                 </div>
                 <div class="appt-actions">
@@ -175,10 +250,10 @@ function renderComments(comments) {
     commentList.innerHTML = comments.map(comment => `
         <div class="comment-item">
             <div class="comment-header">
-                <span class="comment-author">${comment.author}</span>
-                <span class="comment-date">${comment.date}</span>
+                <span class="comment-author">${escapeHtml(comment.author)}</span>
+                <span class="comment-date">${escapeHtml(comment.date)}</span>
             </div>
-            <p class="comment-text">${comment.text}</p>
+            <p class="comment-text">${escapeHtml(comment.text)}</p>
         </div>
     `).join('');
 }
@@ -227,8 +302,11 @@ let currentPreviewDay = 'monday';
 let previewSlots = [];
 
 async function initAvailability() {
+    // Only initialize if we're on the availability page
+    if (!document.getElementById('monday-toggle')) return;
+    
     try {
-        const response = await fetch('../api/availability.php');
+        const response = await fetch('../app/controllers/availability.php');
         const data = await response.json();
         
         // Create a map of saved days for quick lookup
@@ -424,7 +502,7 @@ async function saveAvailability() {
     });
     
     try {
-        const response = await fetch('../api/availability.php', {
+        const response = await fetch('../app/controllers/availability.php', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({ schedule: availability })
@@ -466,6 +544,9 @@ function showToast(message, type = 'info') {
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
+    initTopNavActive();
+    initTheme();
+    initMobileMenu();
     initAvailability();
     loadDashboardAppointments();
 
@@ -492,10 +573,10 @@ async function loadPatientList() {
             } else {
                 list.innerHTML = data.patients.map(p => `
                     <div class="patient-card" data-patient-id="${p.id}" onclick="openPatientDetail(${p.id}, this)" style="background:white; padding: 20px; border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,0.05); display:flex; flex-direction:column; gap:10px; cursor:pointer; transition:all 0.3s ease;">
-                        <h3 style="color:#2c3e50; margin:0;">${p.name}</h3>
-                        <div style="font-size:14px; color:#7f8c8d;"><i class="fas fa-envelope"></i> ${p.email}</div>
-                        <div style="font-size:14px; color:#7f8c8d;"><i class="fas fa-phone"></i> ${p.phone}</div>
-                        <div style="font-size:14px; color:#7f8c8d;"><i class="fas fa-calendar-check"></i> Last Visit: ${p.last_visit ? p.last_visit : 'Never'}</div>
+                        <h3 style="color:#2c3e50; margin:0;">${escapeHtml(p.name)}</h3>
+                        <div style="font-size:14px; color:#7f8c8d;"><i class="fas fa-envelope"></i> ${escapeHtml(p.email)}</div>
+                        <div style="font-size:14px; color:#7f8c8d;"><i class="fas fa-phone"></i> ${escapeHtml(p.phone)}</div>
+                        <div style="font-size:14px; color:#7f8c8d;"><i class="fas fa-calendar-check"></i> Last Visit: ${p.last_visit ? escapeHtml(p.last_visit) : 'Never'}</div>
                     </div>
                 `).join('');
             }
@@ -519,7 +600,9 @@ async function openPatientDetail(patientId, element) {
             document.getElementById('detail-patient-name').textContent = patient.name;
             document.getElementById('detail-patient-email').textContent = '📧 ' + patient.email;
             document.getElementById('detail-patient-phone').textContent = '📞 ' + patient.phone;
-            document.getElementById('detail-patient-dob').textContent = '📅 DOB: ' + patient.date_of_birth;
+            // DOB not available in current schema, skip or show placeholder
+            const dobElement = document.getElementById('detail-patient-dob');
+            if(dobElement) dobElement.textContent = '📅 Since: ' + patient.created_at;
             
             // Render comments from comment_history
             renderPatientComments(data.comment_history);
@@ -558,11 +641,11 @@ function renderPatientComments(comments) {
     commentList.innerHTML = comments.map(comment => `
         <div class="comment-item">
             <div class="comment-header">
-                <span class="comment-author">${comment.author}</span>
-                <span class="comment-date">${comment.date}</span>
+                <span class="comment-author">${escapeHtml(comment.author)}</span>
+                <span class="comment-date">${escapeHtml(comment.date)}</span>
             </div>
-            <p class="comment-text"><strong>${comment.visit_reason}</strong> - ${comment.appointment_date} at ${comment.appointment_time}</p>
-            <p class="comment-text">${comment.text}</p>
+            <p class="comment-text"><strong>${escapeHtml(comment.visit_reason)}</strong> - ${escapeHtml(comment.appointment_date)} at ${escapeHtml(comment.appointment_time)}</p>
+            <p class="comment-text">${escapeHtml(comment.text)}</p>
         </div>
     `).join('');
 }
@@ -617,15 +700,27 @@ async function savePatientComment() {
 // Load Schedule by Date
 async function loadScheduleAppointments() {
     const list = document.getElementById('schedule-appointment-list');
-    const dateInput = document.getElementById('schedule-date-picker').value;
+    if (!list) return; // Exit if element doesn't exist (not on schedule page)
+    
+    const dateInput = document.getElementById('schedule-date-picker');
+    if (!dateInput) return; // Exit if date picker doesn't exist
+    
+    const selectedDate = dateInput.value;
     list.innerHTML = '<p>Loading...</p>';
     
     try {
-        const response = await fetch('../app/controllers/appointments.php?date=' + dateInput);
+        const response = await fetch('../app/controllers/appointments.php?date=' + selectedDate);
+        
+        if (!response.ok) {
+            list.innerHTML = '<p>Error: Server returned ' + response.status + '</p>';
+            console.error('API error:', response.status);
+            return;
+        }
+        
         const data = await response.json();
         
         if (data.success) {
-            if (data.appointments.length === 0) {
+            if (!data.appointments || data.appointments.length === 0) {
                 list.innerHTML = '<p>No appointments for this date.</p>';
                 return;
             }
@@ -633,14 +728,17 @@ async function loadScheduleAppointments() {
             list.innerHTML = data.appointments.map(appt => {
                 let badgeClass = 'badge-pending';
                 if (appt.status === 'Confirmed') badgeClass = 'badge-confirmed';
+                const reason = appt.visit_reason ? escapeHtml(appt.visit_reason) : 'No reason specified';
+                const duration = appt.duration_minutes ? appt.duration_minutes : '30';
+                
                 return `
                     <div class="appointment-item" style="cursor:default">
                         <div class="appt-time">${appt.time}</div>
                         <div class="appt-details">
                             <div class="appt-icon"><i class="fas fa-user"></i></div>
                             <div class="appt-info">
-                                <h4>${appt.patient_name}</h4>
-                                <p>${appt.visit_reason} &middot; ${appt.duration_minutes} min</p>
+                                <h4>${escapeHtml(appt.patient_name)}</h4>
+                                <p>${reason} &middot; ${duration} min</p>
                             </div>
                         </div>
                         <div class="appt-actions">
@@ -649,9 +747,13 @@ async function loadScheduleAppointments() {
                     </div>
                 `;
             }).join('');
+        } else {
+            list.innerHTML = '<p>Error: ' + (data.message || 'Failed to load appointments') + '</p>';
+            console.error('API error:', data);
         }
     } catch (e) {
-        list.innerHTML = '<p>Error loading schedule.</p>';
+        console.error('Schedule loading error:', e);
+        list.innerHTML = '<p>Error loading schedule: ' + e.message + '</p>';
     }
 }
 
@@ -692,15 +794,21 @@ async function loadProfileData() {
             // Populate view mode
             document.getElementById('doctor-name').textContent = 'Dr. ' + doctor.name;
             document.getElementById('view-specialty').textContent = doctor.specialty;
-            document.getElementById('view-experience').textContent = doctor.years_experience + ' years exp.';
-            document.getElementById('view-rating').textContent = doctor.rating + ' (' + doctor.review_count + ' reviews)';
-            document.getElementById('doctor-fee').textContent = doctor.fee;
+            document.getElementById('view-experience').textContent = (doctor.experience_years || 0) + ' years exp.';
             document.getElementById('doctor-bio').textContent = doctor.bio || 'No bio provided';
             
+            const emailEl = document.getElementById('view-email');
+            if (emailEl) emailEl.textContent = doctor.email || '—';
+            
+            const phoneEl = document.getElementById('view-phone');
+            if (phoneEl) phoneEl.textContent = doctor.phone || '—';
+            
             // Update photo in view mode
-            if (doctor.photo_url) {
+            if (doctor.photo) {
                 const photoDiv = document.getElementById('view-profile-photo');
-                photoDiv.innerHTML = '<img src="' + doctor.photo_url + '" alt="Profile">';
+                if (photoDiv) {
+                    photoDiv.innerHTML = '<img src="' + escapeHtml(doctor.photo) + '" alt="Profile">';
+                }
             }
         }
     } catch (e) {
@@ -717,16 +825,26 @@ function enterEditMode() {
     // Get current values from view mode
     const name = document.getElementById('doctor-name').textContent.replace('Dr. ', '');
     const specialty = document.getElementById('view-specialty').textContent;
-    const experience = document.getElementById('view-experience').textContent.split(' ')[0];
-    const fee = document.getElementById('doctor-fee').textContent;
+    const experienceText = document.getElementById('view-experience').textContent;
+    const experience = experienceText ? experienceText.split(' ')[0] : '0';
     const bio = document.getElementById('doctor-bio').textContent;
+    const email = document.getElementById('view-email')?.textContent || '';
+    const phone = document.getElementById('view-phone')?.textContent || '';
     
     // Populate form
-    document.getElementById('name-input').value = name;
-    document.getElementById('specialty-input').value = specialty;
-    document.getElementById('experience-input').value = experience;
-    document.getElementById('fee-input').value = fee;
-    document.getElementById('bio-input').value = bio;
+    const nameInput = document.getElementById('name-input');
+    const specialtyInput = document.getElementById('specialty-input');
+    const experienceInput = document.getElementById('experience-input');
+    const bioInput = document.getElementById('bio-input');
+    const emailInput = document.getElementById('email-input');
+    const phoneInput = document.getElementById('phone-input');
+    
+    if (nameInput) nameInput.value = name;
+    if (specialtyInput) specialtyInput.value = specialty;
+    if (experienceInput) experienceInput.value = experience;
+    if (bioInput) bioInput.value = bio.trim() === 'No bio provided' ? '' : bio.trim();
+    if (emailInput) emailInput.value = email === '—' ? '' : email;
+    if (phoneInput) phoneInput.value = phone === '—' ? '' : phone;
     
     // Hide view mode, show edit mode
     viewMode.classList.add('hidden');
@@ -913,3 +1031,35 @@ async function bookAppointment() {
 }
 
 // Theme Toggle Logic
+
+function initTheme() {
+    const themeBtn = document.getElementById('theme-toggle');
+    const root = document.documentElement;
+    let savedTheme = localStorage.getItem('theme') || 'dark';
+    root.setAttribute('data-theme', savedTheme);
+    updateThemeIcon(savedTheme, themeBtn);
+
+    if(themeBtn) {
+        themeBtn.removeEventListener('click', handleThemeToggle); // Remove old listener if exists
+        themeBtn.addEventListener('click', handleThemeToggle);
+    }
+}
+
+function handleThemeToggle() {
+    const root = document.documentElement;
+    const themeBtn = document.getElementById('theme-toggle');
+    const currentTheme = root.getAttribute('data-theme');
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', newTheme);
+    localStorage.setItem('theme', newTheme);
+    updateThemeIcon(newTheme, themeBtn);
+}
+
+function updateThemeIcon(theme, btn) {
+    if(!btn) return;
+    if(theme === 'dark') {
+        btn.innerHTML = '<i class="fas fa-sun" style="color:#f1c40f;"></i>';
+    } else {
+        btn.innerHTML = '<i class="fas fa-moon" style="color:#2c3e50;"></i>';
+    }
+}

@@ -4,8 +4,10 @@ $current = $_GET['page'] ?? 'dashboard';
 
 <aside class="sidebar">
     <div class="logo">
+        <a href="index.php?page=dashboard" style="text-decoration: none; color: inherit;">
             Doc<span>Book</span>
-     </div>
+        </a>
+    </div>
     <div class="menu-section">
         <div class="menu-title">Doctor Menu</div>
 

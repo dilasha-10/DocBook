@@ -37,6 +37,7 @@ try {
             a.id,
             a.appointment_date,
             a.start_time,
+            a.end_time,
             a.status,
             a.visit_reason,
             u.id as patient_id,
@@ -56,15 +57,23 @@ try {
     $formattedAppointments = [];
 
     foreach ($appointments as $appt) {
+        // Calculate duration in minutes - use appointment_date for both to avoid date mismatch
+        $start = strtotime($appt['appointment_date'] . ' ' . $appt['start_time']);
+        $end   = strtotime($appt['appointment_date'] . ' ' . $appt['end_time']);
+        $duration_minutes = ($start && $end) ? (int)(($end - $start) / 60) : 30;
+
         $formattedAppointments[] = [
-            'id' => (int)$appt['id'],
-            'patient_id' => (int)$appt['patient_id'],
-            'patient_name' => $appt['patient_name'],
-            'time' => date('g:i A', strtotime($appt['start_time'])),
-            'visit_reason' => $appt['visit_reason'],
-            'status' => $appt['status']
+            'id'               => (int)$appt['id'],
+            'patient_id'       => (int)$appt['patient_id'],
+            'patient_name'     => $appt['patient_name'],
+            'time'             => date('g:i A', strtotime($appt['start_time'])),
+            'visit_reason'     => $appt['visit_reason'],
+            'status'           => $appt['status'],
+            'duration_minutes' => $duration_minutes
         ];
     }
+
+    
 
     // Success response
     http_response_code(200);

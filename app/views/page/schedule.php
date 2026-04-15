@@ -7,7 +7,7 @@
         <div>
             <input type="date" id="schedule-date-picker" onchange="loadScheduleAppointments()" 
                    style="padding: 10px; border-radius: 8px; border: 1px solid #ccc;"
-                   value="2026-03-31">
+                   value="<?php echo date('Y-m-d'); ?>">
         </div>
     </div>
 

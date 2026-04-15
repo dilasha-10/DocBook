@@ -25,10 +25,6 @@
                                 <span id="view-experience">8 years exp.</span>
                             </div>
                         </div>
-
-                        <div class="profile-fee">
-                            NPR <span id="doctor-fee">175</span> per consultation
-                        </div>
                     </div>
                     <button class="btn-primary btn-small" onclick="enterEditMode()">
                         <i class="fas fa-edit"></i> Edit Profile
@@ -41,6 +37,18 @@
                 </p>
 
                 <button class="btn-read-more" onclick="toggleBio()">Read More</button>
+
+                <!-- Contact info -->
+                <div class="profile-stats" style="margin-top: 12px;">
+                    <div class="profile-stat">
+                        <i class="fas fa-envelope"></i>
+                        <span id="view-email" style="font-size:13px;">—</span>
+                    </div>
+                    <div class="profile-stat">
+                        <i class="fas fa-phone"></i>
+                        <span id="view-phone" style="font-size:13px;">—</span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -63,7 +71,7 @@
                         <div class="photo-preview" id="edit-photo-preview">
                             <i class="fas fa-user"></i>
                         </div>
-                        <input type="file" id="photo-input" accept="image/*" onchange="previewPhoto(event)">
+                        <input type="file" id="photo-input" name="photo" accept="image/*" onchange="previewPhoto(event)">
                         <label for="photo-input" class="btn-secondary btn-small">
                             <i class="fas fa-camera"></i> Change Photo
                         </label>
@@ -82,17 +90,23 @@
                     <input type="text" id="specialty-input" name="specialty" required>
                 </div>
 
+                <!-- Email & Phone -->
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="email-input">Email</label>
+                        <input type="email" id="email-input" name="email">
+                    </div>
+                    <div class="form-group">
+                        <label for="phone-input">Phone</label>
+                        <input type="tel" id="phone-input" name="phone">
+                    </div>
+                </div>
+
                 <!-- Years of Experience -->
                 <div class="form-row">
                     <div class="form-group">
                         <label for="experience-input">Years of Experience</label>
-                        <input type="number" id="experience-input" name="years_experience" min="0">
-                    </div>
-
-                    <!-- Consultation Fee -->
-                    <div class="form-group">
-                        <label for="fee-input">Consultation Fee (NPR)</label>
-                        <input type="number" id="fee-input" name="fee" min="0" step="0.01">
+                        <input type="number" id="experience-input" name="experience_years" min="0">
                     </div>
                 </div>
 

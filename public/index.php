@@ -10,6 +10,23 @@ $allowed_pages = ['dashboard', 'schedule', 'patients', 'availability', 'profile'
 if (!in_array($page, $allowed_pages)) {
     $page = 'dashboard';
 }
+
+// Fetch doctor info for the header
+global $pdo;
+$doctorId = 1; // Simulated auth
+$stmt = $pdo->prepare("SELECT d.photo, u.name FROM doctors d JOIN users u ON d.user_id = u.id WHERE d.id = ?");
+$stmt->execute([$doctorId]);
+$authDoctor = $stmt->fetch();
+
+$authName = $authDoctor ? "Dr. " . $authDoctor['name'] : "Doctor";
+$authPhoto = $authDoctor && $authDoctor['photo'] ? $authDoctor['photo'] : null;
+$authInitials = '';
+if ($authDoctor) {
+    preg_match_all('/\b\w/', $authDoctor['name'], $matches);
+    $authInitials = strtoupper(implode('', array_slice($matches[0], 0, 2)));
+} else {
+    $authInitials = "DR";
+}
 ?>
 
 <!DOCTYPE html>

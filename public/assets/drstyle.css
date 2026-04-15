@@ -1,4 +1,19 @@
 :root {
+    --bg-dark: #121212;
+    --bg-panel: #1e1e1e;
+    --bg-card: #2a2a2a;
+    --bg-hover: #333333;
+    --primary: #4da6ff;
+    --primary-hover: #3d92f5;
+    --text-main: #ffffff;
+    --text-muted: #a0a0a0;
+    --success: #2ecc71;
+    --warning: #f1c40f;
+    --danger: #e74c3c;
+    --border: #333;
+}
+
+:root[data-theme="light"] {
     --bg-dark: #f0f2f5;
     --bg-panel: #ffffff;
     --bg-card: #ffffff;
@@ -7,9 +22,6 @@
     --primary-hover: #0052a3;
     --text-main: #2c3e50;
     --text-muted: #6c757d;
-    --success: #2ecc71;
-    --warning: #f1c40f;
-    --danger: #e74c3c;
     --border: #e0e0e0;
 }
 
@@ -19,7 +31,6 @@
     padding: 0;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
-
 body {
     background-color: var(--bg-dark);
     color: var(--text-main);
@@ -42,6 +53,26 @@ body {
     z-index: 100;
 }
 
+@media (max-width: 768px) {
+    .sidebar {
+        position: fixed;
+        left: -260px;
+        top: 0;
+        height: 100vh;
+        width: 260px;
+        border-right: none;
+        border-bottom: none;
+        transition: left 0.3s ease;
+        z-index: 1000;
+        box-shadow: 2px 0 8px rgba(0, 0, 0, 0.3);
+        overflow-y: auto;
+    }
+
+    .sidebar.mobile-open {
+        left: 0;
+    }
+}
+
 .logo {
     font-size: 24px;
     font-weight: bold;
@@ -54,6 +85,20 @@ body {
 
 .logo span {
     color: var(--primary);
+}
+
+
+.top-nav { display: flex; gap: 4px; list-style: none; flex: 1; }
+.top-nav a {
+  padding: 6px 14px; border-radius: 8px;
+  color: var(--muted); text-decoration: none; font-weight: 500;
+  transition: color .15s, background .15s;
+}
+.top-nav a:hover { color: var(--text); background: var(--surface2); }
+.top-nav a.active { color: var(--text); background: var(--surface3); }
+
+.top-right {
+  display: flex; align-items: center; gap: 12px; margin-left: auto;
 }
 
 .menu-section {
@@ -101,25 +146,40 @@ body {
     flex: 1;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    overflow: auto;
     position: relative;
     z-index: 1;
+    min-height: 0;
+}
+
+/* Content Area */
+.content-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: 0;
 }
 
 /* Top Header */
 .top-header {
-    height: 70px;
+    height: auto;
+    min-height: 70px;
     border-bottom: 1px solid var(--border);
     display: flex;
     align-items: center;
-    justify-content: right;
-    padding: 0 30px;
+    justify-content: flex-start;
+    padding: 10px 30px;
     background-color: transparent;
+    flex-wrap: wrap;
+    gap: 10px;
+    flex-shrink: 0;
 }
-
 .top-nav {
     display: flex;
-    gap: 30px;
+    gap: 20px;
+    flex-wrap: wrap;
+    align-items: center;
 }
 
 .top-nav a {
@@ -128,6 +188,8 @@ body {
     font-weight: 500;
     transition: color 0.2s;
     cursor: pointer;
+    white-space: nowrap;
+    font-size: 14px;
 }
 
 .top-nav a:hover, .top-nav a.active {
@@ -138,6 +200,7 @@ body {
     display: flex;
     align-items: center;
     gap: 15px;
+    margin-left: auto;
 }
 
 .user-badge {
@@ -182,7 +245,7 @@ body {
     padding: 15px 30px;
     background-color: var(--bg-card);
     border-top: 1px solid var(--border);
-    margin-top: auto;
+    flex-shrink: 0;
 }
 
 .footer-content {
@@ -213,6 +276,8 @@ body {
     padding: 30px;
     overflow-y: auto;
     flex: 1;
+    height: 100%;
+    min-height: 0;
 }
 
 .view-header {
@@ -838,6 +903,7 @@ input:checked + .slider:before {
     display: flex;
     flex-direction: column;
     gap: 25px;
+    min-height: 0;  /* Critical for flex children to scroll */
 }
 
 .patient-info {
@@ -847,21 +913,21 @@ input:checked + .slider:before {
 }
 
 .patient-avatar {
-    width: 80px;
-    height: 80px;
+    width: 50px;
+    height: 50px;
     background-color: var(--bg-card);
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin: 0 auto 15px;
-    font-size: 32px;
+    margin: 0 auto 5px;
+    font-size: 30px;
     color: var(--primary);
 }
 
 .patient-info h3 {
     font-size: 20px;
-    margin-bottom: 5px;
+    margin-bottom: 2px;
 }
 
 .patient-info p {
@@ -874,12 +940,16 @@ input:checked + .slider:before {
     display: flex;
     flex-direction: column;
     min-height: 0;
+    max-height: 400px;  /* Limit height to prevent overflow */
+    background-color: var(--bg-card);
+    padding: 5px;
+    border-radius: 8px;
 }
 
 .comment-section h4 {
     font-size: 14px;
     color: var(--text-muted);
-    margin-bottom: 15px;
+    margin-bottom: 10px;
     text-transform: uppercase;
     letter-spacing: 1px;
 }
@@ -889,14 +959,36 @@ input:checked + .slider:before {
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: 15px;
-    margin-bottom: 20px;
+    gap: 10px;
+    margin-bottom: 0;
+    min-height: 0;  /* Allow scrolling */
+    padding-right: 8px;  /* Space for scrollbar */
+}
+
+.comment-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.comment-list::-webkit-scrollbar-track {
+    background: var(--bg-main);
+}
+
+.comment-list::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 3px;
+}
+
+.comment-list::-webkit-scrollbar-thumb:hover {
+    background: var(--text-muted);
 }
 
 .comment-item {
-    background-color: var(--bg-card);
-    padding: 15px;
-    border-radius: 10px;
+    background-color: var(--bg-main);
+    padding: 12px;
+    border-radius: 6px;
+    border-left: 3px solid var(--primary);
+    font-size: 13px;
+    flex-shrink: 0;  /* Prevent shrinking */
 }
 
 .comment-header {
@@ -922,6 +1014,10 @@ input:checked + .slider:before {
     line-height: 1.5;
 }
 
+.add-comment-section {
+    flex-shrink: 0;  /* Keep visible always */
+}
+
 .add-comment-section h4 {
     font-size: 14px;
     color: var(--text-muted);
@@ -932,7 +1028,7 @@ input:checked + .slider:before {
 
 .comment-input {
     width: 100%;
-    height: 100px;
+    height: 50px;
     background-color: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: 8px;
@@ -983,6 +1079,13 @@ input:checked + .slider:before {
     justify-content: center;
     font-size: 60px;
     color: var(--primary);
+    overflow: hidden;
+}
+
+.profile-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
 .profile-info {
@@ -1047,6 +1150,11 @@ input:checked + .slider:before {
     padding: 40px;
     max-width: 800px;
     margin: 0 auto;
+    height: 100%;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
 }
 
 .profile-edit-container.hidden {
@@ -1266,4 +1374,888 @@ input:checked + .slider:before {
 .btn-book:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+}
+
+/* Hamburger Menu Icon */
+.menu-toggle {
+    display: none;
+    background: none;
+    border: none;
+    color: var(--text-main);
+    font-size: 24px;
+    cursor: pointer;
+    padding: 8px 12px;
+    transition: color 0.2s;
+    margin-right: 10px;
+    line-height: 1;
+    min-width: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.menu-toggle:hover {
+    color: var(--primary);
+}
+
+@media (max-width: 768px) {
+    .menu-toggle {
+        display: flex;
+    }
+}
+
+/* ===== MOBILE RESPONSIVE DESIGN ===== */
+
+/* Tablets and Small Devices (768px and below) */
+@media (max-width: 768px) {
+    body {
+        flex-direction: column;
+        height: auto;
+        overflow: auto;
+    }
+
+    .main-content {
+        width: 100%;
+        height: auto;
+        margin-top: 60px;
+        overflow: visible;
+    }
+
+    .content-area {
+        height: auto;
+        overflow: visible;
+    }
+
+    .top-header {
+        height: auto;
+        min-height: 60px;
+        padding: 10px 15px;
+        position: sticky;
+        top: 0;
+        z-index: 999;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .top-nav {
+        gap: 15px;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+
+    .top-nav a {
+        font-size: 12px;
+        padding: 6px 10px;
+        white-space: nowrap;
+    }
+
+    .user-profile {
+        gap: 10px;
+        margin-left: auto;
+    }
+
+    .user-badge {
+        padding: 6px 12px;
+        font-size: 12px;
+    }
+
+    .avatar {
+        width: 28px;
+        height: 28px;
+        font-size: 11px;
+    }
+
+    .btn-signout {
+        padding: 6px 15px;
+        font-size: 12px;
+    }
+
+    .view-container {
+        padding: 20px 15px;
+    }
+
+    .view-header {
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .greeting h1 {
+        font-size: 20px;
+    }
+
+    .greeting p {
+        font-size: 13px;
+    }
+
+    .stats-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
+        margin-bottom: 20px;
+    }
+
+    .stat-card {
+        padding: 15px;
+    }
+
+    .stat-value {
+        font-size: 24px;
+    }
+
+    .stat-label {
+        font-size: 12px;
+    }
+
+    .appointment-item {
+        flex-direction: column;
+        gap: 10px;
+        padding: 15px;
+    }
+
+    .appt-time {
+        width: auto;
+        font-size: 14px;
+    }
+
+    .appt-details {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .appt-icon {
+        width: 35px;
+        height: 35px;
+        font-size: 16px;
+    }
+
+    .appt-info h4 {
+        font-size: 14px;
+    }
+
+    .appt-info p {
+        font-size: 12px;
+    }
+
+    .patient-card {
+        padding: 15px !important;
+    }
+
+    .patient-card h3 {
+        font-size: 14px !important;
+    }
+
+    .badge {
+        font-size: 11px;
+        padding: 4px 8px;
+    }
+
+    .btn-sm {
+        padding: 5px 10px;
+        font-size: 11px;
+    }
+
+    /* Availability Container */
+    .availability-container {
+        grid-template-columns: 1fr;
+        gap: 20px;
+        height: auto;
+    }
+
+    .days-config {
+        padding: 15px;
+    }
+
+    .day-config {
+        padding-bottom: 12px;
+        margin-bottom: 12px;
+    }
+
+    .time-inputs {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .time-input-group input {
+        padding: 8px;
+        font-size: 13px;
+    }
+
+    .preview-day-selector {
+        gap: 6px;
+    }
+
+    .preview-day-btn {
+        padding: 6px 12px;
+        font-size: 12px;
+    }
+
+    .slots-preview-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
+
+    .preview-slot {
+        padding: 10px;
+        font-size: 12px;
+    }
+
+    /* Profile */
+    .profile-container {
+        gap: 15px;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .profile-edit-container {
+        padding: 20px 15px;
+        max-height: calc(100vh - 120px);
+        overflow-y: auto;
+    }
+
+    .profile-photo {
+        width: 120px;
+        height: 120px;
+        font-size: 48px;
+    }
+
+    .profile-name {
+        font-size: 20px;
+    }
+
+    .profile-specialty {
+        font-size: 14px;
+    }
+
+    .profile-fee {
+        font-size: 16px;
+    }
+
+    .profile-stats {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .photo-upload {
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .photo-preview {
+        width: 100px;
+        height: 100px;
+        font-size: 40px;
+    }
+
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+
+    .form-actions {
+        flex-direction: column;
+    }
+
+    .form-actions button {
+        width: 100%;
+    }
+
+    /* Booking */
+    .slots-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+    }
+
+    .slot {
+        padding: 10px;
+        font-size: 12px;
+    }
+
+    .btn-book {
+        padding: 12px 20px;
+        font-size: 13px;
+    }
+
+    /* Patient Panel */
+    .patient-panel {
+        width: 100%;
+        right: -100%;
+        top: 0;
+        height: 100vh;
+        z-index: 2000;
+    }
+
+    /* Footer */
+    .main-footer {
+        padding: 12px 15px;
+    }
+
+    .footer-content {
+        flex-direction: column;
+        gap: 10px;
+        font-size: 12px;
+    }
+
+    .footer-links {
+        gap: 10px;
+    }
+
+    .footer-links a {
+        font-size: 11px;
+    }
+}
+
+/* Mobile Phones (480px and below) */
+@media (max-width: 480px) {
+    body {
+        height: auto;
+    }
+
+    .sidebar {
+        padding: 12px;
+    }
+
+    .logo {
+        font-size: 18px;
+        margin-bottom: 10px;
+        gap: 0;
+    }
+
+    .menu-section {
+        margin-bottom: 15px;
+    }
+
+    .menu-title {
+        font-size: 11px;
+        margin-bottom: 10px;
+    }
+
+    .nav-item {
+        padding: 10px 12px;
+        font-size: 13px;
+        margin-bottom: 4px;
+    }
+
+    .nav-item i {
+        width: 16px;
+        margin-right: 8px;
+    }
+
+    .main-content {
+        margin-top: 50px;
+    }
+
+    .top-header {
+        height: auto;
+        min-height: 50px;
+        padding: 8px 10px;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .top-nav {
+        gap: 12px;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+
+    .top-nav a {
+        font-size: 11px;
+        padding: 5px 8px;
+        white-space: nowrap;
+    }
+
+    .user-badge {
+        padding: 5px 10px;
+        font-size: 11px;
+        gap: 6px;
+    }
+
+    .avatar {
+        width: 25px;
+        height: 25px;
+        font-size: 10px;
+    }
+
+    .btn-signout {
+        padding: 5px 12px;
+        font-size: 11px;
+    }
+
+    .view-container {
+        padding: 15px 12px;
+    }
+
+    .greeting h1 {
+        font-size: 18px;
+    }
+
+    .greeting p {
+        font-size: 12px;
+    }
+
+    .btn-primary,
+    .btn-secondary {
+        padding: 10px 18px;
+        font-size: 12px;
+    }
+
+    .btn-primary.btn-small,
+    .btn-secondary.btn-small {
+        padding: 6px 12px;
+        font-size: 11px;
+    }
+
+    .stats-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .stat-card {
+        padding: 12px;
+    }
+
+    .stat-value {
+        font-size: 20px;
+    }
+
+    .stat-label {
+        font-size: 11px;
+    }
+
+    .stat-status {
+        font-size: 10px;
+        padding: 3px 6px;
+    }
+
+    .appointment-list {
+        gap: 10px;
+    }
+
+    .appointment-item {
+        padding: 12px;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .appt-time {
+        font-size: 13px;
+    }
+
+    .appt-details {
+        gap: 8px;
+    }
+
+    .appt-icon {
+        width: 32px;
+        height: 32px;
+        font-size: 14px;
+    }
+
+    .appt-info h4 {
+        font-size: 13px;
+        margin-bottom: 2px;
+    }
+
+    .appt-info p {
+        font-size: 11px;
+    }
+
+    .appt-actions {
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .badge {
+        font-size: 10px;
+        padding: 3px 6px;
+    }
+
+    .btn-sm {
+        padding: 4px 8px;
+        font-size: 10px;
+    }
+
+    /* Patient cards */
+    .patient-card {
+        padding: 12px !important;
+        gap: 8px !important;
+    }
+
+    .patient-card h3 {
+        font-size: 13px !important;
+    }
+
+    .patient-card div {
+        font-size: 11px !important;
+    }
+
+    /* Schedule */
+    .schedule-section h3 {
+        font-size: 14px;
+        margin-bottom: 12px;
+    }
+
+    /* Availability */
+    .days-config {
+        padding: 12px;
+    }
+
+    .day-toggle {
+        padding: 8px 0;
+    }
+
+    .day-toggle span {
+        font-size: 13px;
+    }
+
+    .time-input-group label {
+        font-size: 11px;
+    }
+
+    .time-input-group input {
+        padding: 7px;
+        font-size: 12px;
+    }
+
+    .break-config {
+        padding: 12px;
+    }
+
+    .break-option {
+        font-size: 12px;
+    }
+
+    .slot-preview-header h3 {
+        font-size: 16px;
+    }
+
+    .slot-preview-header p {
+        font-size: 13px;
+    }
+
+    .preview-day-selector {
+        gap: 5px;
+        margin-bottom: 15px;
+    }
+
+    .preview-day-btn {
+        padding: 5px 10px;
+        font-size: 11px;
+    }
+
+    .slots-preview-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 6px;
+    }
+
+    .preview-slot {
+        padding: 8px;
+        font-size: 11px;
+    }
+
+    /* Profile Edit */
+    .profile-header {
+        padding: 20px;
+    }
+
+    .profile-edit-container {
+        padding: 15px;
+        max-height: calc(100vh - 120px);
+        overflow-y: auto;
+    }
+
+    .profile-form-section {
+        padding: 15px;
+    }
+
+    .profile-photo {
+        width: 100px;
+        height: 100px;
+        font-size: 40px;
+    }
+
+    .profile-name {
+        font-size: 18px;
+    }
+
+    .profile-specialty {
+        font-size: 12px;
+    }
+
+    .profile-stats {
+        gap: 12px;
+        margin-bottom: 10px;
+    }
+
+    .profile-stat {
+        font-size: 12px;
+    }
+
+    .profile-fee {
+        font-size: 14px;
+    }
+
+    .profile-bio {
+        font-size: 12px;
+    }
+
+    .profile-edit-container {
+        padding: 15px;
+    }
+
+    .profile-form-section {
+        padding: 15px;
+    }
+
+    .form-header {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .form-header h2 {
+        font-size: 18px;
+    }
+
+    .form-group {
+        gap: 6px;
+    }
+
+    .form-group label {
+        font-size: 12px;
+    }
+
+    .form-group input,
+    .form-group textarea {
+        padding: 10px;
+        font-size: 13px;
+    }
+
+    .form-row {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+
+    .photo-upload {
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .photo-preview {
+        width: 90px;
+        height: 90px;
+        font-size: 36px;
+    }
+
+    .form-actions {
+        gap: 10px;
+        margin-top: 15px;
+    }
+
+    .form-actions button {
+        width: 100%;
+        padding: 12px;
+        font-size: 12px;
+    }
+
+    /* Booking */
+    .booking-section {
+        padding: 15px 12px;
+    }
+
+    .date-picker {
+        padding: 10px;
+        font-size: 13px;
+    }
+
+    .slots-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
+
+    .slot {
+        padding: 10px;
+        font-size: 11px;
+    }
+
+    .btn-book {
+        margin-top: 15px;
+        padding: 12px;
+        font-size: 12px;
+    }
+
+    /* Patient Panel/Detail */
+    .patient-panel {
+        width: 100%;
+        height: 100%;
+    }
+
+    .panel-header {
+        padding: 15px;
+    }
+
+    .panel-header h2 {
+        font-size: 16px;
+    }
+
+    .btn-close {
+        font-size: 18px;
+        padding: 3px;
+    }
+
+    .panel-body {
+        padding: 15px;
+        gap: 20px;
+    }
+
+    .patient-info {
+        padding-bottom: 15px;
+    }
+
+    .patient-avatar {
+        width: 70px;
+        height: 70px;
+        margin: 0 auto 10px;
+        font-size: 28px;
+    }
+
+    .patient-info h3 {
+        font-size: 16px;
+    }
+
+    .patient-info p {
+        font-size: 12px;
+    }
+
+    .comment-section h4 {
+        font-size: 12px;
+    }
+
+    .comment-list {
+        gap: 10px;
+    }
+
+    .comment-item {
+        padding: 12px;
+    }
+
+    .comment-header {
+        margin-bottom: 6px;
+    }
+
+    .comment-author {
+        font-size: 12px;
+    }
+
+    .comment-date {
+        font-size: 11px;
+    }
+
+    .comment-text {
+        font-size: 12px;
+    }
+
+    .comment-input {
+        height: 80px;
+        padding: 10px;
+        font-size: 12px;
+    }
+
+    .add-comment-section .btn-primary {
+        padding: 10px;
+        font-size: 12px;
+    }
+
+    /* Toast Notifications */
+    .toast-container {
+        bottom: 10px;
+        right: 10px;
+        gap: 8px;
+    }
+
+    .toast {
+        padding: 12px 15px;
+        font-size: 12px;
+    }
+
+    /* Hamburger Menu Icon */
+    .menu-toggle {
+        display: none;
+        background: none;
+        border: none;
+        color: var(--text-main);
+        font-size: 24px;
+        cursor: pointer;
+        padding: 8px;
+    }
+}
+
+/* Extra Small Phones (360px and below) */
+@media (max-width: 360px) {
+    .logo {
+        font-size: 16px;
+    }
+
+    .greeting h1 {
+        font-size: 16px;
+    }
+
+    .stat-value {
+        font-size: 18px;
+    }
+
+    .appointment-item {
+        padding: 10px;
+    }
+
+    .appt-info h4 {
+        font-size: 12px;
+    }
+
+    .appt-info p {
+        font-size: 10px;
+    }
+
+    .btn-sm {
+        padding: 3px 6px;
+        font-size: 9px;
+    }
+
+    .slots-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 6px;
+    }
+
+    .slot {
+        padding: 8px;
+        font-size: 10px;
+    }
+}
+
+/* Utility Classes for Mobile */
+@media (max-width: 768px) {
+    .desktop-only {
+        display: none;
+    }
+
+    .mobile-only {
+        display: block;
+    }
+}
+
+/* Touch-friendly adjustments */
+@media (hover: none) and (pointer: coarse) {
+    button,
+    a,
+    .nav-item,
+    .appointment-item,
+    .patient-card {
+        min-height: 44px;
+        min-width: 44px;
+    }
+
+    .btn-sm {
+        min-height: 36px;
+        min-width: 36px;
+        padding: 8px 12px;
+    }
 }
