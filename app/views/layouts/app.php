@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="<?= BASE_URL ?>/css/style.css">
     <?php if (isset($extra_styles)) echo $extra_styles; ?>
+    <script>var BASE_URL = "<?= BASE_URL ?>";</script>
     <script>
         (function(){
             if(localStorage.getItem('docbook-theme')==='dark'){
@@ -28,14 +29,14 @@
             <i class="fa fa-bars"></i>
         </button>
 
-        <a href="/" class="nav-brand">Doc<span>Book</span></a>
+        <a href="<?= BASE_URL ?>/" class="nav-brand">Doc<span>Book</span></a>
 
         <!-- Desktop nav links -->
         <div class="nav-links">
-            <a href="/about"      class="nav-link <?php echo request_is('/about')      ? 'active' : ''; ?>">About</a>
-            <a href="/dashboard"  class="nav-link <?php echo request_is('/dashboard')  ? 'active' : ''; ?>">My Appointments</a>
-            <a href="/categories" class="nav-link <?php echo request_is('/categories') ? 'active' : ''; ?>">Find Doctors</a>
-            <a href="/contact"    class="nav-link <?php echo request_is('/contact')    ? 'active' : ''; ?>">Contact</a>
+            <a href="<?= BASE_URL ?>/about"      class="nav-link <?php echo request_is('/about')      ? 'active' : ''; ?>">About</a>
+            <a href="<?= BASE_URL ?>/dashboard"  class="nav-link <?php echo request_is('/dashboard')  ? 'active' : ''; ?>">My Appointments</a>
+            <a href="<?= BASE_URL ?>/categories" class="nav-link <?php echo request_is('/categories') ? 'active' : ''; ?>">Find Doctors</a>
+            <a href="<?= BASE_URL ?>/contact"    class="nav-link <?php echo request_is('/contact')    ? 'active' : ''; ?>">Contact</a>
         </div>
 
         <!-- Right actions (always visible) -->
@@ -45,14 +46,14 @@
                 <i class="fa fa-moon" id="themeIcon"></i>
             </button>
             <?php if (isset($user)): ?>
-                <a href="/profile" class="user-chip" style="text-decoration:none;cursor:pointer;">
+                <a href="<?= BASE_URL ?>/profile" class="user-chip" style="text-decoration:none;cursor:pointer;">
                     <div class="avatar-circle"><?php echo strtoupper(substr($user['name'] ?? 'U', 0, 2)); ?></div>
                     <span class="user-chip-name"><?php echo htmlspecialchars($user['name'] ?? ''); ?></span>
                 </a>
-                <a href="/logout" class="btn-signout">Sign out</a>
+                <a href="<?= BASE_URL ?>/logout" class="btn-signout">Sign out</a>
             <?php else: ?>
-                <a href="/login"  class="btn-signin">Sign in</a>
-                <a href="/signup" class="btn-signup">Sign up</a>
+                <a href="<?= BASE_URL ?>/login"  class="btn-signin">Sign in</a>
+                <a href="<?= BASE_URL ?>/signup" class="btn-signup">Sign up</a>
             <?php endif; ?>
 
             <!-- Hamburger (mobile only — opens nav drawer on RIGHT) -->
@@ -70,21 +71,21 @@
     <aside class="sidebar" id="sidebar">
         <nav class="sidebar-nav">
             <div class="sidebar-section-label">Main</div>
-            <a href="/dashboard" class="sidebar-link <?php echo request_is('/dashboard') ? 'active' : ''; ?>">
+            <a href="<?= BASE_URL ?>/dashboard" class="sidebar-link <?php echo request_is('/dashboard') ? 'active' : ''; ?>">
                 <i class="fa fa-th-large sidebar-icon"></i>
                 <span>Dashboard</span>
             </a>
-            <a href="/dashboard#upcoming" class="sidebar-link sidebar-sub-link">
+            <a href="<?= BASE_URL ?>/dashboard#upcoming" class="sidebar-link sidebar-sub-link">
                 <i class="fa fa-calendar-check sidebar-icon"></i>
                 <span>Appointments</span>
             </a>
-            <a href="/dashboard#past" class="sidebar-link sidebar-sub-link">
+            <a href="<?= BASE_URL ?>/dashboard#past" class="sidebar-link sidebar-sub-link">
                 <i class="fa fa-clock-rotate-left sidebar-icon"></i>
                 <span>History</span>
             </a>
             <?php if (isset($user)): ?>
             <div class="sidebar-section-label">Account</div>
-            <a href="/profile" class="sidebar-link <?php echo request_is('/profile') ? 'active' : ''; ?>">
+            <a href="<?= BASE_URL ?>/profile" class="sidebar-link <?php echo request_is('/profile') ? 'active' : ''; ?>">
                 <i class="fa fa-user sidebar-icon"></i>
                 <span>My Profile</span>
             </a>
@@ -100,7 +101,7 @@
                     <div class="sidebar-user-role">Patient</div>
                 </div>
             </div>
-            <a href="/logout" class="sidebar-logout" title="Sign out"><i class="fa fa-right-from-bracket"></i></a>
+            <a href="<?= BASE_URL ?>/logout" class="sidebar-logout" title="Sign out"><i class="fa fa-right-from-bracket"></i></a>
             <?php endif; ?>
         </div>
     </aside>
@@ -124,12 +125,12 @@
         </button>
     </div>
     <ul class="mobile-nav-links">
-        <li><a href="/about"      class="<?php echo request_is('/about')      ? 'active' : ''; ?>"><i class="fa fa-circle-info"></i> About</a></li>
-        <li><a href="/dashboard"  class="<?php echo request_is('/dashboard')  ? 'active' : ''; ?>"><i class="fa fa-th-large"></i> My Appointments</a></li>
-        <li><a href="/categories" class="<?php echo request_is('/categories') ? 'active' : ''; ?>"><i class="fa fa-stethoscope"></i> Find Doctors</a></li>
-        <li><a href="/contact"    class="<?php echo request_is('/contact')    ? 'active' : ''; ?>"><i class="fa fa-envelope"></i> Contact</a></li>
+        <li><a href="<?= BASE_URL ?>/about"      class="<?php echo request_is('/about')      ? 'active' : ''; ?>"><i class="fa fa-circle-info"></i> About</a></li>
+        <li><a href="<?= BASE_URL ?>/dashboard"  class="<?php echo request_is('/dashboard')  ? 'active' : ''; ?>"><i class="fa fa-th-large"></i> My Appointments</a></li>
+        <li><a href="<?= BASE_URL ?>/categories" class="<?php echo request_is('/categories') ? 'active' : ''; ?>"><i class="fa fa-stethoscope"></i> Find Doctors</a></li>
+        <li><a href="<?= BASE_URL ?>/contact"    class="<?php echo request_is('/contact')    ? 'active' : ''; ?>"><i class="fa fa-envelope"></i> Contact</a></li>
         <?php if (isset($user)): ?>
-        <li><a href="/profile"    class="<?php echo request_is('/profile')    ? 'active' : ''; ?>"><i class="fa fa-user"></i> Profile &amp; Settings</a></li>
+        <li><a href="<?= BASE_URL ?>/profile"    class="<?php echo request_is('/profile')    ? 'active' : ''; ?>"><i class="fa fa-user"></i> Profile &amp; Settings</a></li>
         <?php endif; ?>
     </ul>
     <div class="mobile-nav-actions">
@@ -138,10 +139,10 @@
                 <div class="avatar-circle"><?php echo strtoupper(substr($user['name'] ?? 'U', 0, 2)); ?></div>
                 <span><?php echo htmlspecialchars($user['name'] ?? ''); ?></span>
             </div>
-            <a href="/logout" class="btn-signout" style="text-align:center;">Sign out</a>
+            <a href="<?= BASE_URL ?>/logout" class="btn-signout" style="text-align:center;">Sign out</a>
         <?php else: ?>
-            <a href="/login"  class="btn-signin" style="text-align:center;">Sign in</a>
-            <a href="/signup" class="btn-signup" style="text-align:center;">Sign up</a>
+            <a href="<?= BASE_URL ?>/login"  class="btn-signin" style="text-align:center;">Sign in</a>
+            <a href="<?= BASE_URL ?>/signup" class="btn-signup" style="text-align:center;">Sign up</a>
         <?php endif; ?>
     </div>
 </div>

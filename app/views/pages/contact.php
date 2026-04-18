@@ -230,7 +230,7 @@ ob_start();
                     <i class="fa fa-circle-question"></i>
                     <div>
                         <strong>Looking for quick answers?</strong><br>
-                        <span style="color:var(--muted);font-size:12px;">Check out your dashboard for appointment management, or visit <a href="/categories">Find Doctors</a> to browse specialists.</span>
+                        <span style="color:var(--muted);font-size:12px;">Check out your dashboard for appointment management, or visit <a href="<?= BASE_URL ?>/categories">Find Doctors</a> to browse specialists.</span>
                     </div>
                 </div>
             </div>

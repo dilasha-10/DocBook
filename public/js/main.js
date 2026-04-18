@@ -107,7 +107,7 @@ async function apiCall(url, method = "GET", body = null) {
       : `<span class="badge badge-cancelled">Unavailable</span>`;
 
     const action = doctor.next_available_date
-      ? `<a href="/doctors/${doctor.id}" class="btn-primary" style="padding:7px 18px;font-size:13px;">Book</a>`
+      ? `<a href="${BASE_URL}/doctors/${doctor.id}" class="btn-primary" style="padding:7px 18px;font-size:13px;">Book</a>`
       : `<button class="btn-secondary" disabled style="padding:7px 18px;font-size:13px;opacity:0.4;cursor:not-allowed;">Unavailable</button>`;
 
     const expText = doctor.experience_years
@@ -151,7 +151,7 @@ async function apiCall(url, method = "GET", body = null) {
 
     grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:var(--muted);padding:40px 0;">Loading…</div>`;
 
-    fetch("/api/doctors?" + params.toString())
+    fetch(BASE_URL + "/api/doctors?" + params.toString())
       .then((r) => r.json())
       .then((res) => {
         const doctors = res.data || [];

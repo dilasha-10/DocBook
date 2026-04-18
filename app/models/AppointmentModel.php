@@ -236,7 +236,7 @@ function get_appointment_detail_with_comment(int $id): ?array
             a.reference_number,
             u.name              AS doctor_name,
             d.specialty,
-            c.name              AS category
+            c.name              AS category,
             (SELECT ac.message
                FROM appointment_comments ac
                JOIN doctors dx ON dx.user_id = ac.user_id

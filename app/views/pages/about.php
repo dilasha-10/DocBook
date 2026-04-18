@@ -16,10 +16,10 @@ ob_start();
             to book medical appointments from anywhere, anytime.
         </p>
         <div class="about-hero-actions">
-            <a href="/categories" class="btn-primary about-btn-main">
+            <a href="<?= BASE_URL ?>/categories" class="btn-primary about-btn-main">
                 <i class="fa fa-calendar-plus"></i> Book an Appointment
             </a>
-            <a href="/contact" class="about-btn-secondary">
+            <a href="<?= BASE_URL ?>/contact" class="about-btn-secondary">
                 <i class="fa fa-envelope"></i> Get in Touch
             </a>
         </div>
@@ -171,8 +171,8 @@ ob_start();
         <h2>Ready to take control of your health?</h2>
         <p>Join thousands of patients who trust DocBook for their medical appointments.</p>
         <div class="about-cta-actions">
-            <a href="/signup" class="btn-primary">Create Free Account</a>
-            <a href="/contact" class="about-btn-secondary" style="color:#fff;border-color:rgba(255,255,255,0.4);">Contact Us</a>
+            <a href="<?= BASE_URL ?>/signup" class="btn-primary">Create Free Account</a>
+            <a href="<?= BASE_URL ?>/contact" class="about-btn-secondary" style="color:#fff;border-color:rgba(255,255,255,0.4);">Contact Us</a>
         </div>
     </section>
 
