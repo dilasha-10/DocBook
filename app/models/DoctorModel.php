@@ -6,6 +6,7 @@ function get_filtered_doctors(?string $category = null, ?string $search = null):
 {
     $pdo = db_connect();
 
+    // Base query: fetch doctor details along with their category and next available date
     $sql = "
         SELECT
             d.id,
@@ -34,25 +35,30 @@ function get_filtered_doctors(?string $category = null, ?string $search = null):
         WHERE 1 = 1
     ";
 
+    // Holds named parameter bindings for the prepared statement
     $params = [];
 
+    // Filter by category slug if provided and not 'all'
     if (!empty($category) && $category !== 'all') {
         $sql .= " AND c.slug = :category ";
         $params[':category'] = strtolower(trim($category));
     }
 
+    // Filter by doctor name using a partial match if a search term is provided
     if (!empty($search)) {
         $sql .= " AND u.name LIKE :search ";
         $params[':search'] = '%' . trim($search) . '%';
     }
 
+    // Group by all non-aggregated fields and sort results alphabetically by name
     $sql .= "
         GROUP BY
             d.id, u.name, d.photo, d.specialty, d.bio, d.experience_years,
             c.name, c.slug
         ORDER BY u.name ASC
     ";
-
+    
+    // Prepare and execute the query with bound parameters
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -105,17 +111,20 @@ function get_doctor_availability(int $doctor_id): array
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
-//  Fetch already-booked slots for a doctor on a specific date 
+// Fetch full-hour slots for a doctor on a date (max 5 patients per hour).
+// Returns array of hour start_times (e.g. "09:00:00") where the hour is at capacity.
 function get_booked_slots(int $doctor_id, string $date): array
 {
     $pdo  = db_connect();
     $stmt = $pdo->prepare("
-        SELECT start_time
+        SELECT TIME_FORMAT(start_time, '%H:00:00') AS hour_slot, COUNT(*) AS cnt
         FROM   appointments
         WHERE  doctor_id        = :did
           AND  appointment_date = :date
           AND  status NOT IN ('Cancelled', 'Rescheduled')
+        GROUP BY hour_slot
+        HAVING cnt >= 5
     ");
     $stmt->execute([':did' => $doctor_id, ':date' => $date]);
-    return array_column($stmt->fetchAll(PDO::FETCH_ASSOC), 'start_time');
+    return array_column($stmt->fetchAll(PDO::FETCH_ASSOC), 'hour_slot');
 }
