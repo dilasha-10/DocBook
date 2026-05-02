@@ -2,7 +2,7 @@
 
 require_once BASE_PATH . '/app/models/User.php';
 
-// Auth helpers
+// ── Auth helpers ──────────────────────────────────────────────────────────────
 
 function auth_user(): ?array
 {
@@ -35,7 +35,7 @@ function require_auth_api(): array
     return $user;
 }
 
-// GET /login
+// ── GET /login ────────────────────────────────────────────────────────────────
 
 function login_get(): void
 {
@@ -47,7 +47,7 @@ function login_get(): void
     exit;
 }
 
-// POST /login
+// ── POST /login ───────────────────────────────────────────────────────────────
 
 function login_post(): void
 {
@@ -89,7 +89,7 @@ function login_post(): void
     redirect('/dashboard');
 }
 
-// GET /signup
+// ── GET /signup ───────────────────────────────────────────────────────────────
 
 function signup_get(): void
 {
@@ -101,7 +101,7 @@ function signup_get(): void
     exit;
 }
 
-// POST /signup
+// ── POST /signup ──────────────────────────────────────────────────────────────
 
 function signup_post(): void
 {
@@ -189,7 +189,7 @@ function signup_post(): void
     redirect('/login?registered=1');
 }
 
-// GET /logout
+// ── GET /logout ───────────────────────────────────────────────────────────────
 
 function logout(): void
 {

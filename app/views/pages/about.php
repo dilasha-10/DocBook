@@ -52,7 +52,7 @@ ob_start();
         </div>
     </section>
 
-    <!-- Mission Section -->
+    <!-- ── Mission Section ──────────────────────────────────── -->
     <section class="about-section">
         <div class="about-two-col">
             <div class="about-text-col">
@@ -115,7 +115,7 @@ ob_start();
         </div>
     </section>
 
-    <!-- How It Works -->
+    <!-- ── How It Works ─────────────────────────────────────── -->
     <section class="about-section about-how-section">
         <div class="about-section-tag center"><i class="fa fa-route"></i> How It Works</div>
         <h2 class="about-section-title center">Three Steps to Your Appointment</h2>
@@ -143,7 +143,7 @@ ob_start();
         </div>
     </section>
 
-    <!-- Values -->
+    <!-- ── Values ───────────────────────────────────────────── -->
     <section class="about-section">
         <div class="about-section-tag center"><i class="fa fa-star"></i> Our Values</div>
         <h2 class="about-section-title center">What We Stand For</h2>
@@ -166,7 +166,7 @@ ob_start();
         </div>
     </section>
 
-    <!-- CTA -->
+    <!-- ── CTA ──────────────────────────────────────────────── -->
     <section class="about-cta">
         <h2>Ready to take control of your health?</h2>
         <p>Join thousands of patients who trust DocBook for their medical appointments.</p>

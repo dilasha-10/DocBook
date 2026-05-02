@@ -10,7 +10,7 @@ $patient_id = (int) $user['id'];
 
 $extra_styles = <<<CSS
 <style>
-/* Chat page layout: fills entire remaining viewport, no scroll */
+/* ── Chat page layout: fills entire remaining viewport, no scroll ── */
 .chat-page-wrap {
     display: flex;
     height: calc(100vh - 64px);
@@ -20,7 +20,7 @@ $extra_styles = <<<CSS
     overflow: hidden;
 }
 
-/* Chat main area */
+/* ── Chat main area ───────────────────────────────────────── */
 .chat-main {
     flex: 1;
     display: flex;
@@ -29,7 +29,7 @@ $extra_styles = <<<CSS
     background: var(--bg);
 }
 
-/* Chat header */
+/* ── Chat header ─────────────────────────────────────────── */
 .chat-header {
     background: var(--surface);
     border-bottom: 1px solid var(--border);
@@ -63,7 +63,7 @@ $extra_styles = <<<CSS
     border-radius: 999px; border: 1px solid rgba(77,166,232,0.3); white-space: nowrap;
 }
 
-/* Messages area */
+/* ── Messages area ─────────────────────────────────────────── */
 .chat-messages-area {
     flex: 1;
     overflow-y: auto;
@@ -145,7 +145,7 @@ $extra_styles = <<<CSS
 .chat-empty-state i { font-size: 40px; color: var(--border2); }
 .chat-empty-state p { font-size: 15px; }
 
-/* Input bar */
+/* ── Input bar ─────────────────────────────────────────────── */
 .chat-input-bar {
     background: var(--surface);
     border-top: 1px solid var(--border);
@@ -290,7 +290,6 @@ function buildBubble(msg) {
     return html;
 }
 
-/* Fetch and render all messages for the current appointment */
 function loadMessages() {
     fetch(BASE_URL + '/api/messages/' + APPT_ID)
         .then(r => r.json())
@@ -298,28 +297,22 @@ function loadMessages() {
             if (!d.success) return;
             const area  = document.getElementById('messagesArea');
             const empty = document.getElementById('emptyState');
-
-            /* Show the empty state placeholder if there are no messages */
             if (d.data.length === 0) {
                 if (empty) empty.style.display = 'flex';
                 return;
             }
-            /* Reset the date separator tracker before rendering */
             if (empty) empty.remove();
             lastDate = null;
-
-            /* Render all message bubbles and scroll to the bottom */
             area.innerHTML = d.data.map(buildBubble).join('');
             area.scrollTop = area.scrollHeight;
         });
 }
-/* Send a new message and append it to the conversation */
+
 function sendMessage() {
     const input = document.getElementById('msgInput');
     const msg   = input.value.trim();
     if (!msg) return;
 
-    /* Disable the send button to prevent duplicate submissions */
     const btn = document.getElementById('sendBtn');
     btn.disabled = true;
 
@@ -334,14 +327,11 @@ function sendMessage() {
         const area  = document.getElementById('messagesArea');
         const empty = document.getElementById('emptyState');
         if (empty) empty.remove();
-
-        /* Append the new message bubble and scroll to the bottom */
         area.insertAdjacentHTML('beforeend', buildBubble(d.data));
         area.scrollTop = area.scrollHeight;
         input.value = '';
         input.style.height = 'auto';
     })
-    /*  Re-enable the send button regardless of success or failure */
     .finally(() => { btn.disabled = false; });
 }
 

@@ -187,15 +187,15 @@ $oldEmail = htmlspecialchars(trim($_POST['email'] ?? ''));
             --text-dark:   #f0f0f0;
             --text-mid:    #888888;
             --text-light:  #555555;
-            --white:       #2c2c2c;
+            --white:       #111111;
             --error:       #d06060;
             --success:     #50a878;
         }
         [data-theme="dark"] html,
-        [data-theme="dark"] body { background: #2c2c2c; }
+        [data-theme="dark"] body { background: #111111; }
 
         [data-theme="dark"] .auth-navbar {
-            background: #242424;
+            background: #0a0a0a;
             border-bottom-color: rgba(255,255,255,0.07);
         }
         [data-theme="dark"] .auth-navbar .nav-logo { color: #f0f0f0; }
@@ -220,7 +220,7 @@ $oldEmail = htmlspecialchars(trim($_POST['email'] ?? ''));
         }
 
         [data-theme="dark"] .form-panel,
-        [data-theme="dark"] .right-panel { background: #2c2c2c; }
+        [data-theme="dark"] .right-panel { background: #111111; }
 
         [data-theme="dark"] .logo,
         [data-theme="dark"] .auth-content h1,
@@ -319,14 +319,6 @@ $oldEmail = htmlspecialchars(trim($_POST['email'] ?? ''));
             background: rgba(74,143,196,0.10);
             border-color: #4a8fc4;
             color: #4a8fc4;
-        }
-        [data-theme="dark"] input:-webkit-autofill,
-        [data-theme="dark"] input:-webkit-autofill:hover,
-        [data-theme="dark"] input:-webkit-autofill:focus {
-            -webkit-box-shadow: 0 0 0px 1000px #404040 inset !important;
-            -webkit-text-fill-color: #eeeeee !important;
-            border-color: #555555 !important;
-            transition: background-color 5000s ease-in-out 0s;
         }
     </style>
 
