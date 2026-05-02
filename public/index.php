@@ -62,6 +62,7 @@ require_once BASE_PATH . '/app/controllers/PatientController.php';
 require_once BASE_PATH . '/app/controllers/DoctorController.php';
 require_once BASE_PATH . '/app/controllers/PageController.php';
 require_once BASE_PATH . '/app/controllers/AdminController.php';
+require_once BASE_PATH . '/app/controllers/ChatbotController.php';
 
 // Routing
 
@@ -135,11 +136,18 @@ if (preg_match('#^/api/messages/(\d+)$#', $uri, $m) && $method === 'GET')  { api
 if (preg_match('#^/api/messages/(\d+)$#', $uri, $m) && $method === 'POST') { api_send_message((int)$m[1]); }
 
 // Admin pages
-if ($uri === '/admin/dashboard'    && $method === 'GET') { admin_dashboard_page();    }
-if ($uri === '/admin/transactions' && $method === 'GET') { admin_transactions_page(); }
+if ($uri === '/admin/dashboard'             && $method === 'GET')   { admin_dashboard_page();              }
+if ($uri === '/admin/transactions'          && $method === 'GET')   { admin_transactions_page();           }
+if ($uri === '/admin/chatbot-escalations'   && $method === 'GET')   { admin_chatbot_escalations_page();    }
 
 // Admin API routes
-if ($uri === '/admin/api/transactions' && $method === 'GET') { api_admin_transactions(); }
+if ($uri === '/admin/api/transactions'      && $method === 'GET')   { api_admin_transactions();            }
+if ($uri === '/admin/api/chatbot/escalations' && $method === 'GET') { api_admin_chatbot_escalations();     }
+if (preg_match('#^/admin/api/chatbot/escalations/(\d+)$#', $uri, $m) && $method === 'PATCH') { api_admin_chatbot_update((int)$m[1]); }
+
+// Chatbot API routes (patient)
+if ($uri === '/api/chatbot/message'  && $method === 'POST') { api_chatbot_message();  }
+if ($uri === '/api/chatbot/escalate' && $method === 'POST') { api_chatbot_escalate(); }
 
 // Payment routes
 if ($uri === '/api/payment/initiate' && $method === 'POST') { api_payment_initiate(); }

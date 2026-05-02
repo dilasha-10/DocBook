@@ -40,10 +40,7 @@ function admin_transactions_page()
 }
 
 // API: GET /admin/api/transactions
-// Query params:
-//   date_from  YYYY-MM-DD  (optional) inclusive start date filter on paid_at
-//   date_to    YYYY-MM-DD  (optional) inclusive end   date filter on paid_at
-//   search     string — matches patient name, doctor name, or transaction_id
+//   search     string - matches patient name, doctor name, or transaction_id
 
 function api_admin_transactions()
 {

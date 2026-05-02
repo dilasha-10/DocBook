@@ -172,6 +172,7 @@ function payment_success_page()
 
 function payment_failure_page()
 {
+    if (session_status() === PHP_SESSION_NONE) session_start();
     $user = require_auth();
 
     $raw     = $_GET['data'] ?? '';
@@ -185,45 +186,165 @@ function payment_failure_page()
     if ($transaction_uuid) {
         $pdo = db_connect();
 
-        // Mark the transaction as failed
+        // Only update the transaction row if one exists (it won't on a first-attempt failure
+        // because api_book_appointment never pre-inserts a transaction — it only inserts
+        // after payment success). This UPDATE is a no-op when no row matches, which is safe.
         $pdo->prepare("UPDATE transactions SET status = 'failed' WHERE transaction_id = ? AND patient_id = ?")
             ->execute([$transaction_uuid, $user['id']]);
 
-        // Clean up the pending_booking DB row on failure too
+        // Clean up the pending_booking DB row so stale data doesn't accumulate
         $pdo->prepare("DELETE FROM pending_bookings WHERE transaction_uuid = ?")
             ->execute([$transaction_uuid]);
     }
 
-    // Leave the appointment as 'Pending' — patient can retry payment from the dashboard
-    render_payment_error('Payment was cancelled or failed. Your appointment slot is still held. Please try again from your dashboard.');
+    // Clear session pending data too
+    unset($_SESSION['pending_booking']);
+
+    render_payment_error('Payment was cancelled or failed. Please try booking again.');
+}
+
+// API: POST /api/payment/initiate
+// Called from the booking-confirm page when the user clicks "Pay with eSewa".
+// Looks up the pending appointment by appointment_id, re-generates a fresh
+// transaction_uuid + signature, saves to pending_bookings, and returns the
+// eSewa form fields. This is the retry path — the first-time path goes through
+// api_book_appointment() in PatientController which handles booking + payment together.
+
+function api_payment_initiate(): void
+{
+    if (session_status() === PHP_SESSION_NONE) session_start();
+
+    $authUser   = require_auth_api();
+    $patient_id = (int) $authUser['id'];
+
+    $body        = json_decode(file_get_contents('php://input'), true) ?? [];
+    $appt_id     = (int) ($body['appointment_id'] ?? 0);
+
+    if (!$appt_id) {
+        json_response(['success' => false, 'message' => 'Missing appointment_id.'], 422);
+    }
+
+    $pdo = db_connect();
+
+    // Load the appointment — must belong to this patient and still be Confirmed or Pending
+    $stmt = $pdo->prepare("
+        SELECT a.*, t.status AS txn_status
+        FROM appointments a
+        LEFT JOIN transactions t ON t.appointment_id = a.id AND t.status = 'paid'
+        WHERE a.id = :id AND a.patient_id = :pid
+    ");
+    $stmt->execute([':id' => $appt_id, ':pid' => $patient_id]);
+    $appt = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$appt) {
+        json_response(['success' => false, 'message' => 'Appointment not found.'], 404);
+    }
+
+    // Already paid — no need to pay again
+    if ($appt['txn_status'] === 'paid') {
+        json_response(['success' => false, 'message' => 'This appointment has already been paid.'], 409);
+    }
+
+    // Generate a fresh transaction UUID for this retry attempt
+    $transaction_uuid = 'TXN-' . strtoupper(bin2hex(random_bytes(8)));
+
+    // Upsert into pending_bookings so PaymentController can retrieve it after the
+    // browser round-trips through eSewa (session is unreliable cross-domain).
+    $pdo->prepare("
+        INSERT INTO pending_bookings
+            (transaction_uuid, patient_id, doctor_id, appointment_date,
+             start_time, end_time, reason, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
+        ON DUPLICATE KEY UPDATE created_at = NOW()
+    ")->execute([
+        $transaction_uuid,
+        $patient_id,
+        $appt['doctor_id'],
+        $appt['appointment_date'],
+        $appt['start_time'],
+        $appt['end_time'],
+        $appt['visit_reason'] ?? null,
+    ]);
+
+    // Keep session as best-effort fallback (may be lost on cross-domain redirect)
+    $_SESSION['pending_booking'] = [
+        'transaction_uuid' => $transaction_uuid,
+        'patient_id'       => $patient_id,
+        'doctor_id'        => $appt['doctor_id'],
+        'date'             => $appt['appointment_date'],
+        'start_time'       => $appt['start_time'],
+        'end_time'         => $appt['end_time'],
+        'reason'           => $appt['visit_reason'] ?? null,
+    ];
+
+    $amount    = number_format(APPOINTMENT_AMOUNT, 2, '.', '');
+    $tax       = number_format(APPOINTMENT_TAX,   2, '.', '');
+    $total     = number_format(APPOINTMENT_AMOUNT + APPOINTMENT_TAX, 2, '.', '');
+    $signature = esewa_signature($total, $transaction_uuid);
+
+    json_response([
+        'success'   => true,
+        'esewa_url' => ESEWA_GATEWAY_URL,
+        'fields'    => [
+            'amount'                  => $amount,
+            'tax_amount'              => $tax,
+            'total_amount'            => $total,
+            'transaction_uuid'        => $transaction_uuid,
+            'product_code'            => ESEWA_PRODUCT_CODE,
+            'product_service_charge'  => '0.00',
+            'product_delivery_charge' => '0.00',
+            'success_url'             => BASE_URL . '/payment/success',
+            'failure_url'             => BASE_URL . '/payment/failure',
+            'signed_field_names'      => 'total_amount,transaction_uuid,product_code',
+            'signature'               => $signature,
+        ],
+    ]);
 }
 
 // Shared error renderer
 
 function render_payment_error(string $message): void
 {
+    // Determine the best "try again" destination:
+    // If a referer is available and it's our own booking page, link back there.
+    $referer     = $_SERVER['HTTP_REFERER'] ?? '';
+    $tryAgainUrl = (defined('BASE_URL') ? BASE_URL : '') . '/categories';
+
     http_response_code(402);
+    $escapedMsg = htmlspecialchars($message, ENT_QUOTES, 'UTF-8');
+    $dashUrl    = (defined('BASE_URL') ? BASE_URL : '') . '/dashboard';
     echo <<<HTML
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Payment Error</title>
+<title>Payment Error — DocBook</title>
 <style>
-  body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f4f6fb;font-family:sans-serif;}
-  .card{background:#fff;border-radius:16px;padding:40px 32px;max-width:380px;width:100%;text-align:center;box-shadow:0 4px 24px rgba(0,0,0,.08);}
-  h2{color:#f59e0b;margin:0 0 12px;}
-  p{color:#555;font-size:14px;line-height:1.6;margin:0 0 24px;}
-  a{display:inline-block;padding:11px 28px;background:#3b9ddd;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f4f6fb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:16px;}
+  .card{background:#fff;border-radius:16px;padding:40px 32px;max-width:400px;width:100%;text-align:center;box-shadow:0 2px 16px rgba(0,0,0,.08);}
+  .icon{font-size:48px;margin-bottom:16px;}
+  h2{color:#f59e0b;font-size:22px;font-weight:700;margin-bottom:10px;}
+  p{color:#555;font-size:14px;line-height:1.6;margin-bottom:28px;}
+  .actions{display:flex;gap:10px;flex-direction:column;}
+  .btn-primary{display:block;padding:12px 24px;background:#0d9488;color:#fff;border-radius:9px;text-decoration:none;font-weight:600;font-size:14px;}
+  .btn-secondary{display:block;padding:12px 24px;background:transparent;color:#555;border:1px solid #ddd;border-radius:9px;text-decoration:none;font-weight:600;font-size:14px;}
+  .btn-primary:hover{background:#0b7d74;}
+  .btn-secondary:hover{border-color:#aaa;color:#333;}
+  .hint{font-size:12px;color:#999;margin-top:20px;line-height:1.5;}
 </style>
 </head>
 <body>
   <div class="card">
-    <div style="font-size:48px;margin-bottom:16px;">⚠️</div>
+    <div class="icon">⚠️</div>
     <h2>Payment Error</h2>
-    <p>{$message}</p>
-    <a href="/dashboard">Go to Dashboard</a>
+    <p>{$escapedMsg}</p>
+    <div class="actions">
+      <a href="{$tryAgainUrl}" class="btn-primary">Try booking again</a>
+      <a href="{$dashUrl}" class="btn-secondary">Go to Dashboard</a>
+    </div>
+    <p class="hint">If you were charged but see this error, please contact support with your transaction details. Your slot has been released.</p>
   </div>
 </body>
 </html>

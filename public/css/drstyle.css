@@ -733,7 +733,7 @@ input:checked + .slider:before { transform: translateX(18px); }
 /* ── Dark mode: time & date picker fixes ── */
 [data-theme="dark"] .time-input-group input[type="time"] {
     color-scheme: dark;
-    background: var(--surface2, #1e2130);
+    background: var(--surface2, #404040);
     color: var(--text);
     border-color: var(--border2);
 }
@@ -744,7 +744,7 @@ input:checked + .slider:before { transform: translateX(18px); }
 }
 [data-theme="dark"] input[type="date"] {
     color-scheme: dark;
-    background: var(--surface2, #1e2130);
+    background: var(--surface2, #404040);
     color: var(--text);
     border-color: var(--border2);
 }
@@ -756,7 +756,7 @@ input:checked + .slider:before { transform: translateX(18px); }
 /* ── Dark mode: time input stronger override ── */
 [data-theme="dark"] input[type="time"] {
     color-scheme: dark !important;
-    background: var(--surface2, #1e2130) !important;
+    background: var(--surface2, #404040) !important;
     color: var(--text) !important;
     border-color: var(--border2) !important;
 }
@@ -764,4 +764,16 @@ input:checked + .slider:before { transform: translateX(18px); }
     filter: invert(1) brightness(1.8) !important;
     opacity: 0.9;
     cursor: pointer;
+}
+/* Kill browser autofill light-blue override */
+[data-theme="dark"] input:-webkit-autofill,
+[data-theme="dark"] input:-webkit-autofill:hover,
+[data-theme="dark"] input:-webkit-autofill:focus,
+[data-theme="dark"] textarea:-webkit-autofill,
+[data-theme="dark"] select:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0px 1000px var(--surface2) inset !important;
+  -webkit-text-fill-color: var(--text) !important;
+  caret-color: var(--text);
+  border-color: var(--border2) !important;
+  transition: background-color 5000s ease-in-out 0s;
 }

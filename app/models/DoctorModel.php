@@ -116,14 +116,15 @@ function get_doctor_availability(int $doctor_id): array
 function get_booked_slots(int $doctor_id, string $date): array
 {
     $pdo  = db_connect();
+    // Return every booking's hour bucket so the frontend can count per-slot.
+    // The frontend accumulates counts and marks a slot full only when it reaches 5.
     $stmt = $pdo->prepare("
-        SELECT TIME_FORMAT(start_time, '%H:00:00') AS hour_slot, COUNT(*) AS cnt
+        SELECT TIME_FORMAT(start_time, '%H:00:00') AS hour_slot
         FROM   appointments
         WHERE  doctor_id        = :did
           AND  appointment_date = :date
           AND  status NOT IN ('Cancelled', 'Rescheduled')
-        GROUP BY hour_slot
-        HAVING cnt >= 5
+        ORDER BY start_time
     ");
     $stmt->execute([':did' => $doctor_id, ':date' => $date]);
     return array_column($stmt->fetchAll(PDO::FETCH_ASSOC), 'hour_slot');
