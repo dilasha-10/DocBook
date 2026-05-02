@@ -140,7 +140,7 @@ function reschedule_appointment(int $id, string $new_date, string $new_start, st
             INSERT INTO appointments
                 (patient_id, doctor_id, appointment_date, start_time, end_time, reference_number, status, visit_reason)
             VALUES
-                (:pid, :did, :date, :start, :end, :ref, 'Pending', :reason)
+                (:pid, :did, :date, :start, :end, :ref, 'Confirmed', :reason)
         ");
         $ins->execute([
             ':pid'    => $appt['patient_id'],
@@ -183,7 +183,7 @@ function cancel_appointment(int $id, int $patient_id): array
         $upd = $pdo->prepare("UPDATE appointments SET status = 'Cancelled' WHERE id = :id");
         $upd->execute([':id' => $id]);
 
-        // Write audit log entry (best-effort — table may not exist yet)
+        // Write audit log entry (best-effort - table may not exist yet)
         try {
             $log = $pdo->prepare("
                 INSERT INTO appointment_audit_log
@@ -193,7 +193,7 @@ function cancel_appointment(int $id, int $patient_id): array
             ");
             $log->execute([':appt_id' => $id, ':user_id' => $patient_id]);
         } catch (Exception $e) {
-            // audit log table not yet created — skip silently
+            // audit log table not yet created - skip silently
         }
 
         $pdo->commit();
@@ -220,7 +220,7 @@ function get_appointment_stats($patient_id) {
     $stmt->execute([':pid' => $patient_id]);
     return $stmt->fetch(PDO::FETCH_ASSOC) ?: ['upcoming' => 0, 'total' => 0, 'pending' => 0];
 }
-// ── GET /api/appointments/:id — detail with doctor's latest comment ────────────
+// GET /api/appointments/:id - detail with doctor's latest comment
 function get_appointment_detail_with_comment(int $id): ?array
 {
     $pdo  = db_connect();
@@ -254,7 +254,7 @@ function get_appointment_detail_with_comment(int $id): ?array
     return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
 }
 
-// ── GET /api/appointments/:id/comments — full chat thread ─────────────────────
+// GET /api/appointments/:id/comments - full chat thread
 function get_appointment_comments(int $appointment_id): array
 {
     $pdo  = db_connect();
@@ -269,7 +269,7 @@ function get_appointment_comments(int $appointment_id): array
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
-// ── POST /api/appointments/:id/comments — patient posts a message ─────────────
+// POST /api/appointments/:id/comments - patient posts a message
 function create_appointment_comment(int $appointment_id, int $user_id, string $message): array
 {
     $pdo  = db_connect();
@@ -291,7 +291,7 @@ function create_appointment_comment(int $appointment_id, int $user_id, string $m
     return $fetch->fetch(PDO::FETCH_ASSOC) ?: [];
 }
 
-// ── GET /api/patient/appointments — list with doctor name and status ──────────
+// GET /api/patient/appointments - list with doctor name and status 
 function get_patient_appointments_list(int $patient_id): array
 {
     $pdo  = db_connect();

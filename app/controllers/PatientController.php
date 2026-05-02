@@ -283,7 +283,14 @@ function api_book_appointment()
             (transaction_uuid, patient_id, doctor_id, appointment_date,
              start_time, end_time, reason, created_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
-        ON DUPLICATE KEY UPDATE created_at = NOW()
+        ON DUPLICATE KEY UPDATE
+            patient_id       = VALUES(patient_id),
+            doctor_id        = VALUES(doctor_id),
+            appointment_date = VALUES(appointment_date),
+            start_time       = VALUES(start_time),
+            end_time         = VALUES(end_time),
+            reason           = VALUES(reason),
+            created_at       = NOW()
     ")->execute([
         $transaction_uuid,
         $patient_id,
@@ -320,8 +327,8 @@ function api_book_appointment()
             'total_amount'            => $total,
             'transaction_uuid'        => $transaction_uuid,
             'product_code'            => ESEWA_PRODUCT_CODE,
-            'product_service_charge'  => '0',
-            'product_delivery_charge' => '0',
+            'product_service_charge'  => '0.00',
+            'product_delivery_charge' => '0.00',
             'success_url'             => BASE_URL . '/payment/success',
             'failure_url'             => BASE_URL . '/payment/failure',
             'signed_field_names'      => 'total_amount,transaction_uuid,product_code',

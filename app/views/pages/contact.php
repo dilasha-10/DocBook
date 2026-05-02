@@ -4,7 +4,7 @@ ob_start();
 ?>
 
 <style>
-/* Contact page — fills viewport, no scroll */
+/* Contact page - fills viewport, no scroll */
 .contact-page-wrap {
     display: flex;
     flex-direction: column;

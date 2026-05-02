@@ -56,7 +56,18 @@ ob_start();
         </div>
 
         <div class="section-title">Select new date</div>
-        <div class="date-grid" id="dateGrid"></div>
+        <div class="two-week-grid">
+            <div class="week-block">
+                <div class="week-block-label" id="week1Label"></div>
+                <div class="rsch-week-hdr" id="rschHdr1"></div>
+                <div class="rsch-week-dates" id="rschDates1"></div>
+            </div>
+            <div class="week-block">
+                <div class="week-block-label" id="week2Label"></div>
+                <div class="rsch-week-hdr" id="rschHdr2"></div>
+                <div class="rsch-week-dates" id="rschDates2"></div>
+            </div>
+        </div>
 
         <div class="section-title">Select new time</div>
         <div class="slots-wrap" id="slotsWrap">
@@ -86,8 +97,15 @@ ob_start();
     var AVAIL   = <?= $availJson ?>;
     var DOCTOR  = <?= $doctorJson ?>;
     var APPT_ID = <?= $apptId ?>;
-    var DAY_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    var DAY_NAMES  = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    var DAY_SHORT  = ['Su','Mo','Tu','We','Th','Fr','Sa'];
     var selectedDate = null, selectedStart = null, selectedEnd = null, bookedOnDate = [];
+
+    function getNPTNow() {
+        var now = new Date();
+        var utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
+        return new Date(utcMs + (5 * 60 + 45) * 60000);
+    }
 
     function toISO(d) {
         return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
@@ -99,21 +117,60 @@ ob_start();
         return (h%12||12) + ':' + m + ' ' + (h>=12?'PM':'AM');
     }
 
-    function buildDateGrid() {
-        var grid = document.getElementById('dateGrid');
-        grid.innerHTML = '';
-        var today = new Date(); today.setHours(0,0,0,0);
-        for (var i = 0; i < 7; i++) {
-            var d = new Date(today); d.setDate(today.getDate() + i);
-            var dayName = DAY_NAMES[d.getDay()];
-            var btn = document.createElement('button');
-            btn.className = 'day-btn';
-            btn.disabled  = !AVAIL[dayName];
-            btn.dataset.date = toISO(d); btn.dataset.day = dayName;
-            btn.innerHTML = '<span class="day-name">' + dayName.slice(0,3) + '</span><span class="day-num">' + d.getDate() + '</span>';
-            if (AVAIL[dayName]) btn.addEventListener('click', onDayClick);
-            grid.appendChild(btn);
+    var nptNow     = getNPTNow();
+    var todayISO   = toISO(nptNow);
+    var nptMinutes = nptNow.getHours() * 60 + nptNow.getMinutes();
+
+    var MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+    function buildWeek(weekIndex) {
+        var npt = getNPTNow(); npt.setHours(0,0,0,0);
+        var weekStart = new Date(npt);
+        weekStart.setDate(npt.getDate() - npt.getDay() + weekIndex * 7);
+
+        var weekEnd = new Date(weekStart); weekEnd.setDate(weekStart.getDate() + 6);
+        document.getElementById('week' + (weekIndex+1) + 'Label').textContent =
+            MONTH_SHORT[weekStart.getMonth()] + ' ' + weekStart.getDate() +
+            ' – ' + MONTH_SHORT[weekEnd.getMonth()] + ' ' + weekEnd.getDate();
+
+        var headerRow = document.getElementById('rschHdr'   + (weekIndex+1));
+        var dateRow   = document.getElementById('rschDates' + (weekIndex+1));
+        headerRow.innerHTML = '';
+        dateRow.innerHTML   = '';
+
+        for (var col = 0; col < 7; col++) {
+            var cellDate = new Date(weekStart);
+            cellDate.setDate(weekStart.getDate() + col);
+            var dayISO   = toISO(cellDate);
+            var dayName  = DAY_NAMES[cellDate.getDay()];
+            var isPast   = dayISO < todayISO;
+            var hasAvail = !!AVAIL[dayName];
+
+            var hdr = document.createElement('div');
+            hdr.className   = 'rsch-day-hdr';
+            hdr.textContent = DAY_SHORT[col];
+            headerRow.appendChild(hdr);
+
+            if (isPast) {
+                var empty = document.createElement('div');
+                empty.className = 'day-btn filler';
+                dateRow.appendChild(empty);
+            } else {
+                var btn = document.createElement('button');
+                btn.className    = 'day-btn' + (!hasAvail ? ' unavailable' : '');
+                btn.disabled     = !hasAvail;
+                btn.dataset.date = dayISO;
+                btn.dataset.day  = dayName;
+                btn.innerHTML    = '<span class="day-name">' + DAY_SHORT[col] + '</span><span class="day-num">' + cellDate.getDate() + '</span>';
+                if (hasAvail) btn.addEventListener('click', onDayClick);
+                dateRow.appendChild(btn);
+            }
         }
+    }
+
+    function buildDateGrid() {
+        buildWeek(0);
+        buildWeek(1);
     }
 
     function onDayClick() {
@@ -128,26 +185,41 @@ ob_start();
         document.getElementById('slotsWrap').innerHTML = '<div class="slots-placeholder"><i class="fa fa-spinner fa-spin" style="font-size:20px;opacity:.5;"></i></div>';
         fetch(BASE_URL + '/api/slots?doctor_id=' + DOCTOR.id + '&date=' + date)
             .then(function(r){ return r.json(); })
-            .then(function(res){ bookedOnDate = res.booked || []; renderSlots(dayName); })
-            .catch(function(){ bookedOnDate = []; renderSlots(dayName); });
+            .then(function(res){ bookedOnDate = res.booked || []; renderSlots(dayName, date); })
+            .catch(function(){ bookedOnDate = []; renderSlots(dayName, date); });
     }
 
-    function renderSlots(dayName) {
+    function renderSlots(dayName, dateStr) {
         var avail = AVAIL[dayName], wrap = document.getElementById('slotsWrap');
         if (!avail) { wrap.innerHTML = '<div class="slots-placeholder">No availability on this day.</div>'; return; }
+
         var grid = document.createElement('div');
         grid.className = 'slots-grid';
-        var cur = timeToMin(avail.start), last = timeToMin(avail.end), breakMins = avail.break_minutes || 0;
-        while (cur + DOCTOR.slot_minutes <= last) {
-            var s = minToTime(cur), e = minToTime(cur + DOCTOR.slot_minutes);
-            var isBooked = bookedOnDate.some(function(b){ return b.slice(0,5) === s.slice(0,5); });
+
+        var isToday = (dateStr === todayISO);
+        // Always use 1-hour slots (60 min), ignore DOCTOR.slot_minutes for consistency
+        var cur = timeToMin(avail.start), last = timeToMin(avail.end);
+
+        while (cur + 60 <= last) {
+            var s = minToTime(cur), e = minToTime(cur + 60);
+            var hourKey = String(Math.floor(cur/60)).padStart(2,'0') + ':00:00';
+
+            // A slot is fully booked only when it appears 5+ times in bookedOnDate
+            var bookingCount = bookedOnDate.filter(function(b){ return b === hourKey; }).length;
+            var isBooked = bookingCount >= 5;
+
+            // Block slots in the past for today (NPT)
+            var isPast = isToday && (cur <= nptMinutes);
+
             var btn = document.createElement('button');
-            btn.className = 'slot-btn'; btn.textContent = fmt12(s);
+            btn.className = 'slot-btn' + (isBooked || isPast ? ' booked' : '');
+            btn.textContent = fmt12(s) + ' – ' + fmt12(e);
             btn.dataset.start = s; btn.dataset.end = e;
-            btn.disabled = isBooked;
-            if (!isBooked) btn.addEventListener('click', onSlotClick);
+            btn.disabled = isBooked || isPast;
+            if (isPast) btn.title = 'This time has already passed';
+            if (!isBooked && !isPast) btn.addEventListener('click', onSlotClick);
             grid.appendChild(btn);
-            cur += DOCTOR.slot_minutes;
+            cur += 60;
         }
         wrap.innerHTML = '';
         wrap.appendChild(grid);

@@ -21,10 +21,10 @@
 </head>
 <body>
 
-<!-- ══ TOP NAVBAR ══════════════════════════════════════════ -->
+<!-- TOP NAVBAR -->
 <nav class="navbar">
     <div class="navbar-inner">
-        <!-- Sidebar toggle (desktop only — collapses sidebar) -->
+        <!-- Sidebar toggle (desktop only - collapses sidebar) -->
         <button class="sidebar-toggle desktop-only" id="sidebarToggle" aria-label="Toggle sidebar">
             <i class="fa fa-bars"></i>
         </button>
@@ -64,10 +64,10 @@
     </div>
 </nav>
 
-<!-- ══ PAGE SHELL (sidebar + content) ══════════════════════ -->
+<!-- PAGE SHELL (sidebar + content) -->
 <div class="page-shell">
 
-    <!-- ── SIDEBAR ─────────────────────────────────────────── -->
+    <!-- SIDEBAR -->
     <aside class="sidebar" id="sidebar">
         <nav class="sidebar-nav">
             <div class="sidebar-section-label">Main</div>
@@ -101,7 +101,6 @@
                     <div class="sidebar-user-role">Patient</div>
                 </div>
             </div>
-            <a href="<?= BASE_URL ?>/logout" class="sidebar-logout" title="Sign out"><i class="fa fa-right-from-bracket"></i></a>
             <?php endif; ?>
         </div>
     </aside>
@@ -109,14 +108,14 @@
     <!-- Sidebar overlay (mobile) -->
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
-    <!-- ── MAIN CONTENT ────────────────────────────────────── -->
+    <!-- MAIN CONTENT -->
     <main class="main-wrap">
         <?php echo $content; ?>
     </main>
 
 </div><!-- /.page-shell -->
 
-<!-- ══ MOBILE NAV DRAWER (slides from RIGHT) ══════════════ -->
+<!-- MOBILE NAV DRAWER (slides from RIGHT) -->
 <div class="mobile-drawer" id="mobileDrawer">
     <div class="mobile-drawer-header">
         <span class="mobile-drawer-brand">Doc<span>Book</span></span>
@@ -151,7 +150,7 @@
 <script src="<?= BASE_URL ?>/js/main.js"></script>
 <script>
 (function(){
-    // ── Single theme toggle (navbar only)
+    // Single theme toggle (navbar only)
     var themeBtn  = document.getElementById('themeToggleBtn');
     var themeIcon = document.getElementById('themeIcon');
 
@@ -177,7 +176,7 @@
         });
     }
 
-    // ── Mobile drawer (slides from RIGHT) — hamburger in nav-actions
+    // Mobile drawer (slides from RIGHT) — hamburger in nav-actions
     var hamburger    = document.getElementById('hamburgerBtn');
     var drawer       = document.getElementById('mobileDrawer');
     var drawerClose  = document.getElementById('mobileDrawerClose');
@@ -229,6 +228,14 @@
 })();
 </script>
 <?php if (isset($extra_scripts)) echo $extra_scripts; ?>
+
+<?php
+// Chatbot floating widget - only for logged-in patients
+$_cbRole = $user['role'] ?? '';
+if ($_cbRole === 'patient') {
+    include BASE_PATH . '/app/views/partials/chatbot-widget.php';
+}
+?>
 
 </body>
 </html>

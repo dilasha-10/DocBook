@@ -1,6 +1,7 @@
 <?php
 $title = 'Booking Confirmed';
 
+// Styling section: layout for the confirmation card and CSS3 animations
 $extra_styles = <<<CSS
 <style>
 .confirm-wrap {
@@ -21,6 +22,7 @@ $extra_styles = <<<CSS
     padding: 36px 32px 28px;
 }
 
+/* Keyframe animations for a polished "Success" feel */
 .confirm-icon-wrap {
     display: flex;
     align-items: center;
@@ -59,6 +61,7 @@ $extra_styles = <<<CSS
     animation: fadeUp .4s .14s ease both;
 }
 
+/* Summary Grid: Displays appointment metadata */
 .summary-card {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -90,6 +93,7 @@ $extra_styles = <<<CSS
     color: var(--text);
 }
 
+/* Dynamic status coloring */
 .summary-field-value.status-confirmed { color: #22C55E; }
 .summary-field-value.status-pending   { color: #fbbf24; }
 
@@ -148,14 +152,19 @@ CSS;
 
 ob_start();
 
-$appt       = $appointment ?? [];
-$doctorName = htmlspecialchars($appt['doctor_name']      ?? '—');
-$specialty  = htmlspecialchars($appt['specialty']        ?? '—');
-$apptDate   = htmlspecialchars($appt['date']             ?? '—');
-$apptTime   = htmlspecialchars($appt['time']             ?? '—');
-$refNumber  = htmlspecialchars($appt['reference_number'] ?? '—');
-$status     = htmlspecialchars($appt['status']           ?? 'Pending');
+// Data preparation
+$appt          = $appointment ?? [];
+$doctorName    = htmlspecialchars($appt['doctor_name']      ?? '—');
+$specialty     = htmlspecialchars($appt['specialty']        ?? '—');
+$apptDate      = htmlspecialchars($appt['date']             ?? '—');
+$apptTime      = htmlspecialchars($appt['time']             ?? '—');
+$refNumber     = htmlspecialchars($appt['reference_number'] ?? '—');
+$status        = htmlspecialchars($appt['status']           ?? 'Pending');
+$amountPaid    = $appt['amount_paid']    ?? null;
+$transactionId = $appt['transaction_id'] ?? null;
+$alreadyPaid   = ($amountPaid !== null);
 
+// Format date to readable string (e.g., January 1, 2024)
 if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $appt['date'] ?? '')) {
     $apptDate = date('F j, Y', strtotime($appt['date']));
 }
@@ -206,9 +215,32 @@ $statusClass = strtolower($status) === 'confirmed' ? 'status-confirmed' : 'statu
             </div>
         </div>
 
+        <?php if ($alreadyPaid): ?>
+        <div style="background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.3);border-radius:12px;padding:14px 18px;margin-bottom:18px;text-align:left;animation:fadeUp .4s .22s ease both;">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#22C55E;margin-bottom:6px;"><i class="fa fa-shield-check"></i> Payment Verified</div>
+            <div style="font-size:13px;color:var(--text);">Amount paid: <strong>Rs <?= number_format((float)$amountPaid, 2) ?></strong></div>
+            <?php if ($transactionId): ?>
+            <div style="font-size:11px;color:var(--muted);font-family:monospace;margin-top:2px;"><?= htmlspecialchars($transactionId) ?></div>
+            <?php endif; ?>
+        </div>
+        <?php else: ?>
+        <div id="esewaBlock" style="margin-bottom:16px;animation:fadeUp .4s .22s ease both;">
+            <div style="font-size:11px;color:var(--muted);margin-bottom:8px;text-align:left;">Complete payment to confirm your appointment:</div>
+            <button onclick="initiateEsewa()" id="esewaBtn"
+                style="width:100%;padding:12px;background:#60BB46;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+                <svg width="22" height="22" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="50" cy="50" r="50" fill="#fff"/>
+                    <text x="50" y="67" text-anchor="middle" font-size="52" font-weight="900" fill="#60BB46" font-family="Arial">e</text>
+                </svg>
+                Pay Rs 500 with eSewa
+            </button>
+            <div id="esewaError" style="display:none;color:#ef4444;font-size:12px;margin-top:8px;"></div>
+        </div>
+        <form id="esewaForm" method="POST" style="display:none;"></form>
+        <?php endif; ?>
+
         <div class="confirm-actions">
             <a href="<?= BASE_URL ?>/dashboard"  class="btn-cf-primary">View my appointments</a>
-
         </div>
 
     </div>
@@ -219,11 +251,54 @@ $content = ob_get_clean();
 
 $extra_scripts = <<<JS
 <script>
+// Prevent re-submission issues on page refresh
 (function () {
     if (window.history && window.history.replaceState) {
         window.history.replaceState({ page: 'booking-confirm' }, '', window.location.href);
     }
 })();
+
+const APPT_ID = {$appt['appointment_id']};
+
+async function initiateEsewa() {
+    if (!APPT_ID) { alert('Appointment ID missing. Please try booking again.'); return; }
+    const btn = document.getElementById('esewaBtn');
+    const errEl = document.getElementById('esewaError');
+    
+    btn.disabled = true;
+    btn.textContent = 'Initiating payment…';
+    errEl.style.display = 'none';
+
+    try {
+        const res = await fetch(BASE_URL + '/api/payment/initiate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ appointment_id: APPT_ID }),
+        });
+        const data = await res.json();
+        
+        if (!data.success) throw new Error(data.message || 'Failed to initiate payment.');
+
+        // Populate the hidden form and submit to eSewa
+        const form = document.getElementById('esewaForm');
+        form.action = data.esewa_url;
+        form.innerHTML = '';
+        
+        for (const [k, v] of Object.entries(data.fields)) {
+            const inp = document.createElement('input');
+            inp.type = 'hidden'; 
+            inp.name = k; 
+            inp.value = v;
+            form.appendChild(inp);
+        }
+        form.submit();
+    } catch (e) {
+        errEl.textContent = e.message;
+        errEl.style.display = 'block';
+        btn.disabled = false;
+        btn.innerHTML = '<svg width="22" height="22" viewBox="0 0 100 100" fill="none"><circle cx="50" cy="50" r="50" fill="#fff"/><text x="50" y="67" text-anchor="middle" font-size="52" font-weight="900" fill="#60BB46" font-family="Arial">e</text></svg> Pay Rs 500 with eSewa';
+    }
+}
 </script>
 JS;
 
