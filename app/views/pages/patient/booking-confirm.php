@@ -1,305 +1,334 @@
 <?php
 $title = 'Booking Confirmed';
 
-// Styling section: layout for the confirmation card and CSS3 animations
 $extra_styles = <<<CSS
 <style>
+/* ── Screen styles ── */
 .confirm-wrap {
     min-height: calc(100vh - 60px - 64px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 48px 24px;
+    display: flex; align-items: flex-start; justify-content: center;
+    padding: 48px 24px 64px;
+}
+.invoice-shell { width: 100%; max-width: 620px; }
+.invoice-success-bar {
+    display: flex; align-items: center; gap: 12px;
+    background: rgba(34,197,94,.10); border: 1px solid rgba(34,197,94,.35);
+    border-radius: 12px; padding: 14px 18px; margin-bottom: 24px;
+    animation: fadeUp .4s ease both;
+}
+.invoice-success-bar .chk {
+    width:36px;height:36px;border-radius:50%;background:#22C55E;
+    display:flex;align-items:center;justify-content:center;font-size:17px;color:#fff;flex-shrink:0;
+}
+.invoice-success-bar h2 { font-size:16px;font-weight:700;color:#22C55E;margin:0 0 2px; }
+.invoice-success-bar p  { font-size:13px;color:var(--muted);margin:0; }
+.invoice-card { background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;animation:fadeUp .4s .08s ease both; }
+.invoice-header { background:var(--blue);padding:22px 28px 18px;display:flex;justify-content:space-between;align-items:flex-start;gap:16px; }
+.invoice-brand { font-size:20px;font-weight:800;color:#fff;letter-spacing:.02em; }
+.invoice-brand span { opacity:.75; }
+.invoice-brand-sub { font-size:10px;color:rgba(255,255,255,.65);margin-top:2px;letter-spacing:.04em;text-transform:uppercase; }
+.invoice-label-block { text-align:right; }
+.invoice-label-block .inv-title { font-size:11px;font-weight:700;color:rgba(255,255,255,.8);text-transform:uppercase;letter-spacing:.08em; }
+.invoice-label-block .inv-ref   { font-size:16px;font-weight:800;color:#fff;font-family:monospace;margin-top:2px; }
+.invoice-label-block .inv-date  { font-size:10px;color:rgba(255,255,255,.6);margin-top:2px; }
+.invoice-body { padding:20px 28px 16px; }
+.inv-section-title { font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--hint);margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--border); }
+.inv-grid { display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;margin-bottom:18px; }
+.inv-field-label { font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--hint);margin-bottom:2px; }
+.inv-field-value { font-size:13px;font-weight:600;color:var(--text);line-height:1.3; }
+.inv-field-value.green { color:#22C55E; }
+.inv-table { width:100%;border-collapse:collapse;margin-bottom:14px; }
+.inv-table thead th { font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--hint);padding:0 0 6px;border-bottom:1px solid var(--border);text-align:left; }
+.inv-table thead th:last-child { text-align:right; }
+.inv-table tbody td { padding:8px 0 3px;font-size:13px;color:var(--text);vertical-align:top; }
+.inv-table tbody td:last-child { text-align:right;font-weight:600; }
+.inv-table tfoot td { padding:8px 0 0;border-top:1px solid var(--border);font-size:13px;font-weight:700;color:var(--text); }
+.inv-table tfoot td:last-child { text-align:right;color:#22C55E;font-size:15px; }
+.inv-payment-row { display:flex;align-items:center;justify-content:space-between;background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.25);border-radius:8px;padding:10px 14px;margin-bottom:0; }
+.inv-payment-row .pay-label  { font-size:11px;font-weight:600;color:var(--muted); }
+.inv-payment-row .pay-method { font-size:12px;font-weight:700;color:#22C55E; }
+.inv-payment-row .pay-txn    { font-size:9px;color:var(--hint);font-family:monospace;margin-top:2px; }
+.invoice-footer { border-top:1px solid var(--border);padding:12px 28px;display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--bg); }
+.invoice-footer .note { font-size:10px;color:var(--hint);line-height:1.5;max-width:340px; }
+.invoice-actions { display:flex;gap:10px;margin-top:20px;animation:fadeUp .4s .18s ease both; }
+.btn-inv-primary { flex:1;padding:12px 16px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none;text-align:center;cursor:pointer;transition:background .15s;display:flex;align-items:center;justify-content:center;gap:7px; }
+.btn-inv-primary:hover { background:#3a8eef;color:#fff; }
+.btn-inv-secondary { padding:12px 20px;background:transparent;color:var(--muted);border:1px solid var(--border2);border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;transition:border-color .15s,color .15s;display:flex;align-items:center;gap:7px;text-decoration:none; }
+.btn-inv-secondary:hover { border-color:var(--text);color:var(--text); }
+@keyframes fadeUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+@media(max-width:540px){
+    .invoice-header{flex-direction:column}
+    .invoice-label-block{text-align:left}
+    .invoice-body{padding:16px}
+    .invoice-footer{flex-direction:column;align-items:flex-start}
+    .inv-grid{grid-template-columns:1fr}
+    .invoice-actions{flex-direction:column}
 }
 
-.confirm-card {
-    width: 100%;
-    max-width: 420px;
-    text-align: center;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 36px 32px 28px;
-}
+/* ════════════════════════════════════════════════════
+   PRINT / PDF  —  strict black & white, one page
+   Strategy: hide the entire page, then un-hide only
+   the invoice card using a fixed-position overlay.
+   This avoids fighting the layout's wrapper divs.
+   ════════════════════════════════════════════════════ */
+@media print {
+    /* 1. Silence absolutely everything */
+    * {
+        visibility: hidden !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
 
-/* Keyframe animations for a polished "Success" feel */
-.confirm-icon-wrap {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 20px;
-    animation: popIn .5s cubic-bezier(.34,1.56,.64,1) both;
-}
+    /* 2. Reset page chrome */
+    @page { margin: 14mm 12mm; }
+    html, body {
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #fff !important;
+        width: 100% !important;
+    }
 
-.confirm-check-circle {
-    width: 64px;
-    height: 64px;
-    border-radius: 50%;
-    background: rgba(34,197,94,.15);
-    border: 2px solid #22C55E;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 26px;
-    color: #22C55E;
-}
+    /* 3. Make the invoice card and ALL its descendants visible */
+    #invoiceCard,
+    #invoiceCard * {
+        visibility: visible !important;
+    }
 
-.confirm-heading {
-    font-size: 34px;
-    font-weight: 800;
-    letter-spacing: .05em;
-    color: #22C55E;
-    margin-bottom: 8px;
-    animation: fadeUp .4s .08s ease both;
-}
+    /* 4. Pull it out of the layout flow and fill the page */
+    #invoiceCard {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        border: none !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        background: #fff !important;
+        overflow: visible !important;
+        page-break-inside: avoid;
+    }
 
-.confirm-subtitle {
-    font-size: 14px;
-    color: var(--muted);
-    margin-bottom: 28px;
-    line-height: 1.5;
-    animation: fadeUp .4s .14s ease both;
-}
+    /* 5. Header — solid black bar */
+    #invoiceCard .invoice-header {
+        background: #111 !important;
+        padding: 14px 24px !important;
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: flex-start !important;
+        gap: 16px !important;
+    }
+    #invoiceCard .invoice-brand,
+    #invoiceCard .invoice-brand span,
+    #invoiceCard .invoice-brand-sub,
+    #invoiceCard .inv-title,
+    #invoiceCard .inv-ref,
+    #invoiceCard .inv-date {
+        color: #fff !important;
+        opacity: 1 !important;
+    }
 
-/* Summary Grid: Displays appointment metadata */
-.summary-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 20px;
-    text-align: left;
-    margin-bottom: 20px;
-    animation: fadeUp .4s .2s ease both;
-}
+    /* 6. Body */
+    #invoiceCard .invoice-body { padding: 14px 24px 10px !important; }
 
-.summary-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 18px 12px;
-}
+    /* 7. All text → black */
+    #invoiceCard .inv-field-value,
+    #invoiceCard .inv-table tbody td,
+    #invoiceCard .inv-table tfoot td { color: #111 !important; }
 
-.summary-field-label {
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: .08em;
-    text-transform: uppercase;
-    color: var(--hint);
-    margin-bottom: 4px;
-}
+    #invoiceCard .inv-field-label,
+    #invoiceCard .inv-section-title,
+    #invoiceCard .inv-table thead th { color: #444 !important; }
 
-.summary-field-value {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--text);
-}
+    /* Overide green status/total with black */
+    #invoiceCard .inv-field-value.green,
+    #invoiceCard .inv-table tfoot td:last-child { color: #111 !important; font-weight: 700 !important; }
 
-/* Dynamic status coloring */
-.summary-field-value.status-confirmed { color: #22C55E; }
-.summary-field-value.status-pending   { color: #fbbf24; }
+    /* 8. Borders → light grey */
+    #invoiceCard .inv-section-title { border-bottom: 1px solid #bbb !important; }
+    #invoiceCard .inv-table thead th { border-bottom: 1px solid #bbb !important; }
+    #invoiceCard .inv-table tfoot td { border-top: 1px solid #bbb !important; }
 
-.confirm-actions {
-    display: flex;
-    gap: 10px;
-    animation: fadeUp .4s .26s ease both;
-}
+    /* 9. Payment row — no colour tint */
+    #invoiceCard .inv-payment-row {
+        background: #f0f0f0 !important;
+        border: 1px solid #bbb !important;
+        border-radius: 6px !important;
+    }
+    #invoiceCard .inv-payment-row .pay-method,
+    #invoiceCard .inv-payment-row > div:last-child { color: #111 !important; }
+    #invoiceCard .inv-payment-row .pay-label,
+    #invoiceCard .inv-payment-row .pay-txn { color: #444 !important; }
 
-.btn-cf-primary {
-    flex: 1;
-    padding: 11px 16px;
-    background: var(--blue);
-    color: #fff;
-    border: none;
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 600;
-    text-decoration: none;
-    text-align: center;
-    cursor: pointer;
-    transition: background .15s;
-}
-.btn-cf-primary:hover { background: #3a8eef; color: #fff; }
-
-.btn-cf-secondary {
-    flex: 1;
-    padding: 11px 16px;
-    background: transparent;
-    color: var(--muted);
-    border: 1px solid var(--border2);
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 600;
-    text-decoration: none;
-    text-align: center;
-    cursor: pointer;
-    transition: border-color .15s, color .15s;
-}
-.btn-cf-secondary:hover { border-color: var(--text); color: var(--text); }
-
-@keyframes popIn {
-    from { opacity: 0; transform: scale(.5); }
-    to   { opacity: 1; transform: scale(1);  }
-}
-@keyframes fadeUp {
-    from { opacity: 0; transform: translateY(12px); }
-    to   { opacity: 1; transform: translateY(0);    }
-}
-
-@media (max-width: 480px) {
-    .confirm-actions { flex-direction: column; }
+    /* 10. Footer */
+    #invoiceCard .invoice-footer {
+        background: #f5f5f5 !important;
+        border-top: 1px solid #bbb !important;
+        padding: 10px 24px !important;
+    }
+    #invoiceCard .invoice-footer .note,
+    #invoiceCard .invoice-footer div { color: #444 !important; }
 }
 </style>
 CSS;
 
 ob_start();
 
-// Data preparation
 $appt          = $appointment ?? [];
 $doctorName    = htmlspecialchars($appt['doctor_name']      ?? '—');
 $specialty     = htmlspecialchars($appt['specialty']        ?? '—');
-$apptDate      = htmlspecialchars($appt['date']             ?? '—');
-$apptTime      = htmlspecialchars($appt['time']             ?? '—');
 $refNumber     = htmlspecialchars($appt['reference_number'] ?? '—');
-$status        = htmlspecialchars($appt['status']           ?? 'Pending');
-$amountPaid    = $appt['amount_paid']    ?? null;
-$transactionId = $appt['transaction_id'] ?? null;
-$alreadyPaid   = ($amountPaid !== null);
-
-// Format date to readable string (e.g., January 1, 2024)
+$status        = htmlspecialchars($appt['status']           ?? 'Confirmed');
+$amountPaid    = number_format((float)($appt['amount_paid'] ?? 500), 2);
+$transactionId = htmlspecialchars($appt['transaction_id']   ?? '');
+$issuedDate    = date('F j, Y');
+$issuedTime    = date('g:i A');
+$apptDate      = '—';
 if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $appt['date'] ?? '')) {
     $apptDate = date('F j, Y', strtotime($appt['date']));
 }
-
-$statusClass = strtolower($status) === 'confirmed' ? 'status-confirmed' : 'status-pending';
+$apptTime     = htmlspecialchars($appt['time']  ?? '—');
+$patientName  = htmlspecialchars($user['name']  ?? '—');
+$patientEmail = htmlspecialchars($user['email'] ?? '—');
+$patientPhone = htmlspecialchars($user['phone'] ?? '—');
 ?>
 
 <div class="confirm-wrap">
-    <div class="confirm-card">
+<div class="invoice-shell">
 
-        <div class="confirm-icon-wrap">
-            <div class="confirm-check-circle">
-                <i class="fa fa-check"></i>
-            </div>
+    <div class="invoice-success-bar">
+        <div class="chk"><i class="fa fa-check"></i></div>
+        <div>
+            <h2>Booking Confirmed &amp; Payment Received</h2>
+            <p>Your appointment is confirmed. Print this page or save as PDF for your records.</p>
         </div>
-
-        <div class="confirm-heading">CONFIRMED</div>
-        <p class="confirm-subtitle">Your appointment has been booked.</p>
-
-        <div class="summary-card">
-            <div class="summary-grid">
-
-                <div>
-                    <div class="summary-field-label">Doctor</div>
-                    <div class="summary-field-value"><?= $doctorName ?></div>
-                </div>
-
-                <div>
-                    <div class="summary-field-label">Specialization</div>
-                    <div class="summary-field-value"><?= $specialty ?></div>
-                </div>
-
-                <div>
-                    <div class="summary-field-label">Date &amp; Time</div>
-                    <div class="summary-field-value"><?= $apptDate ?> &middot; <?= $apptTime ?></div>
-                </div>
-
-                <div>
-                    <div class="summary-field-label">Status</div>
-                    <div class="summary-field-value <?= $statusClass ?>"><?= $status ?></div>
-                </div>
-
-                <div>
-                    <div class="summary-field-label">Reference</div>
-                    <div class="summary-field-value"><?= $refNumber ?></div>
-                </div>
-
-            </div>
-        </div>
-
-        <?php if ($alreadyPaid): ?>
-        <div style="background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.3);border-radius:12px;padding:14px 18px;margin-bottom:18px;text-align:left;animation:fadeUp .4s .22s ease both;">
-            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#22C55E;margin-bottom:6px;"><i class="fa fa-shield-check"></i> Payment Verified</div>
-            <div style="font-size:13px;color:var(--text);">Amount paid: <strong>Rs <?= number_format((float)$amountPaid, 2) ?></strong></div>
-            <?php if ($transactionId): ?>
-            <div style="font-size:11px;color:var(--muted);font-family:monospace;margin-top:2px;"><?= htmlspecialchars($transactionId) ?></div>
-            <?php endif; ?>
-        </div>
-        <?php else: ?>
-        <div id="esewaBlock" style="margin-bottom:16px;animation:fadeUp .4s .22s ease both;">
-            <div style="font-size:11px;color:var(--muted);margin-bottom:8px;text-align:left;">Complete payment to confirm your appointment:</div>
-            <button onclick="initiateEsewa()" id="esewaBtn"
-                style="width:100%;padding:12px;background:#60BB46;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
-                <svg width="22" height="22" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="50" cy="50" r="50" fill="#fff"/>
-                    <text x="50" y="67" text-anchor="middle" font-size="52" font-weight="900" fill="#60BB46" font-family="Arial">e</text>
-                </svg>
-                Pay Rs 500 with eSewa
-            </button>
-            <div id="esewaError" style="display:none;color:#ef4444;font-size:12px;margin-top:8px;"></div>
-        </div>
-        <form id="esewaForm" method="POST" style="display:none;"></form>
-        <?php endif; ?>
-
-        <div class="confirm-actions">
-            <a href="<?= BASE_URL ?>/dashboard"  class="btn-cf-primary">View my appointments</a>
-        </div>
-
     </div>
+
+    <!-- id="invoiceCard" is the print target — do not rename -->
+    <div class="invoice-card" id="invoiceCard">
+
+        <div class="invoice-header">
+            <div>
+                <div class="invoice-brand">Doc<span>Book</span></div>
+                <div class="invoice-brand-sub">Appointment Invoice</div>
+            </div>
+            <div class="invoice-label-block">
+                <div class="inv-title">Invoice</div>
+                <div class="inv-ref"><?= $refNumber ?></div>
+                <div class="inv-date">Issued <?= $issuedDate ?> &middot; <?= $issuedTime ?></div>
+            </div>
+        </div>
+
+        <div class="invoice-body">
+
+            <div class="inv-section-title">Patient Details</div>
+            <div class="inv-grid" style="margin-bottom:18px;">
+                <div>
+                    <div class="inv-field-label">Full Name</div>
+                    <div class="inv-field-value"><?= $patientName ?></div>
+                </div>
+                <div>
+                    <div class="inv-field-label">Email</div>
+                    <div class="inv-field-value"><?= $patientEmail ?></div>
+                </div>
+                <?php if ($patientPhone && $patientPhone !== '—'): ?>
+                <div>
+                    <div class="inv-field-label">Phone</div>
+                    <div class="inv-field-value"><?= $patientPhone ?></div>
+                </div>
+                <?php endif; ?>
+            </div>
+
+            <div class="inv-section-title">Appointment Details</div>
+            <div class="inv-grid" style="margin-bottom:18px;">
+                <div>
+                    <div class="inv-field-label">Doctor</div>
+                    <div class="inv-field-value"><?= $doctorName ?></div>
+                </div>
+                <div>
+                    <div class="inv-field-label">Specialization</div>
+                    <div class="inv-field-value"><?= $specialty ?></div>
+                </div>
+                <div>
+                    <div class="inv-field-label">Date</div>
+                    <div class="inv-field-value"><?= $apptDate ?></div>
+                </div>
+                <div>
+                    <div class="inv-field-label">Time</div>
+                    <div class="inv-field-value"><?= $apptTime ?></div>
+                </div>
+                <div>
+                    <div class="inv-field-label">Reference No.</div>
+                    <div class="inv-field-value" style="font-family:monospace;"><?= $refNumber ?></div>
+                </div>
+                <div>
+                    <div class="inv-field-label">Status</div>
+                    <div class="inv-field-value green"><?= $status ?></div>
+                </div>
+            </div>
+
+            <div class="inv-section-title">Payment Summary</div>
+            <table class="inv-table">
+                <thead>
+                    <tr><th>Description</th><th>Amount</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>
+                            <strong>Doctor Consultation Fee</strong><br>
+                            <span style="font-size:11px;color:var(--muted);"><?= $doctorName ?> &middot; <?= $specialty ?></span>
+                        </td>
+                        <td>Rs <?= $amountPaid ?></td>
+                    </tr>
+                </tbody>
+                <tfoot>
+                    <tr><td>Total Paid</td><td>Rs <?= $amountPaid ?></td></tr>
+                </tfoot>
+            </table>
+
+            <div class="inv-payment-row">
+                <div>
+                    <div class="pay-label">Payment Method</div>
+                    <div class="pay-method"><i class="fa fa-circle-check"></i> eSewa — Payment Successful</div>
+                    <?php if ($transactionId): ?>
+                    <div class="pay-txn">Transaction ID: <?= $transactionId ?></div>
+                    <?php endif; ?>
+                </div>
+                <div style="font-size:20px;font-weight:800;color:#22C55E;">Rs <?= $amountPaid ?></div>
+            </div>
+
+        </div>
+
+        <div class="invoice-footer">
+            <p class="note">
+                Auto-generated by DocBook. Keep ref <strong><?= $refNumber ?></strong> for queries.
+                Support: <strong>support@docbook.app</strong>
+            </p>
+            <div style="font-size:10px;color:var(--hint);white-space:nowrap;">
+                DocBook &copy; <?= date('Y') ?>
+            </div>
+        </div>
+
+    </div><!-- /#invoiceCard -->
+
+    <div class="invoice-actions">
+        <button class="btn-inv-primary" onclick="window.print()">
+            <i class="fa fa-print"></i> Print / Save as PDF
+        </button>
+        <a href="<?= BASE_URL ?>/dashboard" class="btn-inv-secondary">
+            <i class="fa fa-gauge"></i> Dashboard
+        </a>
+    </div>
+
+</div>
 </div>
 
 <?php
 $content = ob_get_clean();
-
 $extra_scripts = <<<JS
 <script>
-// Prevent re-submission issues on page refresh
-(function () {
-    if (window.history && window.history.replaceState) {
-        window.history.replaceState({ page: 'booking-confirm' }, '', window.location.href);
-    }
-})();
-
-const APPT_ID = {$appt['appointment_id']};
-
-async function initiateEsewa() {
-    if (!APPT_ID) { alert('Appointment ID missing. Please try booking again.'); return; }
-    const btn = document.getElementById('esewaBtn');
-    const errEl = document.getElementById('esewaError');
-    
-    btn.disabled = true;
-    btn.textContent = 'Initiating payment…';
-    errEl.style.display = 'none';
-
-    try {
-        const res = await fetch(BASE_URL + '/api/payment/initiate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ appointment_id: APPT_ID }),
-        });
-        const data = await res.json();
-        
-        if (!data.success) throw new Error(data.message || 'Failed to initiate payment.');
-
-        // Populate the hidden form and submit to eSewa
-        const form = document.getElementById('esewaForm');
-        form.action = data.esewa_url;
-        form.innerHTML = '';
-        
-        for (const [k, v] of Object.entries(data.fields)) {
-            const inp = document.createElement('input');
-            inp.type = 'hidden'; 
-            inp.name = k; 
-            inp.value = v;
-            form.appendChild(inp);
-        }
-        form.submit();
-    } catch (e) {
-        errEl.textContent = e.message;
-        errEl.style.display = 'block';
-        btn.disabled = false;
-        btn.innerHTML = '<svg width="22" height="22" viewBox="0 0 100 100" fill="none"><circle cx="50" cy="50" r="50" fill="#fff"/><text x="50" y="67" text-anchor="middle" font-size="52" font-weight="900" fill="#60BB46" font-family="Arial">e</text></svg> Pay Rs 500 with eSewa';
-    }
-}
+(function(){if(window.history&&window.history.replaceState){window.history.replaceState({page:'booking-confirm'},'',window.location.href);}})();
 </script>
 JS;
-
 include __DIR__ . '/../../layouts/app.php';

@@ -137,14 +137,36 @@ function payment_success_page()
         ':ref_id' => $esewa_ref_id,
     ]);
 
-    // Load doctor info for confirmation card
+    // Load doctor info for confirmation card + notification
     $docStmt = $pdo->prepare("
-        SELECT u.name AS doctor_name, d.specialty
+        SELECT d.id AS doctor_id, d.specialty, u.id AS user_id, u.name AS doctor_name
         FROM doctors d JOIN users u ON u.id = d.user_id
         WHERE d.id = ?
     ");
     $docStmt->execute([$pending['doctor_id']]);
     $doc = $docStmt->fetch(PDO::FETCH_ASSOC);
+
+    // ── Fire appointment notifications ────────────────────────
+    // Notify the doctor (new booking) and confirm to the patient.
+    try {
+        require_once BASE_PATH . '/app/models/NotificationModel.php';
+        $apptRow = [
+            'id'               => $appt_id,
+            'reference_number' => $ref,
+            'appointment_date' => $pending['date'],
+            'start_time'       => $pending['start_time'],
+        ];
+        $patientRow = [
+            'id'   => (int) $pending['patient_id'],
+            'name' => $user['name'] ?? 'Patient',
+        ];
+        $doc['name'] = $doc['doctor_name'] ?? ''; // notify_appointment_booked expects 'name' key
+        notify_appointment_booked($apptRow, $patientRow, $doc);
+    } catch (\Throwable $e) {
+        // Notification failure must never break the booking flow
+        error_log('notify_appointment_booked error: ' . $e->getMessage());
+    }
+    // ─────────────────────────────────────────────────────────
 
     $h       = (int) substr($pending['start_time'], 0, 2);
     $hEnd    = (int) substr($pending['end_time'],   0, 2);
