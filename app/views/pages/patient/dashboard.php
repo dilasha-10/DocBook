@@ -30,8 +30,8 @@ $extra_styles = <<<CSS
     flex-shrink: 0;
     white-space: nowrap;
 }
-/* Chat btn consistent style */
-.btn-chat {
+/* (chat removed) */
+.btn-chat-removed {
     background: #edfaf4;
     color: #1a6644;
     border: 1.5px solid #86ddb0 !important;
@@ -129,9 +129,7 @@ CSS;
                         <div class="appt-actions">
                             <a href="<?= BASE_URL ?>/appointments/<?= $appt['id'] ?? '' ?>/reschedule" class="btn-sm btn-reschedule">Reschedule</a>
                             <button onclick="cancelAppt(<?= $appt['id'] ?? 0 ?>)" class="btn-sm btn-cancel">Cancel</button>
-                            <a href="<?= BASE_URL ?>/chat/<?= $appt['id'] ?? '' ?>" class="btn-sm btn-chat">
-                                <i class="fa fa-comment-medical" style="font-size:11px;"></i> Chat
-                            </a>
+
                         </div>
                         <?php else: ?>
                         <span style="font-size:12px;color:var(--hint);">—</span>
@@ -184,9 +182,6 @@ CSS;
                             <td>
                                 <div class="appt-actions">
                                     <a href="<?= BASE_URL ?>/categories" class="btn-sm btn-reschedule">Book again</a>
-                                    <a href="<?= BASE_URL ?>/chat/<?= $appt['id'] ?? '' ?>" class="btn-sm btn-chat">
-                                        <i class="fa fa-comment-medical" style="font-size:11px;"></i> Chat
-                                    </a>
                                 </div>
                             </td>
                         </tr>
@@ -283,7 +278,7 @@ function openDetailPanel(apptId) {
     document.body.style.overflow = 'hidden';
     Promise.all([
         fetch(BASE_URL + '/api/appointments/' + apptId).then(function(r){ return r.json(); }),
-        fetch(BASE_URL + '/api/messages/' + apptId).then(function(r){ return r.json(); })
+        fetch(BASE_URL + '/api/appointments/' + apptId + '/comments').then(function(r){ return r.json(); })
     ]).then(function(results){
         var detail = results[0], comments = results[1];
         if (!detail.success) { body.innerHTML = '<p style="color:var(--muted);padding:20px;">Could not load details.</p>'; return; }
@@ -307,16 +302,69 @@ function renderDetailPanel(appt, comments) {
     var statusClass = 'badge-' + (appt.status || 'pending').toLowerCase();
     function fmt(s) { if (!s) return '—'; var d = new Date(s+'T00:00:00'); return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); }
     function fmtT(t) { if (!t) return '—'; var p = t.split(':'), h = parseInt(p[0]); return (h%12||12) + ':' + p[1] + ' ' + (h>=12?'PM':'AM'); }
+    function fmtDt(s) { if (!s) return ''; return new Date(s.replace(' ','T')).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}); }
 
-    var chatHTML = '';
-    if (comments && comments.length) {
-        comments.forEach(function(c){
-            var side = (c.sender_role === 'doctor') ? 'doctor' : 'patient';
-            var label = (c.sender_role === 'doctor') ? 'Dr. ' + escHtml(c.sender_name) : 'You';
-            var time = new Date(c.created_at.replace(' ','T')).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
-            chatHTML += '<div class="chat-msg ' + side + '"><div class="chat-bubble">' + escHtml(c.message) + '</div><span class="chat-meta">' + label + ' · ' + time + '</span></div>';
+    // Separate doctor top-level comments from patient replies
+    var doctorComments = comments.filter(function(c){ return c.author_role === 'doctor' && !c.parent_id; });
+    var patientReplies = comments.filter(function(c){ return c.author_role === 'patient'; });
+    var patientReplyCount = patientReplies.length;
+
+    // Lab report section
+    var labHTML = '';
+    if (appt.lab_report_path) {
+        labHTML = '<div class="detail-notes-box" style="border-color:rgba(99,179,237,.4);background:rgba(99,179,237,.06);">'
+            + '<span class="detail-field-label" style="color:#63b3ed;"><i class="fa fa-flask" style="margin-right:5px;"></i>Lab Report</span>'
+            + '<p style="margin:8px 0 0;font-size:13px;color:var(--text);">Your lab report is ready.</p>'
+            + '<a href="' + BASE_URL + '/lab-report/' + appt.id + '" target="_blank" class="btn-sm" style="margin-top:10px;display:inline-flex;align-items:center;gap:6px;background:rgba(99,179,237,.15);color:#63b3ed;border:1px solid rgba(99,179,237,.3);border-radius:6px;padding:6px 12px;font-size:12px;font-weight:600;text-decoration:none;">'
+            + '<i class="fa fa-download"></i> View / Download Report</a>'
+            + '</div>';
+    } else if (appt.status === 'Completed') {
+        labHTML = '<div class="detail-notes-box"><span class="detail-field-label"><i class="fa fa-flask" style="margin-right:5px;"></i>Lab Report</span>'
+            + '<p class="detail-notes-empty">No lab report uploaded yet.</p></div>';
+    }
+
+    // Doctor comment thread
+    var threadHTML = '';
+    if (doctorComments.length) {
+        doctorComments.forEach(function(dc){
+            // replies to this comment
+            var replies = comments.filter(function(c){ return parseInt(c.parent_id) === parseInt(dc.id); });
+            var replyHTML = '';
+            replies.forEach(function(r){
+                replyHTML += '<div style="margin-left:20px;margin-top:10px;padding:10px 12px;background:rgba(99,102,241,.07);border-left:3px solid rgba(99,102,241,.4);border-radius:0 8px 8px 0;">'
+                    + '<div style="font-size:11px;font-weight:700;color:#818cf8;margin-bottom:4px;">You · ' + fmtDt(r.created_at) + '</div>'
+                    + '<div style="font-size:13px;color:var(--text);">' + escHtml(r.message) + '</div>'
+                    + '</div>';
+            });
+
+            // Reply box — only show if: report uploaded AND <2 patient replies AND no reply to THIS comment yet
+            var repliesForThis = replies.length;
+            var totalPatientReplies = patientReplyCount;
+            var canReply = appt.lab_report_path && totalPatientReplies < 2 && repliesForThis === 0;
+            var replyBox = '';
+            if (canReply) {
+                replyBox = '<div style="margin-left:20px;margin-top:10px;">'
+                    + '<textarea id="replyInput_' + dc.id + '" rows="2" placeholder="Write your reply…" style="width:100%;padding:8px 10px;border:1px solid var(--border2);border-radius:8px;background:var(--bg);color:var(--text);font-size:13px;resize:none;box-sizing:border-box;"></textarea>'
+                    + '<button onclick="sendReply(' + appt.id + ',' + dc.id + ')" style="margin-top:6px;padding:6px 14px;background:var(--blue);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;">'
+                    + '<i class="fa fa-reply"></i> Reply</button>'
+                    + (totalPatientReplies === 1 ? '<span style="font-size:11px;color:var(--hint);margin-left:8px;">1 reply used · 1 remaining</span>' : '')
+                    + '</div>';
+            } else if (appt.lab_report_path && totalPatientReplies >= 2) {
+                replyBox = '<p style="margin:8px 0 0 20px;font-size:11px;color:var(--hint);">You have used all 2 replies for this appointment.</p>';
+            } else if (!appt.lab_report_path) {
+                replyBox = '<p style="margin:8px 0 0 20px;font-size:11px;color:var(--hint);"><i class="fa fa-lock" style="margin-right:4px;"></i>You can reply once the lab report is uploaded.</p>';
+            }
+
+            threadHTML += '<div style="padding:12px 14px;background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.2);border-radius:10px;margin-bottom:10px;">'
+                + '<div style="font-size:11px;font-weight:700;color:#22C55E;margin-bottom:6px;"><i class="fa fa-stethoscope" style="margin-right:4px;"></i>Dr. ' + escHtml(dc.name || dc.doctor_name || 'Doctor') + ' · ' + fmtDt(dc.created_at) + '</div>'
+                + '<div style="font-size:13px;color:var(--text);">' + escHtml(dc.message) + '</div>'
+                + replyHTML
+                + replyBox
+                + '</div>';
         });
-    } else { chatHTML = '<p class="chat-empty">No messages yet. Send the first one!</p>'; }
+    } else {
+        threadHTML = '<p class="detail-notes-empty">Your doctor has not left any notes yet.</p>';
+    }
 
     body.innerHTML =
         '<div class="detail-field"><span class="detail-field-label">Doctor</span><span class="detail-field-value" style="font-weight:600;">' + escHtml(appt.doctor_name) + '</span><span style="font-size:13px;color:var(--muted);">' + escHtml(appt.specialty || appt.category || '') + '</span></div>'
@@ -324,45 +372,30 @@ function renderDetailPanel(appt, comments) {
         + '<div class="detail-field"><span class="detail-field-label">Status</span><span class="badge ' + statusClass + '" style="margin-top:3px;">' + escHtml(appt.status) + '</span></div>'
         + (appt.reference_number ? '<div class="detail-field"><span class="detail-field-label">Reference</span><span class="detail-field-value" style="font-family:monospace;">' + escHtml(appt.reference_number) + '</span></div>' : '')
         + (appt.visit_reason ? '<div class="detail-field"><span class="detail-field-label">Visit Reason</span><span class="detail-field-value">' + escHtml(appt.visit_reason) + '</span></div>' : '')
-        + '<div class="detail-notes-box"><span class="detail-field-label"><i class="fa fa-stethoscope" style="margin-right:5px;"></i>Doctor\'s Notes</span>'
-        + (appt.doctor_comment ? '<p class="detail-notes-text">' + escHtml(appt.doctor_comment) + '</p>' : '<p class="detail-notes-empty">No notes from your doctor yet.</p>') + '</div>'
-        + '<div class="chat-section"><span class="chat-section-title"><i class="fa fa-comments" style="margin-right:5px;"></i>Messages</span>'
-        + '<div class="chat-messages" id="chatMessages">' + chatHTML + '</div>'
-        + '<div class="chat-input-row"><textarea class="chat-input" id="chatInput" placeholder="Send a message to your doctor\u2026" rows="1"></textarea>'
-        + '<button class="chat-send-btn" id="chatSendBtn" onclick="sendChatMessage()"><i class="fa fa-paper-plane"></i></button></div></div>';
-
-    setTimeout(function(){ var m = document.getElementById('chatMessages'); if (m) m.scrollTop = m.scrollHeight; }, 50);
-
-    var inp = document.getElementById('chatInput');
-    if (inp) {
-        inp.addEventListener('input', function(){ this.style.height = 'auto'; this.style.height = Math.min(this.scrollHeight, 100) + 'px'; });
-        inp.addEventListener('keydown', function(e){ if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMessage(); } });
-    }
+        + labHTML
+        + '<div class="detail-notes-box" id="commentThread"><span class="detail-field-label"><i class="fa fa-stethoscope" style="margin-right:5px;"></i>Doctor\'s Notes &amp; Replies</span><div style="margin-top:10px;">' + threadHTML + '</div></div>';
 }
 
-function sendChatMessage() {
-    if (!_detailId) return;
-    var inp = document.getElementById('chatInput'), btn = document.getElementById('chatSendBtn');
+function sendReply(apptId, parentCommentId) {
+    var inp = document.getElementById('replyInput_' + parentCommentId);
     if (!inp) return;
-    var msg = inp.value.trim(); if (!msg) return;
-    inp.disabled = true; btn.disabled = true; btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i>';
-    fetch(BASE_URL + '/api/messages/' + _detailId, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: msg })
+    var msg = inp.value.trim();
+    if (!msg) { showToast('Reply cannot be empty.', 'error'); return; }
+    fetch(BASE_URL + '/api/appointments/' + apptId + '/comments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: msg, parent_id: parentCommentId })
     })
     .then(function(r){ return r.json(); })
     .then(function(res){
         if (res.success) {
-            inp.value = ''; inp.style.height = 'auto';
-            var msgs = document.getElementById('chatMessages');
-            var empty = msgs ? msgs.querySelector('.chat-empty') : null; if (empty) empty.remove();
-            var c = res.data, time = new Date(c.created_at.replace(' ','T')).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
-            var div = document.createElement('div'); div.className = 'chat-msg patient';
-            div.innerHTML = '<div class="chat-bubble">' + escHtml(c.message) + '</div><span class="chat-meta">You · ' + time + '</span>';
-            if (msgs) { msgs.appendChild(div); msgs.scrollTop = msgs.scrollHeight; }
-        } else { showToast(res.message || 'Could not send message.', 'error'); }
+            showToast('Reply sent.', 'success');
+            openDetailPanel(apptId); // refresh panel
+        } else {
+            showToast(res.message || 'Could not send reply.', 'error');
+        }
     })
-    .catch(function(){ showToast('Network error.', 'error'); })
-    .finally(function(){ inp.disabled = false; btn.disabled = false; btn.innerHTML = '<i class="fa fa-paper-plane"></i>'; inp.focus(); });
+    .catch(function(){ showToast('Network error.', 'error'); });
 }
 
 document.addEventListener('DOMContentLoaded', function() {

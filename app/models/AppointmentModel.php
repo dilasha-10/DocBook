@@ -183,7 +183,7 @@ function cancel_appointment(int $id, int $patient_id): array
         $upd = $pdo->prepare("UPDATE appointments SET status = 'Cancelled' WHERE id = :id");
         $upd->execute([':id' => $id]);
 
-        // Write audit log entry (best-effort - table may not exist yet)
+        // Write audit log entry (best-effort — table may not exist yet)
         try {
             $log = $pdo->prepare("
                 INSERT INTO appointment_audit_log
@@ -193,7 +193,7 @@ function cancel_appointment(int $id, int $patient_id): array
             ");
             $log->execute([':appt_id' => $id, ':user_id' => $patient_id]);
         } catch (Exception $e) {
-            // audit log table not yet created - skip silently
+            // audit log table not yet created — skip silently
         }
 
         $pdo->commit();
@@ -220,7 +220,7 @@ function get_appointment_stats($patient_id) {
     $stmt->execute([':pid' => $patient_id]);
     return $stmt->fetch(PDO::FETCH_ASSOC) ?: ['upcoming' => 0, 'total' => 0, 'pending' => 0];
 }
-// GET /api/appointments/:id - detail with doctor's latest comment
+// ── GET /api/appointments/:id — detail with lab report and doctor comment ──────
 function get_appointment_detail_with_comment(int $id): ?array
 {
     $pdo  = db_connect();
@@ -237,29 +237,33 @@ function get_appointment_detail_with_comment(int $id): ?array
             u.name              AS doctor_name,
             d.specialty,
             c.name              AS category,
+            lr.file_path        AS lab_report_path,
             (SELECT ac.message
                FROM appointment_comments ac
                JOIN doctors dx ON dx.user_id = ac.user_id
               WHERE ac.appointment_id = a.id
                 AND dx.id = a.doctor_id
+                AND ac.parent_id IS NULL
               ORDER BY ac.created_at DESC
               LIMIT 1)          AS doctor_comment
         FROM appointments a
         JOIN doctors    d ON a.doctor_id   = d.id
         JOIN users      u ON d.user_id     = u.id
         JOIN categories c ON d.category_id = c.id
+        LEFT JOIN lab_reports lr ON lr.appointment_id = a.id
         WHERE a.id = :id
     ");
     $stmt->execute([':id' => $id]);
     return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
 }
 
-// GET /api/appointments/:id/comments - full chat thread
+// ── GET /api/appointments/:id/comments — full threaded comment list ────────────
 function get_appointment_comments(int $appointment_id): array
 {
     $pdo  = db_connect();
     $stmt = $pdo->prepare("
-        SELECT ac.id, ac.message, ac.created_at, u.name, u.role
+        SELECT ac.id, ac.parent_id, ac.message, ac.created_at,
+               ac.author_role, u.name
         FROM appointment_comments ac
         JOIN users u ON ac.user_id = u.id
         WHERE ac.appointment_id = :id
@@ -269,20 +273,52 @@ function get_appointment_comments(int $appointment_id): array
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
-// POST /api/appointments/:id/comments - patient posts a message
-function create_appointment_comment(int $appointment_id, int $user_id, string $message): array
+// ── POST /api/appointments/:id/comments — patient posts a reply ───────────────
+// Rules:
+//   - patient can only reply to a doctor's top-level comment (parent_id required)
+//   - only allowed after lab report is uploaded
+//   - max 2 patient replies total per appointment
+function create_appointment_comment(int $appointment_id, int $user_id, string $message, ?int $parent_id = null): array
 {
-    $pdo  = db_connect();
+    $pdo = db_connect();
+
+    // Check lab report exists
+    $lr = $pdo->prepare("SELECT id FROM lab_reports WHERE appointment_id = ?");
+    $lr->execute([$appointment_id]);
+    if (!$lr->fetch()) {
+        return ['error' => 'Lab report not yet uploaded. You can reply once the lab report is available.'];
+    }
+
+    // Enforce max 2 patient replies
+    $cnt = $pdo->prepare("SELECT COUNT(*) FROM appointment_comments WHERE appointment_id = ? AND author_role = 'patient'");
+    $cnt->execute([$appointment_id]);
+    if ((int)$cnt->fetchColumn() >= 2) {
+        return ['error' => 'You have reached the maximum of 2 replies for this appointment.'];
+    }
+
+    // parent_id must be a doctor comment
+    if ($parent_id) {
+        $par = $pdo->prepare("SELECT id FROM appointment_comments WHERE id = ? AND appointment_id = ? AND author_role = 'doctor'");
+        $par->execute([$parent_id, $appointment_id]);
+        if (!$par->fetch()) {
+            return ['error' => 'Invalid parent comment.'];
+        }
+    }
+
     $stmt = $pdo->prepare("
-        INSERT INTO appointment_comments (appointment_id, user_id, message)
-        VALUES (:appt_id, :user_id, :msg)
+        INSERT INTO appointment_comments (appointment_id, user_id, message, parent_id, author_role)
+        VALUES (:appt_id, :user_id, :msg, :parent_id, 'patient')
     ");
-    $stmt->execute([':appt_id' => $appointment_id, ':user_id' => $user_id, ':msg' => $message]);
+    $stmt->execute([
+        ':appt_id'   => $appointment_id,
+        ':user_id'   => $user_id,
+        ':msg'       => $message,
+        ':parent_id' => $parent_id,
+    ]);
     $new_id = $pdo->lastInsertId();
 
-    // Return the newly created comment with user info
     $fetch = $pdo->prepare("
-        SELECT ac.id, ac.message, ac.created_at, u.name, u.role
+        SELECT ac.id, ac.parent_id, ac.message, ac.created_at, ac.author_role, u.name
         FROM appointment_comments ac
         JOIN users u ON ac.user_id = u.id
         WHERE ac.id = :id
@@ -291,7 +327,7 @@ function create_appointment_comment(int $appointment_id, int $user_id, string $m
     return $fetch->fetch(PDO::FETCH_ASSOC) ?: [];
 }
 
-// GET /api/patient/appointments - list with doctor name and status 
+// ── GET /api/patient/appointments — list with doctor name and status ──────────
 function get_patient_appointments_list(int $patient_id): array
 {
     $pdo  = db_connect();

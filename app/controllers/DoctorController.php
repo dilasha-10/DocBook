@@ -268,12 +268,21 @@ function api_doctor_appointment_detail(): void
         json_response(['error' => true, 'message' => 'Appointment not found'], 404);
     }
 
-    $stmt = $pdo->prepare("SELECT id, message, created_at FROM appointment_comments WHERE appointment_id = ? ORDER BY created_at ASC");
-    $stmt->execute([$appointmentId]);
-    $comments = [];
-    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $c) {
-        $comments[] = ['id' => (int)$c['id'], 'text' => $c['message'], 'date' => date('M j, Y', strtotime($c['created_at']))];
-    }
+    // Full threaded comments with author info
+    $cStmt = $pdo->prepare("
+        SELECT ac.id, ac.parent_id, ac.message, ac.created_at, ac.author_role, u.name
+        FROM appointment_comments ac
+        JOIN users u ON ac.user_id = u.id
+        WHERE ac.appointment_id = ?
+        ORDER BY ac.created_at ASC
+    ");
+    $cStmt->execute([$appointmentId]);
+    $comments = $cStmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Lab report info
+    $lrStmt = $pdo->prepare("SELECT file_path, original_name, uploaded_at FROM lab_reports WHERE appointment_id = ?");
+    $lrStmt->execute([$appointmentId]);
+    $labReport = $lrStmt->fetch(PDO::FETCH_ASSOC) ?: null;
 
     $startTs = strtotime($appt['start_time']);
     $endTs   = strtotime($appt['end_time']);
@@ -287,6 +296,7 @@ function api_doctor_appointment_detail(): void
         'duration_minutes' => (int)(($endTs - $startTs) / 60),
         'doctor'           => ['id' => (int)$appt['doctor_id'], 'name' => $appt['doctor_name'], 'specialty' => $appt['doctor_specialty']],
         'comments'         => $comments,
+        'lab_report'       => $labReport,
     ]]);
 }
 
@@ -535,7 +545,7 @@ function api_doctor_comment(): void
     $dStmt->execute([$doctorId]);
     $dRow  = $dStmt->fetch(PDO::FETCH_ASSOC);
 
-    $pdo->prepare("INSERT INTO appointment_comments (appointment_id, user_id, message, created_at) VALUES (?, ?, ?, NOW())")->execute([$appointmentId, $dRow['user_id'], $commentText]);
+    $pdo->prepare("INSERT INTO appointment_comments (appointment_id, user_id, message, author_role, parent_id, created_at) VALUES (?, ?, ?, 'doctor', NULL, NOW())")->execute([$appointmentId, $dRow['user_id'], $commentText]);
     $commentId = (int)$pdo->lastInsertId();
 
     $stmt = $pdo->prepare("SELECT id, message AS comment_text, created_at FROM appointment_comments WHERE id = ?");
@@ -543,6 +553,88 @@ function api_doctor_comment(): void
     $comment = $stmt->fetch(PDO::FETCH_ASSOC);
 
     json_response(['success' => true, 'message' => 'Comment saved successfully', 'comment' => ['id' => (int)$comment['id'], 'text' => $comment['comment_text'], 'author' => 'Dr. ' . $dRow['name'], 'date' => date('M j, Y', strtotime($comment['created_at'])), 'appointment_id' => $appointmentId, 'visit_reason' => $appt['visit_reason'], 'appointment_date' => $appt['appointment_date'], 'appointment_time' => date('g:i A', strtotime($appt['start_time']))]]);
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// API: POST /doctor/api/lab-report
+// FormData: appointment_id, report (file)
+// Uploads a lab report for an appointment. Only the doctor assigned to the
+// appointment may upload. One report per appointment (upsert).
+// ══════════════════════════════════════════════════════════════════════════════
+function api_doctor_lab_report(): void
+{
+    $doctorId = require_doctor_auth_api();
+    $pdo      = db_connect();
+
+    $appointmentId = (int)($_POST['appointment_id'] ?? 0);
+    if (!$appointmentId) {
+        json_response(['error' => true, 'message' => 'Appointment ID is required'], 400);
+    }
+
+    // Verify appointment belongs to this doctor
+    $appt = $pdo->prepare("SELECT id FROM appointments WHERE id = ? AND doctor_id = ?");
+    $appt->execute([$appointmentId, $doctorId]);
+    if (!$appt->fetch()) {
+        json_response(['error' => true, 'message' => 'Appointment not found or unauthorised'], 404);
+    }
+
+    // File validation
+    if (empty($_FILES['report']) || $_FILES['report']['error'] !== UPLOAD_ERR_OK) {
+        json_response(['error' => true, 'message' => 'No file uploaded or upload error'], 400);
+    }
+
+    $file         = $_FILES['report'];
+    $originalName = basename($file['name']);
+    $ext          = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+    $allowed      = ['pdf', 'jpg', 'jpeg', 'png'];
+
+    if (!in_array($ext, $allowed)) {
+        json_response(['error' => true, 'message' => 'Only PDF, JPG, and PNG files are allowed'], 400);
+    }
+    if ($file['size'] > 5 * 1024 * 1024) {
+        json_response(['error' => true, 'message' => 'File size exceeds 5 MB limit'], 400);
+    }
+
+    $uploadDir = BASE_PATH . '/public/uploads/lab-reports/';
+    if (!is_dir($uploadDir)) {
+        mkdir($uploadDir, 0755, true);
+    }
+
+    // Get doctor's user_id for uploader field
+    $dRow = $pdo->prepare("SELECT user_id FROM doctors WHERE id = ?")->execute([$doctorId]);
+    $dStmt = $pdo->prepare("SELECT user_id FROM doctors WHERE id = ?");
+    $dStmt->execute([$doctorId]);
+    $dRow = $dStmt->fetch(PDO::FETCH_ASSOC);
+
+    $filename   = 'report_' . $appointmentId . '_' . time() . '.' . $ext;
+    $destPath   = $uploadDir . $filename;
+    $publicPath = 'public/uploads/lab-reports/' . $filename;
+
+    if (!move_uploaded_file($file['tmp_name'], $destPath)) {
+        json_response(['error' => true, 'message' => 'Failed to save file'], 500);
+    }
+
+    // Remove old file if exists
+    $old = $pdo->prepare("SELECT file_path FROM lab_reports WHERE appointment_id = ?");
+    $old->execute([$appointmentId]);
+    $oldRow = $old->fetch(PDO::FETCH_ASSOC);
+    if ($oldRow) {
+        $oldFile = BASE_PATH . '/' . $oldRow['file_path'];
+        if (file_exists($oldFile)) @unlink($oldFile);
+    }
+
+    // Upsert
+    $pdo->prepare("
+        INSERT INTO lab_reports (appointment_id, uploaded_by, file_path, original_name, uploaded_at)
+        VALUES (?, ?, ?, ?, NOW())
+        ON DUPLICATE KEY UPDATE
+            uploaded_by   = VALUES(uploaded_by),
+            file_path     = VALUES(file_path),
+            original_name = VALUES(original_name),
+            uploaded_at   = NOW()
+    ")->execute([$appointmentId, $dRow['user_id'], $publicPath, $originalName]);
+
+    json_response(['success' => true, 'message' => 'Lab report uploaded successfully', 'file_path' => $publicPath]);
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -647,118 +739,32 @@ function api_doctor_slots(): void
 
     json_response(['success' => true, 'doctor_id' => $doctorId, 'date' => $date, 'day_of_week' => $dayOfWeek, 'slots' => $finalSlots]);
 }
-// ══════════════════════════════════════════════════════════════════════════════
-// PAGE: GET /doctor/chat/{appointment_id}
-// ══════════════════════════════════════════════════════════════════════════════
-function doctor_chat_page(int $appointment_id): void
+
+// ── Doctor notifications page ─────────────────────────────────
+
+/**
+ * GET /doctor/notifications
+ * Full notifications page for doctors.
+ */
+function doctor_notifications_page(): void
 {
-    $doctor = require_doctor_auth();
-    $pdo    = db_connect();
-    $drId   = (int)$doctor['id'];
+    if (session_status() === PHP_SESSION_NONE) session_start();
+    $user = require_auth();
 
-    // Fetch appointment and verify it belongs to this doctor
+    // Load doctor row so the layout has $doctor
+    $pdo  = db_connect();
     $stmt = $pdo->prepare("
-        SELECT a.id, a.appointment_date, a.start_time, a.end_time,
-               a.status, a.visit_reason, a.reference_number,
-               u.id AS patient_id, u.name AS patient_name
-        FROM appointments a
-        JOIN users u ON a.patient_id = u.id
-        WHERE a.id = ? AND a.doctor_id = ?
+        SELECT d.id, d.specialty, u.id AS user_id, u.name, u.email, u.photo
+        FROM   doctors d
+        JOIN   users   u ON u.id = d.user_id
+        WHERE  d.user_id = ?
     ");
-    $stmt->execute([$appointment_id, $drId]);
-    $appt = $stmt->fetch(PDO::FETCH_ASSOC);
+    $stmt->execute([$user['id']]);
+    $doctor = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if (!$appt) {
-        http_response_code(403);
-        echo '<h1>Forbidden — Appointment not found or does not belong to you.</h1>';
-        exit;
+    if (!$doctor) {
+        http_response_code(403); echo 'Access denied.'; exit;
     }
 
-    render_doctor('chat', compact('doctor', 'appt'));
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-// API: GET /doctor/api/messages/{appointment_id}
-// ══════════════════════════════════════════════════════════════════════════════
-function api_doctor_get_messages(int $appointment_id): void
-{
-    $doctorId = require_doctor_auth_api();
-    $pdo      = db_connect();
-
-    // Verify appointment belongs to this doctor
-    $chk = $pdo->prepare("SELECT id FROM appointments WHERE id = ? AND doctor_id = ?");
-    $chk->execute([$appointment_id, $doctorId]);
-    if (!$chk->fetch()) {
-        json_response(['success' => false, 'message' => 'Forbidden.'], 403);
-    }
-
-    $stmt = $pdo->prepare("
-        SELECT m.id, m.sender_id, m.sender_role, m.message, m.is_read,
-               m.created_at, u.name AS sender_name
-        FROM messages m
-        JOIN users u ON u.id = m.sender_id
-        WHERE m.appointment_id = :appt_id
-        ORDER BY m.created_at ASC
-    ");
-    $stmt->execute([':appt_id' => $appointment_id]);
-    $messages = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-    // Mark patient messages as read
-    $pdo->prepare("
-        UPDATE messages SET is_read = 1
-        WHERE appointment_id = :appt_id AND sender_role = 'patient' AND is_read = 0
-    ")->execute([':appt_id' => $appointment_id]);
-
-    json_response(['success' => true, 'data' => $messages]);
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-// API: POST /doctor/api/messages/{appointment_id}
-// Body JSON: { message: "..." }
-// ══════════════════════════════════════════════════════════════════════════════
-function api_doctor_send_message(int $appointment_id): void
-{
-    $doctorId = require_doctor_auth_api();
-    $pdo      = db_connect();
-
-    // Verify appointment belongs to this doctor
-    $chk = $pdo->prepare("SELECT id FROM appointments WHERE id = ? AND doctor_id = ?");
-    $chk->execute([$appointment_id, $doctorId]);
-    if (!$chk->fetch()) {
-        json_response(['success' => false, 'message' => 'Forbidden.'], 403);
-    }
-
-    $body    = json_decode(file_get_contents('php://input'), true) ?? [];
-    $message = trim($body['message'] ?? '');
-    if ($message === '') {
-        json_response(['success' => false, 'message' => 'Message cannot be empty.'], 422);
-    }
-
-    // Get doctor's user_id for the sender_id
-    $dStmt = $pdo->prepare("SELECT user_id FROM doctors WHERE id = ?");
-    $dStmt->execute([$doctorId]);
-    $dRow   = $dStmt->fetch(PDO::FETCH_ASSOC);
-    $userId = (int)$dRow['user_id'];
-
-    $stmt = $pdo->prepare("
-        INSERT INTO messages (appointment_id, sender_id, sender_role, message)
-        VALUES (:appt_id, :sender_id, 'doctor', :message)
-    ");
-    $stmt->execute([
-        ':appt_id'   => $appointment_id,
-        ':sender_id' => $userId,
-        ':message'   => $message,
-    ]);
-    $new_id = (int)$pdo->lastInsertId();
-
-    $row = $pdo->prepare("
-        SELECT m.id, m.sender_id, m.sender_role, m.message, m.is_read,
-               m.created_at, u.name AS sender_name
-        FROM messages m JOIN users u ON u.id = m.sender_id
-        WHERE m.id = ?
-    ");
-    $row->execute([$new_id]);
-    $newMsg = $row->fetch(PDO::FETCH_ASSOC);
-
-    json_response(['success' => true, 'data' => $newMsg]);
+    render('doctor/notifications', ['doctor' => $doctor]);
 }
