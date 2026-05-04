@@ -63,6 +63,7 @@ require_once BASE_PATH . '/app/controllers/DoctorController.php';
 require_once BASE_PATH . '/app/controllers/PageController.php';
 require_once BASE_PATH . '/app/controllers/AdminController.php';
 require_once BASE_PATH . '/app/controllers/ChatbotController.php';
+require_once BASE_PATH . '/app/controllers/LabAdminController.php';
 
 // Routing
 
@@ -92,7 +93,7 @@ if ($uri === '/profile'         && $method === 'GET') { profile_page();         
 if ($uri === '/booking/confirm' && $method === 'GET') { booking_confirm_page(); }
 if (preg_match('#^/doctors/(\d+)$#', $uri, $m) && $method === 'GET') { doctor_booking_page((int)$m[1]); }
 if (preg_match('#^/appointments/(\d+)/reschedule$#', $uri, $m) && $method === 'GET') { reschedule_page((int)$m[1]); }
-if (preg_match('#^/chat/(\d+)$#', $uri, $m) && $method === 'GET') { chat_page((int)$m[1]); }
+if (preg_match('#^/lab-report/(\d+)$#', $uri, $m) && $method === 'GET') { lab_report_download((int)$m[1]); }
 
 // Doctor portal pages
 if ($uri === '/doctor/dashboard'    && $method === 'GET') { doctor_dashboard_page();    }
@@ -101,8 +102,8 @@ if ($uri === '/doctor/patients'     && $method === 'GET') { doctor_patients_page
 if ($uri === '/doctor/availability' && $method === 'GET') { doctor_availability_page(); }
 if ($uri === '/doctor/profile'      && $method === 'GET') { doctor_profile_page();      }
 
-// Doctor chat page
-if (preg_match('#^/doctor/chat/(\d+)$#', $uri, $m) && $method === 'GET') { doctor_chat_page((int)$m[1]); }
+// Doctor lab report upload
+if ($uri === '/doctor/api/lab-report' && $method === 'POST') { api_doctor_lab_report(); }
 
 // Doctor API routes (/doctor/api/*)
 if ($uri === '/doctor/api/appointments'       && $method === 'GET')                 { api_doctor_appointments();       }
@@ -114,8 +115,7 @@ if ($uri === '/doctor/api/profile'            && in_array($method, ['GET','POST'
 if ($uri === '/doctor/api/patients'           && $method === 'GET')                 { api_doctor_patients();           }
 if ($uri === '/doctor/api/comment'            && $method === 'POST')                { api_doctor_comment();            }
 if ($uri === '/doctor/api/slots'              && $method === 'GET')                 { api_doctor_slots();              }
-if (preg_match('#^/doctor/api/messages/(\d+)$#', $uri, $m) && $method === 'GET')   { api_doctor_get_messages((int)$m[1]); }
-if (preg_match('#^/doctor/api/messages/(\d+)$#', $uri, $m) && $method === 'POST')  { api_doctor_send_message((int)$m[1]); }
+
 
 // Patient API routes
 if ($uri === '/api/categories'        && $method === 'GET')  { api_get_categories();  }
@@ -131,9 +131,6 @@ if (preg_match('#^/api/appointments/(\d+)/comments$#',   $uri, $m) && $method ==
 if (preg_match('#^/api/appointments/(\d+)/comments$#',   $uri, $m) && $method === 'POST')  { api_post_comment((int)$m[1]);           }
 if (preg_match('#^/api/appointments/(\d+)$#',            $uri, $m) && $method === 'GET')   { api_get_appointment_detail((int)$m[1]); }
 if ($uri === '/api/patient/appointments'                 && $method === 'GET') { api_patient_appointments(); }
-
-if (preg_match('#^/api/messages/(\d+)$#', $uri, $m) && $method === 'GET')  { api_get_messages((int)$m[1]); }
-if (preg_match('#^/api/messages/(\d+)$#', $uri, $m) && $method === 'POST') { api_send_message((int)$m[1]); }
 
 // Admin pages
 if ($uri === '/admin/dashboard'             && $method === 'GET')   { admin_dashboard_page();              }
@@ -153,6 +150,13 @@ if ($uri === '/api/chatbot/escalate' && $method === 'POST') { api_chatbot_escala
 if ($uri === '/api/payment/initiate' && $method === 'POST') { api_payment_initiate(); }
 if ($uri === '/payment/success'      && $method === 'GET')  { payment_success_page(); }
 if ($uri === '/payment/failure'      && $method === 'GET')  { payment_failure_page(); }
+
+// Lab admin
+if ($uri === '/lab-admin/dashboard'              && $method === 'GET')  { lab_admin_dashboard_page();         }
+if ($uri === '/lab-admin/api/find-patient'       && $method === 'GET')  { api_lab_admin_find_patient();       }
+if ($uri === '/lab-admin/api/patient-appointments' && $method === 'GET') { api_lab_admin_patient_appointments(); }
+if ($uri === '/lab-admin/api/upload-report'      && $method === 'POST') { api_lab_admin_upload_report();      }
+if ($uri === '/lab-admin/profile'              && $method === 'GET')  { lab_admin_profile_page();           }
 
 // 404
 http_response_code(404);
