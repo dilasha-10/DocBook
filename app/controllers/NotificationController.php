@@ -15,7 +15,7 @@ require_once BASE_PATH . '/app/models/NotificationModel.php';
 function admin_notifications_page(): void
 {
     $user = require_admin();
-    render('admin/notifications', ['user' => $user]);
+    render('admin/notifications_admin_view', ['user' => $user]);
 }
 
 // ── Admin API: send broadcast ─────────────────────────────────
@@ -50,6 +50,15 @@ function api_admin_notifications_broadcast(): void
         type:         'system_maintenance'
     );
 
+    audit_log(
+        (int) $admin['id'],
+              $admin['name'],
+              $admin['role'],
+        'BROADCAST_NOTIFICATION',
+        'notification',
+        "Broadcast \"{$title}\" sent to roles: " . implode(', ', $roles) . " ({$result['total_sent']} recipients)."
+    );
+
     json_response(['success' => true, 'broadcast_id' => $result['broadcast_id'], 'total_sent' => $result['total_sent']]);
 }
 
@@ -77,6 +86,15 @@ function api_admin_notifications_targeted(): void
         recipient_id: $recipient_id,
         title:        $title,
         message:      $msg
+    );
+
+    audit_log(
+        (int) $admin['id'],
+              $admin['name'],
+              $admin['role'],
+        'TARGETED_NOTIFICATION',
+        'notification',
+        "Targeted notification \"{$title}\" sent to user #{$recipient_id}."
     );
 
     json_response(['success' => true, 'notification_id' => $notif_id]);

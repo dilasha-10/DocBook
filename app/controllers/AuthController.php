@@ -72,6 +72,15 @@ function login_post(): void
         $user = find_user_by_email($email);
 
         if (!$user || !password_verify($password, (string) $user['password'])) {
+            // ── Audit: login failure ──────────────────────────────
+            audit_log(
+                $user ? (int) $user['id'] : null,
+                $user ? $user['name']     : null,
+                $user ? $user['role']     : null,
+                'LOGIN_FAILED',
+                'auth',
+                'Failed login attempt for email: ' . $email
+            );
             $errors['general'] = 'Incorrect email or password.';
         }
     }
@@ -86,7 +95,23 @@ function login_post(): void
     $_SESSION['user_name'] = $user['name'];
     $_SESSION['user_role'] = $user['role'];
 
-    redirect('/dashboard');
+    // ── Audit: login success ──────────────────────────────────
+    audit_log(
+        (int)  $user['id'],
+               $user['name'],
+               $user['role'],
+        'LOGIN',
+        'auth',
+        'User logged in.'
+    );
+
+    $dest = match($user['role']) {
+        'admin'     => '/admin/dashboard',
+        'doctor'    => '/doctor/dashboard',
+        'lab_admin' => '/lab-admin/dashboard',
+        default     => '/dashboard',
+    };
+    redirect($dest);
 }
 
 // GET /signup
@@ -194,6 +219,15 @@ function signup_post(): void
 function logout(): void
 {
     if (session_status() === PHP_SESSION_NONE) session_start();
+
+    // ── Audit: logout ─────────────────────────────────────────
+    $uid   = $_SESSION['user_id']   ?? null;
+    $uname = $_SESSION['user_name'] ?? null;
+    $urole = $_SESSION['user_role'] ?? null;
+    if ($uid) {
+        audit_log((int) $uid, $uname, $urole, 'LOGOUT', 'auth', 'User logged out.');
+    }
+
     $_SESSION = [];
     if (ini_get('session.use_cookies')) {
         $p = session_get_cookie_params();

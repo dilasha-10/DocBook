@@ -279,6 +279,31 @@
     <!-- SIDEBAR -->
     <aside class="sidebar" id="sidebar">
         <nav class="sidebar-nav">
+            <?php
+            $_sidebarRole = $user['role'] ?? '';
+            if ($_sidebarRole === 'admin'): ?>
+            <div class="sidebar-section-label">Admin Portal</div>
+            <a href="<?= BASE_URL ?>/admin/dashboard" class="sidebar-link <?php echo request_is('/admin/dashboard') ? 'active' : ''; ?>">
+                <i class="fa fa-th-large sidebar-icon"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="<?= BASE_URL ?>/admin/transactions" class="sidebar-link <?php echo request_is('/admin/transactions') ? 'active' : ''; ?>">
+                <i class="fa fa-receipt sidebar-icon"></i>
+                <span>Transactions</span>
+            </a>
+            <a href="<?= BASE_URL ?>/admin/notifications" class="sidebar-link <?php echo request_is('/admin/notifications') ? 'active' : ''; ?>">
+                <i class="fa fa-bullhorn sidebar-icon"></i>
+                <span>Notification Centre</span>
+            </a>
+            <a href="<?= BASE_URL ?>/admin/chatbot-escalations" class="sidebar-link <?php echo request_is('/admin/chatbot-escalations') ? 'active' : ''; ?>">
+                <i class="fa fa-robot sidebar-icon"></i>
+                <span>Chatbot Escalations</span>
+            </a>
+            <a href="<?= BASE_URL ?>/admin/audit-trail" class="sidebar-link <?php echo request_is('/admin/audit-trail') ? 'active' : ''; ?>">
+                <i class="fa fa-shield-halved sidebar-icon"></i>
+                <span>Audit Trail</span>
+            </a>
+            <?php else: ?>
             <div class="sidebar-section-label">Main</div>
             <a href="<?= BASE_URL ?>/dashboard" class="sidebar-link <?php echo request_is('/dashboard') ? 'active' : ''; ?>">
                 <i class="fa fa-th-large sidebar-icon"></i>
@@ -304,14 +329,23 @@
                 <span>My Profile</span>
             </a>
             <?php endif; ?>
+            <?php endif; ?>
         </nav>
         <div class="sidebar-footer">
             <?php if (isset($user)): ?>
+            <?php
+            $_roleLabel = match($user['role'] ?? '') {
+                'admin'     => 'Admin',
+                'doctor'    => 'Doctor',
+                'lab_admin' => 'Lab Admin',
+                default     => 'Patient',
+            };
+            ?>
             <div class="sidebar-user">
                 <div class="avatar-circle"><?php echo strtoupper(substr($user['name'] ?? 'U', 0, 2)); ?></div>
                 <div class="sidebar-user-info">
                     <div class="sidebar-user-name"><?php echo htmlspecialchars($user['name'] ?? ''); ?></div>
-                    <div class="sidebar-user-role">Patient</div>
+                    <div class="sidebar-user-role"><?php echo $_roleLabel; ?></div>
                 </div>
             </div>
             <?php endif; ?>
