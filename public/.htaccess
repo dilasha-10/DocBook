@@ -1,12 +1,10 @@
-Options -MultiViews
+Options +FollowSymLinks -MultiViews
 RewriteEngine On
-
-# Set the base to the public/ folder
-RewriteBase /docbook/public/
+RewriteBase /docBook_r/docbook/public/
 
 # Serve existing files and directories directly
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 
 # Route everything else through index.php
-RewriteRule ^ index.php [QSA,L]
+RewriteRule ^(.+)$ index.php [L,QSA]
