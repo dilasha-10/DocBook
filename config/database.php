@@ -9,7 +9,7 @@ function db_connect() {
 
     $host    = $dotenv['DB_HOST']   ?? '127.0.0.1';
     $port    = $dotenv['DB_PORT']   ?? '3306';
-    $dbname  = $dotenv['DB_NAME']   ?? 'docbook';
+    $dbname  = $dotenv['DB_NAME']   ?? 'docbook_admin';
     $user    = $dotenv['DB_USER']   ?? 'root';
     $pass    = $dotenv['DB_PASS']   ?? '';
     $charset = 'utf8mb4';

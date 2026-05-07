@@ -15,8 +15,15 @@ $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' :
 $host   = $_SERVER['HTTP_HOST'] ?? 'localhost';
 $script = $_SERVER['SCRIPT_NAME'] ?? '/index.php';
 $base   = rtrim(dirname($script), '/');
+
+// If the base includes /public, we also want to support the root (the parent of public)
+// This is important for .htaccess rewrites that point to the public folder.
+$baseRoot = rtrim(str_replace('/public', '', $base), '/');
+
 define('BASE_URL', $scheme . '://' . $host . $base);
 define('BASE_PREFIX', $base);
+define('BASE_PREFIX_ROOT', $baseRoot);
+
 
 require_once BASE_PATH . '/config/database.php';
 
@@ -66,15 +73,26 @@ require_once BASE_PATH . '/app/controllers/AdminController.php';
 require_once BASE_PATH . '/app/controllers/ChatbotController.php';
 require_once BASE_PATH . '/app/controllers/LabAdminController.php';
 require_once BASE_PATH . '/app/controllers/NotificationController.php';
+require_once BASE_PATH . '/app/controllers/DepartmentController.php';
+require_once BASE_PATH . '/app/controllers/SupportTicketController.php';
+require_once BASE_PATH . '/app/controllers/AnnouncementController.php';
+require_once BASE_PATH . '/app/controllers/AppointmentAuditController.php';
 
 // ── Routing ───────────────────────────────────────────────────
 
 $rawUri = rtrim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/') ?: '/';
-$uri    = (BASE_PREFIX !== '' && strpos($rawUri, BASE_PREFIX) === 0)
-    ? substr($rawUri, strlen(BASE_PREFIX))
-    : $rawUri;
-$uri    = $uri === '' ? '/' : $uri;
+$uri    = $rawUri;
+
+// Strip prefixes: try the longer one (BASE_PREFIX) first, then the root one
+if (BASE_PREFIX !== '' && strpos($uri, BASE_PREFIX) === 0) {
+    $uri = substr($uri, strlen(BASE_PREFIX));
+} elseif (BASE_PREFIX_ROOT !== '' && strpos($uri, BASE_PREFIX_ROOT) === 0) {
+    $uri = substr($uri, strlen(BASE_PREFIX_ROOT));
+}
+
+$uri    = ($uri === '' || $uri === false) ? '/' : $uri;
 $method = $_SERVER['REQUEST_METHOD'];
+
 
 // ── Home ──────────────────────────────────────────────────────
 
@@ -152,6 +170,10 @@ if ($uri === '/admin/transactions'        && $method === 'GET') { admin_transact
 if ($uri === '/admin/chatbot-escalations' && $method === 'GET') { admin_chatbot_escalations_page();  }
 if ($uri === '/admin/notifications'       && $method === 'GET') { admin_notifications_page();        }
 if ($uri === '/admin/audit-trail'         && $method === 'GET') { admin_audit_trail_page();          }
+if ($uri === '/admin/departments'         && $method === 'GET') { admin_departments_page();          }
+if ($uri === '/admin/support-tickets'     && $method === 'GET') { admin_support_tickets_page();      }
+if ($uri === '/admin/appointments'        && $method === 'GET') { admin_appointments_page();         }
+if ($uri === '/admin/announcements'       && $method === 'GET') { admin_announcements_page();        }
 
 // ── Admin API routes ──────────────────────────────────────────
 
@@ -166,6 +188,44 @@ if ($uri === '/admin/api/audit-trail/export'        && $method === 'GET')  { api
 if ($uri === '/admin/api/audit-trail/filters'       && $method === 'GET')  { api_admin_audit_trail_filters();    }
 
 if (preg_match('#^/admin/api/chatbot/escalations/(\d+)$#', $uri, $m) && $method === 'PATCH') { api_admin_chatbot_update((int)$m[1]); }
+
+// ── Admin: Department API routes ──────────────────────────────
+
+if ($uri === '/admin/api/departments'              && $method === 'GET')  { api_admin_departments_list();       }
+if ($uri === '/admin/api/departments'              && $method === 'POST') { api_admin_department_create();      }
+if ($uri === '/admin/api/specializations'           && $method === 'GET')  { api_admin_specializations_list();   }
+if ($uri === '/admin/api/specializations'           && $method === 'POST') { api_admin_specialization_create();  }
+
+if (preg_match('#^/admin/api/departments/(\d+)$#', $uri, $m) && $method === 'PUT')    { api_admin_department_update((int)$m[1]); }
+if (preg_match('#^/admin/api/departments/(\d+)$#', $uri, $m) && $method === 'DELETE') { api_admin_department_delete((int)$m[1]); }
+if (preg_match('#^/admin/api/specializations/(\d+)$#', $uri, $m) && $method === 'PUT')    { api_admin_specialization_update((int)$m[1]); }
+if (preg_match('#^/admin/api/specializations/(\d+)$#', $uri, $m) && $method === 'DELETE') { api_admin_specialization_delete((int)$m[1]); }
+
+// ── Admin: Support Ticket API routes ──────────────────────────
+
+if ($uri === '/admin/api/support-tickets'           && $method === 'GET') { api_admin_support_tickets(); }
+if (preg_match('#^/admin/api/support-tickets/(\d+)$#', $uri, $m) && $method === 'GET')   { api_admin_support_ticket_detail((int)$m[1]); }
+if (preg_match('#^/admin/api/support-tickets/(\d+)$#', $uri, $m) && $method === 'PATCH') { api_admin_support_ticket_update((int)$m[1]); }
+
+// ── Admin: Appointment Audit API routes ───────────────────────
+
+if ($uri === '/admin/api/appointments'              && $method === 'GET') { api_admin_appointments_list(); }
+if ($uri === '/admin/api/appointments/doctors'      && $method === 'GET') { api_admin_doctors_list();      }
+if (preg_match('#^/admin/api/appointments/(\d+)/cancel$#', $uri, $m) && $method === 'POST') { api_admin_cancel_appointment((int)$m[1]); }
+
+// ── Admin: Announcement API routes ────────────────────────────
+
+if ($uri === '/admin/api/announcements'             && $method === 'GET')  { api_admin_announcements_list();    }
+if ($uri === '/admin/api/announcements'             && $method === 'POST') { api_admin_announcement_create();   }
+if (preg_match('#^/admin/api/announcements/(\d+)$#', $uri, $m) && $method === 'PUT')    { api_admin_announcement_update((int)$m[1]); }
+if (preg_match('#^/admin/api/announcements/(\d+)$#', $uri, $m) && $method === 'DELETE') { api_admin_announcement_delete((int)$m[1]); }
+if (preg_match('#^/admin/api/announcements/(\d+)/toggle$#', $uri, $m) && $method === 'POST') { api_admin_announcement_toggle((int)$m[1]); }
+if ($uri === '/api/announcements/active'            && $method === 'GET')  { api_active_announcements(); }
+
+// ── Patient: Support Ticket routes ────────────────────────────
+
+if ($uri === '/api/support-tickets'                 && $method === 'POST') { api_patient_submit_ticket(); }
+if ($uri === '/api/support-tickets'                 && $method === 'GET')  { api_patient_tickets();       }
 
 // ── Chatbot API routes ────────────────────────────────────────
 
