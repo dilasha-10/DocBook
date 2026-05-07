@@ -78,6 +78,7 @@ if ($uri === '/')                              { about_page(); }
 if ($uri === '/about'   && $method === 'GET') { about_page(); }
 if ($uri === '/contact' && $method === 'GET') { contact_page(); }
 if ($uri === '/admin'   && $method === 'GET') { admin_page(); }
+if ($uri === '/403'     && $method === 'GET') { http_response_code(403); render('403', ['user' => auth_user()]); }
 
 // Auth
 if ($uri === '/login'  && $method === 'GET')  { login_get();    }

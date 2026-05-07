@@ -21,8 +21,11 @@ function require_doctor_auth(): array
 {
     if (session_status() === PHP_SESSION_NONE) session_start();
 
-    if (empty($_SESSION['user_id']) || ($_SESSION['user_role'] ?? '') !== 'doctor') {
+    if (empty($_SESSION['user_id'])) {
         redirect('/login');
+    }
+    if (($_SESSION['user_role'] ?? '') !== 'doctor') {
+        redirect_forbidden();
     }
 
     $pdo  = db_connect();
@@ -37,9 +40,7 @@ function require_doctor_auth(): array
     $doctor = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$doctor) {
-        http_response_code(403);
-        echo '<h1>Doctor profile not found. Please contact admin.</h1>';
-        exit;
+        redirect_forbidden();
     }
 
     return $doctor;
@@ -53,8 +54,11 @@ function require_doctor_auth_api(): int
 {
     if (session_status() === PHP_SESSION_NONE) session_start();
 
-    if (empty($_SESSION['user_id']) || ($_SESSION['user_role'] ?? '') !== 'doctor') {
+    if (empty($_SESSION['user_id'])) {
         json_response(['error' => true, 'message' => 'Unauthorised'], 401);
+    }
+    if (($_SESSION['user_role'] ?? '') !== 'doctor') {
+        json_response(['error' => true, 'message' => 'Forbidden'], 403);
     }
 
     $pdo  = db_connect();

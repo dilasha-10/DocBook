@@ -1,3 +1,38 @@
+<?php
+$role = $user['role'] ?? 'guest';
+$isAdmin = $role === 'admin';
+$isDoctor = $role === 'doctor';
+$isPatient = $role === 'patient' || $role === 'guest';
+
+$navLinks = [];
+if ($isAdmin) {
+    $navLinks = [
+        ['href' => '/admin', 'label' => 'Dashboard'],
+        ['href' => '/about', 'label' => 'About'],
+        ['href' => '/contact', 'label' => 'Contact'],
+    ];
+} elseif ($isDoctor) {
+    $navLinks = [
+        ['href' => '/doctor/dashboard', 'label' => 'Dashboard'],
+        ['href' => '/doctor/schedule', 'label' => 'Schedule'],
+        ['href' => '/doctor/patients', 'label' => 'Patients'],
+    ];
+} else {
+    $navLinks = [
+        ['href' => '/about', 'label' => 'About'],
+        ['href' => '/dashboard', 'label' => 'My Appointments'],
+        ['href' => '/categories', 'label' => 'Find Doctors'],
+        ['href' => '/contact', 'label' => 'Contact'],
+    ];
+}
+
+$userHome = '/dashboard';
+if ($isAdmin) {
+    $userHome = '/admin';
+} elseif ($isDoctor) {
+    $userHome = '/doctor/dashboard';
+}
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -33,10 +68,11 @@
 
         <!-- Desktop nav links -->
         <div class="nav-links">
-            <a href="<?= BASE_URL ?>/about"      class="nav-link <?php echo request_is('/about')      ? 'active' : ''; ?>">About</a>
-            <a href="<?= BASE_URL ?>/dashboard"  class="nav-link <?php echo request_is('/dashboard')  ? 'active' : ''; ?>">My Appointments</a>
-            <a href="<?= BASE_URL ?>/categories" class="nav-link <?php echo request_is('/categories') ? 'active' : ''; ?>">Find Doctors</a>
-            <a href="<?= BASE_URL ?>/contact"    class="nav-link <?php echo request_is('/contact')    ? 'active' : ''; ?>">Contact</a>
+            <?php foreach ($navLinks as $link): ?>
+                <a href="<?= BASE_URL . $link['href'] ?>" class="nav-link <?php echo request_is($link['href']) ? 'active' : ''; ?>">
+                    <?= htmlspecialchars($link['label']) ?>
+                </a>
+            <?php endforeach; ?>
         </div>
 
         <!-- Right actions (always visible) -->
@@ -46,7 +82,7 @@
                 <i class="fa fa-moon" id="themeIcon"></i>
             </button>
             <?php if (isset($user)): ?>
-                <a href="<?= BASE_URL ?>/profile" class="user-chip" style="text-decoration:none;cursor:pointer;">
+                <a href="<?= BASE_URL . $userHome ?>" class="user-chip" style="text-decoration:none;cursor:pointer;">
                     <div class="avatar-circle"><?php echo strtoupper(substr($user['name'] ?? 'U', 0, 2)); ?></div>
                     <span class="user-chip-name"><?php echo htmlspecialchars($user['name'] ?? ''); ?></span>
                 </a>
@@ -71,24 +107,44 @@
     <aside class="sidebar" id="sidebar">
         <nav class="sidebar-nav">
             <div class="sidebar-section-label">Main</div>
-            <a href="<?= BASE_URL ?>/dashboard" class="sidebar-link <?php echo request_is('/dashboard') ? 'active' : ''; ?>">
-                <i class="fa fa-th-large sidebar-icon"></i>
-                <span>Dashboard</span>
-            </a>
-            <a href="<?= BASE_URL ?>/dashboard#upcoming" class="sidebar-link sidebar-sub-link">
-                <i class="fa fa-calendar-check sidebar-icon"></i>
-                <span>Appointments</span>
-            </a>
-            <a href="<?= BASE_URL ?>/dashboard#past" class="sidebar-link sidebar-sub-link">
-                <i class="fa fa-clock-rotate-left sidebar-icon"></i>
-                <span>History</span>
-            </a>
-            <?php if (isset($user)): ?>
-            <div class="sidebar-section-label">Account</div>
-            <a href="<?= BASE_URL ?>/profile" class="sidebar-link <?php echo request_is('/profile') ? 'active' : ''; ?>">
-                <i class="fa fa-user sidebar-icon"></i>
-                <span>My Profile</span>
-            </a>
+            <?php if ($isAdmin): ?>
+                <a href="<?= BASE_URL ?>/admin" class="sidebar-link <?php echo request_is('/admin') ? 'active' : ''; ?>">
+                    <i class="fa fa-th-large sidebar-icon"></i>
+                    <span>Dashboard</span>
+                </a>
+            <?php elseif ($isDoctor): ?>
+                <a href="<?= BASE_URL ?>/doctor/dashboard" class="sidebar-link <?php echo request_is('/doctor/dashboard') ? 'active' : ''; ?>">
+                    <i class="fa fa-th-large sidebar-icon"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="<?= BASE_URL ?>/doctor/schedule" class="sidebar-link <?php echo request_is('/doctor/schedule') ? 'active' : ''; ?>">
+                    <i class="fa fa-calendar-check sidebar-icon"></i>
+                    <span>Schedule</span>
+                </a>
+                <a href="<?= BASE_URL ?>/doctor/patients" class="sidebar-link <?php echo request_is('/doctor/patients') ? 'active' : ''; ?>">
+                    <i class="fa fa-user-group sidebar-icon"></i>
+                    <span>Patients</span>
+                </a>
+            <?php else: ?>
+                <a href="<?= BASE_URL ?>/dashboard" class="sidebar-link <?php echo request_is('/dashboard') ? 'active' : ''; ?>">
+                    <i class="fa fa-th-large sidebar-icon"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="<?= BASE_URL ?>/dashboard#upcoming" class="sidebar-link sidebar-sub-link">
+                    <i class="fa fa-calendar-check sidebar-icon"></i>
+                    <span>Appointments</span>
+                </a>
+                <a href="<?= BASE_URL ?>/dashboard#past" class="sidebar-link sidebar-sub-link">
+                    <i class="fa fa-clock-rotate-left sidebar-icon"></i>
+                    <span>History</span>
+                </a>
+                <?php if (isset($user)): ?>
+                <div class="sidebar-section-label">Account</div>
+                <a href="<?= BASE_URL ?>/profile" class="sidebar-link <?php echo request_is('/profile') ? 'active' : ''; ?>">
+                    <i class="fa fa-user sidebar-icon"></i>
+                    <span>My Profile</span>
+                </a>
+                <?php endif; ?>
             <?php endif; ?>
         </nav>
         <!-- Sidebar footer: NO theme toggle here — only one toggle lives in the navbar -->
@@ -98,7 +154,7 @@
                 <div class="avatar-circle"><?php echo strtoupper(substr($user['name'] ?? 'U', 0, 2)); ?></div>
                 <div class="sidebar-user-info">
                     <div class="sidebar-user-name"><?php echo htmlspecialchars($user['name'] ?? ''); ?></div>
-                    <div class="sidebar-user-role">Patient</div>
+                    <div class="sidebar-user-role"><?php echo htmlspecialchars(strtoupper($role)); ?></div>
                 </div>
             </div>
             <a href="<?= BASE_URL ?>/logout" class="sidebar-logout" title="Sign out"><i class="fa fa-right-from-bracket"></i></a>
@@ -125,12 +181,15 @@
         </button>
     </div>
     <ul class="mobile-nav-links">
-        <li><a href="<?= BASE_URL ?>/about"      class="<?php echo request_is('/about')      ? 'active' : ''; ?>"><i class="fa fa-circle-info"></i> About</a></li>
-        <li><a href="<?= BASE_URL ?>/dashboard"  class="<?php echo request_is('/dashboard')  ? 'active' : ''; ?>"><i class="fa fa-th-large"></i> My Appointments</a></li>
-        <li><a href="<?= BASE_URL ?>/categories" class="<?php echo request_is('/categories') ? 'active' : ''; ?>"><i class="fa fa-stethoscope"></i> Find Doctors</a></li>
-        <li><a href="<?= BASE_URL ?>/contact"    class="<?php echo request_is('/contact')    ? 'active' : ''; ?>"><i class="fa fa-envelope"></i> Contact</a></li>
-        <?php if (isset($user)): ?>
-        <li><a href="<?= BASE_URL ?>/profile"    class="<?php echo request_is('/profile')    ? 'active' : ''; ?>"><i class="fa fa-user"></i> Profile &amp; Settings</a></li>
+        <?php foreach ($navLinks as $link): ?>
+            <li>
+                <a href="<?= BASE_URL . $link['href'] ?>" class="<?php echo request_is($link['href']) ? 'active' : ''; ?>">
+                    <i class="fa fa-circle-info"></i> <?= htmlspecialchars($link['label']) ?>
+                </a>
+            </li>
+        <?php endforeach; ?>
+        <?php if (isset($user) && $isPatient): ?>
+        <li><a href="<?= BASE_URL ?>/profile" class="<?php echo request_is('/profile') ? 'active' : ''; ?>"><i class="fa fa-user"></i> Profile &amp; Settings</a></li>
         <?php endif; ?>
     </ul>
     <div class="mobile-nav-actions">

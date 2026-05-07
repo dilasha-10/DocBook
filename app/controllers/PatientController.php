@@ -13,7 +13,7 @@ function current_user(): ?array
 //  Page: /categories 
 function categories_page()
 {
-    $user = require_auth();
+    $user = require_patient();
     $categories = get_all_categories();
 
     $category = isset($_GET['category']) && $_GET['category'] !== '' ? $_GET['category'] : null;
@@ -46,6 +46,9 @@ function dashboard_page()
 {
     $user = require_auth();
 
+    if (($user['role'] ?? '') === 'admin') {
+        redirect('/admin');
+    }
     if ($user['role'] === 'doctor') {
         redirect('/doctor/dashboard');
     }
@@ -69,7 +72,7 @@ function dashboard_page()
 //  Page: /profile 
 function profile_page()
 {
-    $user = current_user();
+    $user = require_patient();
 
     render('patient/profile', [
         'user' => $user,
@@ -79,7 +82,7 @@ function profile_page()
 //  API: POST /api/profile 
 function api_update_profile()
 {
-    $user = require_auth_api();
+    $user = require_patient_api();
     $id   = (int) $user['id'];
     $body = json_decode(file_get_contents('php://input'), true) ?? [];
 
@@ -100,7 +103,7 @@ function api_update_profile()
 //  API: POST /api/settings/password 
 function api_change_password()
 {
-    $user = require_auth_api();
+    $user = require_patient_api();
     $id   = (int) $user['id'];
     $body = json_decode(file_get_contents('php://input'), true) ?? [];
 
@@ -134,6 +137,8 @@ function api_change_password()
 //  Page: /booking/confirm
 function booking_confirm_page()
 {
+    require_patient();
+
     if (session_status() === PHP_SESSION_NONE) session_start();
 
     if (empty($_SESSION['booking_confirmation'])) {
@@ -172,7 +177,7 @@ function api_get_doctors()
 function api_reschedule_appointment($id)
 {
     if (session_status() === PHP_SESSION_NONE) session_start();
-    $authUser   = require_auth_api();
+    $authUser   = require_patient_api();
     $patient_id = (int) $authUser['id'];
     $body       = json_decode(file_get_contents('php://input'), true) ?? [];
 
@@ -211,7 +216,7 @@ function api_reschedule_appointment($id)
 function api_cancel_appointment($id)
 {
     if (session_status() === PHP_SESSION_NONE) session_start();
-    $authUser   = require_auth_api();
+    $authUser   = require_patient_api();
     $patient_id = (int) $authUser['id'];
 
     $result = cancel_appointment((int)$id, $patient_id);
@@ -226,7 +231,7 @@ function api_book_appointment()
 {
     if (session_status() === PHP_SESSION_NONE) session_start();
 
-    $authUser   = require_auth_api();
+    $authUser   = require_patient_api();
     $patient_id = (int) $authUser['id'];
     $body       = json_decode(file_get_contents('php://input'), true) ?? [];
 
@@ -288,7 +293,7 @@ function api_book_appointment()
 function reschedule_page(int $appt_id)
 {
     if (session_status() === PHP_SESSION_NONE) session_start();
-    $authUser   = require_auth();
+    $authUser   = require_patient();
     $patient_id = (int) $authUser['id'];
 
     $appt = get_appointment_by_id($appt_id);
@@ -317,7 +322,7 @@ function reschedule_page(int $appt_id)
 //  Page: /doctors/{id} 
 function doctor_booking_page(int $doctor_id)
 {
-    $authUser = require_auth();
+    $authUser = require_patient();
     $doctor = get_doctor_by_id($doctor_id);
 
     if (!$doctor) {
@@ -351,7 +356,7 @@ function api_get_slots()
 //  API: GET /api/patient/appointments 
 function api_patient_appointments()
 {
-    $authUser   = require_auth_api();
+    $authUser   = require_patient_api();
     $patient_id = (int) $authUser['id'];
     $data = get_patient_appointments_list($patient_id);
     json_response(['success' => true, 'data' => $data]);
@@ -360,7 +365,7 @@ function api_patient_appointments()
 //  API: GET /api/appointments/:id 
 function api_get_appointment_detail(int $id)
 {
-    $authUser   = require_auth_api();
+    $authUser   = require_patient_api();
     $patient_id = (int) $authUser['id'];
     $appt = get_appointment_detail_with_comment($id);
     if (!$appt) {
@@ -375,7 +380,7 @@ function api_get_appointment_detail(int $id)
 //  API: GET /api/appointments/:id/comments 
 function api_get_comments(int $id)
 {
-    $authUser   = require_auth_api();
+    $authUser   = require_patient_api();
     $patient_id = (int) $authUser['id'];
 
     // Verify ownership
@@ -390,7 +395,7 @@ function api_get_comments(int $id)
 //  API: POST /api/appointments/:id/comments
 function api_post_comment(int $id)
 {
-    $authUser   = require_auth_api();
+    $authUser   = require_patient_api();
     $patient_id = (int) $authUser['id'];
 
     // Verify ownership
@@ -410,7 +415,7 @@ function api_post_comment(int $id)
 //  API: GET /api/messages/:appointment_id 
 function api_get_messages(int $appointment_id): void
 {
-    $authUser   = require_auth_api();
+    $authUser   = require_patient_api();
     $patient_id = (int) $authUser['id'];
 
     $appt = get_appointment_by_id($appointment_id);
@@ -442,7 +447,7 @@ function api_get_messages(int $appointment_id): void
 //  API: POST /api/messages/:appointment_id 
 function api_send_message(int $appointment_id): void
 {
-    $authUser   = require_auth_api();
+    $authUser   = require_patient_api();
     $patient_id = (int) $authUser['id'];
 
     $appt = get_appointment_by_id($appointment_id);
@@ -483,7 +488,7 @@ function api_send_message(int $appointment_id): void
 // ── Page: /chat/:appointment_id ───────────────────────────────────────────────
 function chat_page(int $appointment_id): void
 {
-    $user = require_auth();
+    $user = require_patient();
 
     $appt = get_appointment_by_id($appointment_id);
     if (!$appt || (int)$appt['patient_id'] !== (int)$user['id']) {
