@@ -195,6 +195,12 @@ function api_chatbot_message(): void
 {
     require_auth_api();
 
+    require_once BASE_PATH . '/app/models/SystemSettingsModel.php';
+    if (!get_setting('chatbot', true)) {
+        json_response(['success' => false, 'message' => 'Chatbot is currently disabled.'], 403);
+        exit;
+    }
+
     $body    = json_decode(file_get_contents('php://input'), true) ?? [];
     $message = trim($body['message'] ?? '');
     $history = $body['history'] ?? [];

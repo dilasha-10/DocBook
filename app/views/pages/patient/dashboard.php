@@ -8,6 +8,9 @@ foreach ($past as $appt) {
     $grouped[$key][] = $appt;
 }
 
+// Feature flags
+require_once BASE_PATH . '/app/models/SystemSettingsModel.php';
+$labReportsEnabled = get_setting('lab_reports', true);
 $pending_count = $stats['pending'] ?? 0;
 if (!isset($stats['pending'])) {
     foreach ($upcoming as $a) {
@@ -232,6 +235,7 @@ CSS;
 </div>
 
 <script>
+var LAB_REPORTS_ENABLED = <?= $labReportsEnabled ? 'true' : 'false' ?>;
 var _cancelId = null, _detailId = null;
 
 function showToast(msg, type) {
@@ -309,16 +313,16 @@ function renderDetailPanel(appt, comments) {
     var patientReplies = comments.filter(function(c){ return c.author_role === 'patient'; });
     var patientReplyCount = patientReplies.length;
 
-    // Lab report section
+    // Lab report section — only shown when feature is enabled
     var labHTML = '';
-    if (appt.lab_report_path) {
+    if (LAB_REPORTS_ENABLED && appt.lab_report_path) {
         labHTML = '<div class="detail-notes-box" style="border-color:rgba(99,179,237,.4);background:rgba(99,179,237,.06);">'
             + '<span class="detail-field-label" style="color:#63b3ed;"><i class="fa fa-flask" style="margin-right:5px;"></i>Lab Report</span>'
             + '<p style="margin:8px 0 0;font-size:13px;color:var(--text);">Your lab report is ready.</p>'
             + '<a href="' + BASE_URL + '/lab-report/' + appt.id + '" target="_blank" class="btn-sm" style="margin-top:10px;display:inline-flex;align-items:center;gap:6px;background:rgba(99,179,237,.15);color:#63b3ed;border:1px solid rgba(99,179,237,.3);border-radius:6px;padding:6px 12px;font-size:12px;font-weight:600;text-decoration:none;">'
             + '<i class="fa fa-download"></i> View / Download Report</a>'
             + '</div>';
-    } else if (appt.status === 'Completed') {
+    } else if (LAB_REPORTS_ENABLED && appt.status === 'Completed') {
         labHTML = '<div class="detail-notes-box"><span class="detail-field-label"><i class="fa fa-flask" style="margin-right:5px;"></i>Lab Report</span>'
             + '<p class="detail-notes-empty">No lab report uploaded yet.</p></div>';
     }
@@ -340,7 +344,7 @@ function renderDetailPanel(appt, comments) {
             // Reply box — only show if: report uploaded AND <2 patient replies AND no reply to THIS comment yet
             var repliesForThis = replies.length;
             var totalPatientReplies = patientReplyCount;
-            var canReply = appt.lab_report_path && totalPatientReplies < 2 && repliesForThis === 0;
+            var canReply = LAB_REPORTS_ENABLED && appt.lab_report_path && totalPatientReplies < 2 && repliesForThis === 0;
             var replyBox = '';
             if (canReply) {
                 replyBox = '<div style="margin-left:20px;margin-top:10px;">'

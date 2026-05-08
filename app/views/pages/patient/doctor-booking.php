@@ -98,7 +98,7 @@ ob_start();
     var DAY_SHORT   = ['Su','Mo','Tu','We','Th','Fr','Sa'];
     var DAY_NAMES   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
     var MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    var selectedDate = null, selectedStart = null, selectedEnd = null, bookedOnDate = [];
+    var selectedDate = null, selectedStart = null, selectedEnd = null, bookedOnDate = [], currentHourCap = 5;
 
     function getNPTNow() {
         var now = new Date();
@@ -198,9 +198,9 @@ ob_start();
         while (cur + 60 <= end) {
             var start = minsToTime(cur), finish = minsToTime(cur + 60);
             var hourKey = String(Math.floor(cur/60)).padStart(2,'0') + ':00:00';
-            // Count how many bookings exist for this hour slot; full at 5
+            // Count how many bookings exist for this hour slot; use server-provided cap
             var bookingCount = bookedOnDate.filter(function(b){ return b === hourKey; }).length;
-            var isBooked = bookingCount >= 5;
+            var isBooked = bookingCount >= currentHourCap;
             var isPast   = isToday && (cur <= nptMinutes);
             var btn = document.createElement('button');
             btn.className = 'slot-btn' + (isBooked || isPast ? ' booked' : '');
@@ -208,7 +208,7 @@ ob_start();
             btn.dataset.start = start; btn.dataset.end = finish;
             btn.textContent = formatTime(start) + ' – ' + formatTime(finish);
             if (isPast)   btn.title = 'This time has already passed';
-            if (isBooked) btn.title = 'Fully booked (5/5)';
+            if (isBooked) btn.title = 'Fully booked (' + bookingCount + '/' + currentHourCap + ')';
             if (!isBooked && !isPast) btn.addEventListener('click', onSlotClick);
             grid.appendChild(btn);
             cur += 60;
@@ -250,6 +250,11 @@ ob_start();
         .then(function(res){
             btn.disabled = false; btn.textContent = 'Confirm booking';
             if (!res.success) { showToast(res.message || 'Booking failed.', 'error'); return; }
+            // If payments are disabled, backend confirmed directly — redirect to confirm page
+            if (res.payment_required === false && res.redirect) {
+                window.location.href = res.redirect;
+                return;
+            }
             // Store fields, move modal to body to escape main-wrap overflow:hidden, then show
             pendingEsewaData = res;
             var modal = document.getElementById('payModal');

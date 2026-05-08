@@ -597,10 +597,13 @@
 <?php if (isset($extra_scripts)) echo $extra_scripts; ?>
 
 <?php
-// Chatbot floating widget - only for logged-in patients
+// Chatbot floating widget - only for logged-in patients AND when feature is enabled
 $_cbRole = $user['role'] ?? '';
 if ($_cbRole === 'patient') {
-    include BASE_PATH . '/app/views/partials/chatbot-widget.php';
+    require_once BASE_PATH . '/app/models/SystemSettingsModel.php';
+    if (get_setting('chatbot', true)) {
+        include BASE_PATH . '/app/views/partials/chatbot-widget.php';
+    }
 }
 ?>
 
