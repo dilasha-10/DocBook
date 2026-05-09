@@ -85,6 +85,12 @@ if ($uri === '/login'  && $method === 'POST') { login_post();   }
 if ($uri === '/signup' && $method === 'GET')  { signup_get();   }
 if ($uri === '/signup' && $method === 'POST') { signup_post();  }
 if ($uri === '/logout' && $method === 'GET')  { logout();       }
+if ($uri === '/forgot-password' && $method === 'GET')  { forgot_password_get();        }
+if ($uri === '/forgot-password' && $method === 'POST') { forgot_password_post();       }
+if ($uri === '/forgot-password/verify' && $method === 'GET')  { forgot_password_verify_get();  }
+if ($uri === '/forgot-password/verify' && $method === 'POST') { forgot_password_verify_post(); }
+if ($uri === '/forgot-password/reset' && $method === 'GET')   { forgot_password_reset_get();   }
+if ($uri === '/forgot-password/reset' && $method === 'POST')  { forgot_password_reset_post();  }
 
 // Patient pages
 if ($uri === '/categories'      && $method === 'GET')  { categories_page();      }

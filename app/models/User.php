@@ -47,3 +47,13 @@ function create_user(string $name, string $email, string $hashedPassword, string
     $id = (int) $pdo->lastInsertId();
     return find_user_by_id($id);
 }
+
+function update_user_password(int $userId, string $hashedPassword): bool
+{
+    $pdo = db_connect();
+    $stmt = $pdo->prepare("UPDATE users SET password = :password WHERE id = :id");
+    return $stmt->execute([
+        ':password' => $hashedPassword,
+        ':id' => $userId,
+    ]);
+}

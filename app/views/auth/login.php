@@ -367,6 +367,10 @@ $oldEmail = htmlspecialchars(trim($_POST['email'] ?? ''));
                 <div class="alert-success">✓ Account created successfully! Please sign in below.</div>
             <?php endif; ?>
 
+            <?php if (!empty($_GET['reset'])): ?>
+                <div class="alert-success">✓ Your password has been updated. Please sign in with your new password.</div>
+            <?php endif; ?>
+
             <?php if (!empty($errors['general'])): ?>
                 <div class="alert-danger"><?= htmlspecialchars($errors['general']) ?></div>
             <?php endif; ?>
@@ -402,7 +406,7 @@ $oldEmail = htmlspecialchars(trim($_POST['email'] ?? ''));
                 </div>
 
                 <button type="submit" class="login-btn" id="loginBtn">Sign In</button>
-                <a href="#" class="forgot-pass">Forgot password?</a>
+                <a href="<?= BASE_URL ?>/forgot-password" class="forgot-pass">Forgot password?</a>
             </form>
 
             <div class="divider"><span>New here?</span></div>
