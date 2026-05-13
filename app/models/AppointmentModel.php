@@ -86,7 +86,7 @@ function get_appointment_by_id(int $id): ?array
     return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
 }
 
-// Reschedule: atomically release old slot and book new one
+// Reschedule: release old slot and book new one
 function reschedule_appointment(int $id, string $new_date, string $new_start, string $new_end, int $patient_id): array
 {
     $pdo = db_connect();

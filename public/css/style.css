@@ -693,7 +693,7 @@ body.sidebar-collapsed .sidebar-logout { margin: 0 auto; }
 .booking-panel h2 { font-size: 17px; font-weight: 700; margin-bottom: 20px; }
 .date-label { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--hint); margin-bottom: 10px; }
 .two-week-grid   { display: flex; flex-direction: column; gap: 14px; margin-bottom: 20px; }
-.week-block      { background: var(--card-bg, #fff); border: 1px solid var(--border2); border-radius: 10px; padding: 10px 12px 6px; }
+.week-block      { background: var(--surface); border: 1px solid var(--border2); border-radius: 10px; padding: 10px 12px 6px; }
 .week-block-label { font-size: 11px; font-weight: 600; color: var(--muted); letter-spacing: .04em; text-transform: uppercase; margin-bottom: 8px; }
 .week-block .week-grid { margin-bottom: 2px; }
 .week-block .week-grid + .week-grid { margin-bottom: 0; }
@@ -1311,11 +1311,26 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   background-size: 200% 100%;
 }
 
-/* Image mission wrap */
+/* ── Image mission wrap ── */
 [data-theme="dark"] .about-mission-img-wrap { box-shadow: 0 4px 24px rgba(0,0,0,0.55); }
 
-/* Scrollbars — warm & subtle */
+/* ── Scrollbars — warm & subtle ── */
 [data-theme="dark"] ::-webkit-scrollbar       { width: 6px; height: 6px; }
 [data-theme="dark"] ::-webkit-scrollbar-track  { background: var(--bg); }
 [data-theme="dark"] ::-webkit-scrollbar-thumb  { background: var(--border2); border-radius: 4px; }
 [data-theme="dark"] ::-webkit-scrollbar-thumb:hover { background: var(--muted);}}
+/* ══════════════════════════════════════════════════════════════════════════
+   Global print — hide all chrome, only content shows
+   ══════════════════════════════════════════════════════════════════════════ */
+@media print {
+    .navbar, .sidebar, .topbar,
+    [class*="navbar"], [class*="sidebar"],
+    .chatbot-widget, #chatbot-widget,
+    .invoice-success-bar, .invoice-actions,
+    nav, header { display: none !important; }
+
+    .main-content, .page-content, .view-container, body > main {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+}

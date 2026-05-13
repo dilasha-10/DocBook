@@ -19,7 +19,9 @@ function require_admin_api(): array
     if (session_status() === PHP_SESSION_NONE) session_start();
     $user = auth_user();
     if (!$user || ($user['role'] ?? '') !== 'admin') {
+        // Exit immediately so no subsequent code emits partial output
         json_response(['error' => 'Forbidden'], 403);
+        exit;
     }
     return $user;
 }

@@ -220,15 +220,15 @@ function old(string $key, string $default = ''): string {
             --text-dark:   #f0f0f0;
             --text-mid:    #888888;
             --text-light:  #555555;
-            --white:       #2c2c2c;
+            --white:       #111111;
             --error:       #d06060;
             --success:     #50a878;
         }
         [data-theme="dark"] html,
-        [data-theme="dark"] body { background: #2c2c2c; }
+        [data-theme="dark"] body { background: #111111; }
 
         [data-theme="dark"] .auth-navbar {
-            background: #242424;
+            background: #0a0a0a;
             border-bottom-color: rgba(255,255,255,0.07);
         }
         [data-theme="dark"] .auth-navbar .nav-logo { color: #f0f0f0; }
@@ -253,7 +253,7 @@ function old(string $key, string $default = ''): string {
         }
 
         [data-theme="dark"] .form-panel,
-        [data-theme="dark"] .right-panel { background: #2c2c2c; }
+        [data-theme="dark"] .right-panel { background: #111111; }
 
         [data-theme="dark"] .logo,
         [data-theme="dark"] .auth-content h1,
@@ -352,14 +352,6 @@ function old(string $key, string $default = ''): string {
             background: rgba(74,143,196,0.10);
             border-color: #4a8fc4;
             color: #4a8fc4;
-        }
-        [data-theme="dark"] input:-webkit-autofill,
-        [data-theme="dark"] input:-webkit-autofill:hover,
-        [data-theme="dark"] input:-webkit-autofill:focus {
-            -webkit-box-shadow: 0 0 0px 1000px #404040 inset !important;
-            -webkit-text-fill-color: #eeeeee !important;
-            border-color: #555555 !important;
-            transition: background-color 5000s ease-in-out 0s;
         }
     </style>
 
@@ -529,7 +521,7 @@ function old(string $key, string $default = ''): string {
 </div>
 
 <script>
-// Toggle buttons
+// ── Toggle buttons
 document.querySelectorAll('.toggle-btn').forEach(btn => {
     btn.addEventListener('click', () => {
         const input = document.getElementById(btn.dataset.target);
@@ -538,7 +530,7 @@ document.querySelectorAll('.toggle-btn').forEach(btn => {
     });
 });
 
-// Validation helpers
+// ── Validation helpers
 function setField(input, feedbackEl, msg) {
     if (msg) {
         input.classList.add('is-invalid'); input.classList.remove('is-valid');
@@ -622,7 +614,7 @@ function validateConfirm(v, pw) {
     return '';
 }
 
-// Field references
+// ── Field references
 const fFirst   = document.getElementById('su-first');
 const fLast    = document.getElementById('su-last');
 const fEmail   = document.getElementById('su-email');
@@ -633,11 +625,11 @@ const fConfirm = document.getElementById('su-confirm');
 const fTerms   = document.getElementById('terms');
 const submitBtn = document.getElementById('submitBtn');
 
-// State
+// ── State
 const state = { first: false, last: false, email: false, dob: false, pw: false, confirm: false, terms: false };
 function checkSubmit() { submitBtn.disabled = !Object.values(state).every(Boolean); }
 
-// Bindings
+// ── Bindings
 fFirst.addEventListener('input', () => {
     const e = validateFirstName(fFirst.value);
     setField(fFirst, document.getElementById('first-fb'), e);
@@ -755,7 +747,7 @@ function closeModal() { document.getElementById('modal').classList.remove('open'
 </script>
 
 <script>
-// Font Awesome for auth pages
+// ── Font Awesome for auth pages
 (function(){
     var link = document.createElement('link');
     link.rel = 'stylesheet';
@@ -763,7 +755,7 @@ function closeModal() { document.getElementById('modal').classList.remove('open'
     document.head.appendChild(link);
 })();
 
-// Theme toggle
+// ── Theme toggle
 (function(){
     var btn  = document.getElementById('authThemeBtn');
     var icon = document.getElementById('authThemeIcon');
