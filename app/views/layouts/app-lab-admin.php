@@ -23,6 +23,19 @@
             }
         })();
     </script>
+    <style>
+    .ann-banner { padding: 12px 20px; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid rgba(0,0,0,.06); }
+    .ann-banner .ann-close { background: none; border: none; cursor: pointer; font-size: 16px; margin-left: auto; opacity: .5; color: inherit; }
+    .ann-banner .ann-close:hover { opacity: 1; }
+    .ann-banner.info    { background: #dbeafe; color: #1e40af; }
+    .ann-banner.warning { background: #fef3c7; color: #92400e; }
+    .ann-banner.success { background: #dcfce7; color: #166534; }
+    .ann-banner.urgent  { background: #fef2f2; color: #991b1b; }
+    [data-theme="dark"] .ann-banner.info    { background: rgba(30,64,175,.15); color: #93c5fd; }
+    [data-theme="dark"] .ann-banner.warning { background: rgba(146,64,14,.15); color: #fcd34d; }
+    [data-theme="dark"] .ann-banner.success { background: rgba(22,101,52,.15); color: #86efac; }
+    [data-theme="dark"] .ann-banner.urgent  { background: rgba(153,27,27,.15); color: #fca5a5; }
+    </style>
 </head>
 <body>
 
@@ -109,6 +122,7 @@
 
     <!-- MAIN CONTENT -->
     <main class="main-wrap">
+        <div id="announcementBanners"></div>
         <?php echo $content; ?>
     </main>
 
@@ -211,6 +225,38 @@
 })();
 </script>
 <?php if (isset($extra_scripts)) echo $extra_scripts; ?>
+
+<script>
+(function(){
+    var container = document.getElementById('announcementBanners');
+    if (!container) return;
+    var icons = { info: 'fa-circle-info', warning: 'fa-triangle-exclamation', success: 'fa-circle-check', urgent: 'fa-fire' };
+    var dismissed = JSON.parse(localStorage.getItem('dismissed-announcements') || '[]');
+    fetch(BASE_URL + '/api/announcements/active')
+        .then(function(r){ return r.json(); })
+        .then(function(d) {
+            var anns = (d.announcements || []).filter(function(a){ return dismissed.indexOf(a.id) === -1; });
+            if (!anns.length) return;
+            container.innerHTML = anns.map(function(a) {
+                var icon = icons[a.type] || 'fa-circle-info';
+                return '<div class="ann-banner ' + a.type + '" data-ann-id="' + a.id + '">' +
+                    '<i class="fa ' + icon + '"></i> ' +
+                    '<strong>' + (a.title||'').replace(/</g,'&lt;') + '</strong>' +
+                    ' \u2014 ' + (a.message||'').replace(/</g,'&lt;').substring(0, 200) +
+                    '<button class="ann-close" onclick="dismissAnn(' + a.id + ')" title="Dismiss">\u00d7</button>' +
+                '</div>';
+            }).join('');
+        })
+        .catch(function(){});
+})();
+function dismissAnn(id) {
+    var el = document.querySelector('[data-ann-id="' + id + '"]');
+    if (el) el.remove();
+    var dismissed = JSON.parse(localStorage.getItem('dismissed-announcements') || '[]');
+    dismissed.push(id);
+    localStorage.setItem('dismissed-announcements', JSON.stringify(dismissed));
+}
+</script>
 
 </body>
 </html>
