@@ -87,7 +87,7 @@
     .notif-mark-all-btn {
         font-size: 11px;
         font-weight: 700;
-        color: var(--primary);
+        color: var(--blue);
         background: none;
         border: none;
         cursor: pointer;
@@ -112,8 +112,8 @@
     }
     .notif-item:last-child { border-bottom: none; }
     .notif-item:hover { background: var(--hover-bg, rgba(0,0,0,.04)); }
-    .notif-item.unread { background: color-mix(in srgb, var(--primary) 6%, transparent); }
-    .notif-item.unread:hover { background: color-mix(in srgb, var(--primary) 10%, transparent); }
+    .notif-item.unread { background: color-mix(in srgb, var(--blue) 6%, transparent); }
+    .notif-item.unread:hover { background: color-mix(in srgb, var(--blue) 10%, transparent); }
 
     .notif-icon {
         width: 34px; height: 34px;
@@ -158,7 +158,7 @@
     .notif-dot {
         width: 7px; height: 7px;
         border-radius: 50%;
-        background: var(--primary);
+        background: var(--blue);
         flex-shrink: 0;
         margin-top: 6px;
         display: none;
@@ -182,7 +182,7 @@
     .notif-dropdown-footer a {
         font-size: 12px;
         font-weight: 700;
-        color: var(--primary);
+        color: var(--blue);
         text-decoration: none;
     }
 
@@ -204,6 +204,19 @@
         line-height: 1.4;
     }
     .sidebar-notif-badge.visible { display: inline-block; }
+
+    /* ── Announcement Banners ── */
+    .ann-banner { padding: 12px 20px; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid rgba(0,0,0,.06); }
+    .ann-banner .ann-close { background: none; border: none; cursor: pointer; font-size: 16px; margin-left: auto; opacity: .5; color: inherit; }
+    .ann-banner .ann-close:hover { opacity: 1; }
+    .ann-banner.info    { background: #dbeafe; color: #1e40af; }
+    .ann-banner.warning { background: #fef3c7; color: #92400e; }
+    .ann-banner.success { background: #dcfce7; color: #166534; }
+    .ann-banner.urgent  { background: #fef2f2; color: #991b1b; }
+    [data-theme="dark"] .ann-banner.info    { background: rgba(30,64,175,.15); color: #93c5fd; }
+    [data-theme="dark"] .ann-banner.warning { background: rgba(146,64,14,.15); color: #fcd34d; }
+    [data-theme="dark"] .ann-banner.success { background: rgba(22,101,52,.15); color: #86efac; }
+    [data-theme="dark"] .ann-banner.urgent  { background: rgba(153,27,27,.15); color: #fca5a5; }
     </style>
 </head>
 <body>
@@ -299,6 +312,22 @@
                 <i class="fa fa-robot sidebar-icon"></i>
                 <span>Chatbot Escalations</span>
             </a>
+            <a href="<?= BASE_URL ?>/admin/departments" class="sidebar-link <?php echo request_is('/admin/departments') ? 'active' : ''; ?>">
+                <i class="fa fa-building sidebar-icon"></i>
+                <span>Departments</span>
+            </a>
+            <a href="<?= BASE_URL ?>/admin/appointments" class="sidebar-link <?php echo request_is('/admin/appointments') ? 'active' : ''; ?>">
+                <i class="fa fa-calendar-check sidebar-icon"></i>
+                <span>Appointments</span>
+            </a>
+            <a href="<?= BASE_URL ?>/admin/announcements" class="sidebar-link <?php echo request_is('/admin/announcements') ? 'active' : ''; ?>">
+                <i class="fa fa-bullhorn sidebar-icon"></i>
+                <span>Announcements</span>
+            </a>
+            <a href="<?= BASE_URL ?>/admin/support-tickets" class="sidebar-link <?php echo request_is('/admin/support-tickets') ? 'active' : ''; ?>">
+                <i class="fa fa-headset sidebar-icon"></i>
+                <span>Support Tickets</span>
+            </a>
             <a href="<?= BASE_URL ?>/admin/audit-trail" class="sidebar-link <?php echo request_is('/admin/audit-trail') ? 'active' : ''; ?>">
                 <i class="fa fa-shield-halved sidebar-icon"></i>
                 <span>Audit Trail</span>
@@ -357,6 +386,8 @@
 
     <!-- MAIN CONTENT -->
     <main class="main-wrap">
+        <!-- Announcement banners -->
+        <div id="announcementBanners"></div>
         <?php echo $content; ?>
     </main>
 
@@ -595,6 +626,41 @@
 })();
 </script>
 <?php if (isset($extra_scripts)) echo $extra_scripts; ?>
+
+<script>
+// ── Load active announcement banners ─────────────────────────
+(function(){
+    var container = document.getElementById('announcementBanners');
+    if (!container) return;
+    var icons = { info: 'fa-circle-info', warning: 'fa-triangle-exclamation', success: 'fa-circle-check', urgent: 'fa-fire' };
+    var dismissed = JSON.parse(localStorage.getItem('dismissed-announcements') || '[]');
+
+    fetch(BASE_URL + '/api/announcements/active')
+        .then(function(r){ return r.json(); })
+        .then(function(d) {
+            var anns = (d.announcements || []).filter(function(a){ return dismissed.indexOf(a.id) === -1; });
+            if (!anns.length) return;
+            container.innerHTML = anns.map(function(a) {
+                var icon = icons[a.type] || 'fa-circle-info';
+                return '<div class="ann-banner ' + a.type + '" data-ann-id="' + a.id + '">' +
+                    '<i class="fa ' + icon + '"></i> ' +
+                    '<strong>' + (a.title||'').replace(/</g,'&lt;') + '</strong>' +
+                    ' — ' + (a.message||'').replace(/</g,'&lt;').substring(0, 200) +
+                    '<button class="ann-close" onclick="dismissAnn(' + a.id + ')" title="Dismiss">×</button>' +
+                '</div>';
+            }).join('');
+        })
+        .catch(function(){});
+})();
+
+function dismissAnn(id) {
+    var el = document.querySelector('[data-ann-id="' + id + '"]');
+    if (el) el.remove();
+    var dismissed = JSON.parse(localStorage.getItem('dismissed-announcements') || '[]');
+    dismissed.push(id);
+    localStorage.setItem('dismissed-announcements', JSON.stringify(dismissed));
+}
+</script>
 
 <?php
 // Chatbot floating widget - only for logged-in patients AND when feature is enabled

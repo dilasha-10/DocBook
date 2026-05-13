@@ -2,7 +2,7 @@ Options -MultiViews
 RewriteEngine On
 
 # Set the base to the public/ folder
-RewriteBase /docbook/public/
+RewriteBase /docbook_admin/public/
 
 # Serve existing files and directories directly
 RewriteCond %{REQUEST_FILENAME} !-f
