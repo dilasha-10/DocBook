@@ -37,15 +37,42 @@ function require_auth_api(): array
     return $user;
 }
 
-function require_admin(): array
+function redirect_forbidden(): void
+{
+    redirect('/403');
+}
+
+function require_role(string $role): array
 {
     $user = require_auth();
-    if (($user['role'] ?? '') !== 'admin') {
-        http_response_code(403);
-        echo '<h1>Forbidden</h1>';
-        exit;
+    if (($user['role'] ?? '') !== $role) {
+        redirect_forbidden();
     }
     return $user;
+}
+
+function require_role_api(string $role): array
+{
+    $user = require_auth_api();
+    if (($user['role'] ?? '') !== $role) {
+        json_response(['success' => false, 'message' => 'Forbidden.'], 403);
+    }
+    return $user;
+}
+
+function require_patient(): array
+{
+    return require_role('patient');
+}
+
+function require_patient_api(): array
+{
+    return require_role_api('patient');
+}
+
+function require_admin(): array
+{
+    return require_role('admin');
 }
 
 // ── GET /login ────────────────────────────────────────────────────────────────
@@ -54,6 +81,13 @@ function login_get(): void
 {
     if (session_status() === PHP_SESSION_NONE) session_start();
     if (!empty($_SESSION['user_id'])) {
+        $user = auth_user();
+        if (($user['role'] ?? '') === 'admin') {
+            redirect('/admin');
+        }
+        if (($user['role'] ?? '') === 'doctor') {
+            redirect('/doctor/dashboard');
+        }
         redirect('/dashboard');
     }
     include BASE_PATH . '/app/views/auth/login.php';
@@ -336,6 +370,9 @@ function login_post(): void
 
     if (($user['role'] ?? '') === 'admin') {
         redirect('/admin');
+    }
+    if (($user['role'] ?? '') === 'doctor') {
+        redirect('/doctor/dashboard');
     }
     redirect('/dashboard');
 }

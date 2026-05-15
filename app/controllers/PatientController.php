@@ -13,14 +13,12 @@ function current_user(): ?array
 //  Page: /categories 
 function categories_page()
 {
-    $user = require_auth();
+    $user = require_patient();
     $categories = get_all_categories();
 
-    // Parse filters from URL query parameters
     $category = isset($_GET['category']) && $_GET['category'] !== '' ? $_GET['category'] : null;
     $search   = isset($_GET['search'])   && $_GET['search']   !== '' ? $_GET['search']   : null;
 
-    // Fetch doctors based on filters and map to a UI-friendly structure
     $raw     = get_filtered_doctors($category, $search);
     $doctors = array_map(function ($d) {
         return [
@@ -48,18 +46,16 @@ function dashboard_page()
 {
     $user = require_auth();
 
-    // Redirect doctors and admins away from the patient dashboard
+    if (($user['role'] ?? '') === 'admin') {
+        redirect('/admin');
+    }
     if ($user['role'] === 'doctor') {
         redirect('/doctor/dashboard');
-    }
-    if ($user['role'] === 'admin') {
-        redirect('/admin/dashboard');
     }
 
     $patient_id   = (int) $user['id'];
     $patient_name = $user['name'];
 
-    // Load grouped appointment data and overview metrics
     $upcoming = get_upcoming_appointments($patient_id);
     $past     = get_past_appointments($patient_id);
     $stats    = get_appointment_stats($patient_id);
@@ -76,7 +72,7 @@ function dashboard_page()
 //  Page: /profile 
 function profile_page()
 {
-    $user = current_user();
+    $user = require_patient();
 
     render('patient/profile', [
         'user' => $user,
@@ -86,19 +82,17 @@ function profile_page()
 //  API: POST /api/profile 
 function api_update_profile()
 {
-    $user = require_auth_api();
+    $user = require_patient_api();
     $id   = (int) $user['id'];
     $body = json_decode(file_get_contents('php://input'), true) ?? [];
 
     $name  = trim($body['name']  ?? '');
     $phone = trim($body['phone'] ?? '');
 
-    // Validation: Name is mandatory for identity
     if ($name === '') {
         json_response(['success' => false, 'message' => 'Name is required.'], 422);
     }
 
-    // Direct database update for basic profile info
     $pdo  = db_connect();
     $stmt = $pdo->prepare("UPDATE users SET name = :name, phone = :phone WHERE id = :id");
     $stmt->execute([':name' => $name, ':phone' => $phone, ':id' => $id]);
@@ -109,7 +103,7 @@ function api_update_profile()
 //  API: POST /api/settings/password 
 function api_change_password()
 {
-    $user = require_auth_api();
+    $user = require_patient_api();
     $id   = (int) $user['id'];
     $body = json_decode(file_get_contents('php://input'), true) ?? [];
 
@@ -117,7 +111,6 @@ function api_change_password()
     $new     = $body['new_password']     ?? '';
     $confirm = $body['confirm_password'] ?? '';
 
-    // Standard length and confirmation check
     if (strlen($new) < 8) {
         json_response(['success' => false, 'message' => 'Password must be at least 8 characters.'], 422);
     }
@@ -125,7 +118,6 @@ function api_change_password()
         json_response(['success' => false, 'message' => 'Passwords do not match.'], 422);
     }
 
-    // Verify the existing password before permitting change
     $pdo  = db_connect();
     $stmt = $pdo->prepare("SELECT password FROM users WHERE id = :id");
     $stmt->execute([':id' => $id]);
@@ -135,7 +127,6 @@ function api_change_password()
         json_response(['success' => false, 'message' => 'Current password is incorrect.'], 403);
     }
 
-    // Hash the new password using BCRYPT standard
     $hash = password_hash($new, PASSWORD_BCRYPT);
     $upd  = $pdo->prepare("UPDATE users SET password = :pw WHERE id = :id");
     $upd->execute([':pw' => $hash, ':id' => $id]);
@@ -146,16 +137,16 @@ function api_change_password()
 //  Page: /booking/confirm
 function booking_confirm_page()
 {
+    require_patient();
+
     if (session_status() === PHP_SESSION_NONE) session_start();
 
-    // Ensure user has just completed a booking flow
     if (empty($_SESSION['booking_confirmation'])) {
         redirect('/categories');
     }
 
     $appointment = $_SESSION['booking_confirmation'];
-    // IMPORTANT: Flash data pattern - clear session data once it has been rendered
-    unset($_SESSION['booking_confirmation']);
+    unset($_SESSION['booking_confirmation']); // clear after viewing so refreshing also redirects
 
     render('patient/booking-confirm', [
         'user'        => current_user(),
@@ -186,7 +177,7 @@ function api_get_doctors()
 function api_reschedule_appointment($id)
 {
     if (session_status() === PHP_SESSION_NONE) session_start();
-    $authUser   = require_auth_api();
+    $authUser   = require_patient_api();
     $patient_id = (int) $authUser['id'];
     $body       = json_decode(file_get_contents('php://input'), true) ?? [];
 
@@ -194,61 +185,24 @@ function api_reschedule_appointment($id)
     $new_start = trim($body['start_time'] ?? '');
     $new_end   = trim($body['end_time']   ?? '');
 
-    // Strict validation for rescheduling inputs
+    // Validate required fields
     if (!$new_date || !$new_start || !$new_end) {
         json_response(['success' => false, 'message' => 'Missing required fields: date, start_time, end_time.'], 422);
     }
 
+    // Validate date format (YYYY-MM-DD)
     if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $new_date) || !strtotime($new_date)) {
         json_response(['success' => false, 'message' => 'Invalid date format. Use YYYY-MM-DD.'], 422);
     }
 
-    // Business Logic: No retroactive rescheduling
+    // Must not be in the past
     if ($new_date < date('Y-m-d')) {
         json_response(['success' => false, 'message' => 'Cannot reschedule to a past date.'], 422);
-        exit;
     }
 
-    // Block rescheduling to an admin-marked holiday / blocked date
-    require_once BASE_PATH . '/app/models/SystemSettingsModel.php';
-    if (is_holiday($new_date)) {
-        json_response([
-            'success' => false,
-            'message' => 'Cannot reschedule to this date — it has been marked as a holiday or blocked day.',
-        ], 422);
-        exit;
-    }
-
+    // Validate time format (HH:MM or HH:MM:SS)
     if (!preg_match('/^\d{2}:\d{2}(:\d{2})?$/', $new_start) || !preg_match('/^\d{2}:\d{2}(:\d{2})?$/', $new_end)) {
         json_response(['success' => false, 'message' => 'Invalid time format. Use HH:MM.'], 422);
-    }
-
-    // Enforce per-hour capacity on rescheduling (psychiatrist=2, others=5)
-    $appt = get_appointment_by_id((int)$id);
-    if ($appt) {
-        $pdoR   = db_connect();
-        $catS   = $pdoR->prepare("SELECT c.slug FROM doctors d JOIN categories c ON c.id=d.category_id WHERE d.id=:did");
-        $catS->execute([':did' => $appt['doctor_id']]);
-        $catSlug = $catS->fetchColumn();
-        $hourCap = ($catSlug === 'psychiatrist') ? 2 : 5;
-
-        $hour = substr($new_start, 0, 2) . ':00:00';
-        $capS = $pdoR->prepare("
-            SELECT COUNT(*) FROM appointments
-            WHERE doctor_id        = :did
-              AND appointment_date = :date
-              AND TIME_FORMAT(start_time,'%H:00:00') = :hour
-              AND status NOT IN ('Cancelled','Rescheduled')
-              AND id != :id
-        ");
-        $capS->execute([':did' => $appt['doctor_id'], ':date' => $new_date, ':hour' => $hour, ':id' => (int)$id]);
-        if ((int)$capS->fetchColumn() >= $hourCap) {
-            $msg = $hourCap === 2
-                ? 'This psychiatrist can only take 2 appointments per hour. Please choose another time.'
-                : 'This time slot is fully booked. Please choose another.';
-            json_response(['success' => false, 'message' => $msg], 409);
-            exit;
-        }
     }
 
     $result = reschedule_appointment((int)$id, $new_date, $new_start, $new_end, $patient_id);
@@ -262,7 +216,7 @@ function api_reschedule_appointment($id)
 function api_cancel_appointment($id)
 {
     if (session_status() === PHP_SESSION_NONE) session_start();
-    $authUser   = require_auth_api();
+    $authUser   = require_patient_api();
     $patient_id = (int) $authUser['id'];
 
     $result = cancel_appointment((int)$id, $patient_id);
@@ -272,15 +226,12 @@ function api_cancel_appointment($id)
     json_response($result, $status);
 }
 
-// API: POST /api/appointments
-// Validates the slot, stores booking intent in the DB (not just session),
-// and returns eSewa payment fields to the frontend (or direct-confirms when payments off).
-// The appointment row is only INSERTed after payment succeeds (or immediately when payments off).
+//  API: POST /api/appointments 
 function api_book_appointment()
 {
     if (session_status() === PHP_SESSION_NONE) session_start();
 
-    $authUser   = require_auth_api();
+    $authUser   = require_patient_api();
     $patient_id = (int) $authUser['id'];
     $body       = json_decode(file_get_contents('php://input'), true) ?? [];
 
@@ -292,181 +243,67 @@ function api_book_appointment()
 
     if (!$doctor_id || !$date || !$start_time || !$end_time) {
         json_response(['success' => false, 'message' => 'Missing required fields.'], 422);
-        exit;
     }
 
-    // Block booking on admin-marked holiday / blocked dates
-    require_once BASE_PATH . '/app/models/SystemSettingsModel.php';
-    if (is_holiday($date)) {
-        json_response([
-            'success' => false,
-            'message' => 'Appointments cannot be booked on this date — it has been marked as a holiday or blocked day.',
-        ], 422);
-        exit;
-    }
-
-    // Determine per-hour capacity: psychiatrists are capped at 2, all others at 5
     $pdo = db_connect();
-    $catStmt = $pdo->prepare("
-        SELECT c.slug FROM doctors d
-        JOIN categories c ON c.id = d.category_id
-        WHERE d.id = :did
+
+    // Generate unique reference number
+    do {
+        $ref = 'DBK-' . date('Y') . '-' . str_pad(random_int(1, 9999), 4, '0', STR_PAD_LEFT);
+        $chk = $pdo->prepare("SELECT id FROM appointments WHERE reference_number = :r");
+        $chk->execute([':r' => $ref]);
+    } while ($chk->fetch());
+
+    $stmt = $pdo->prepare("
+        INSERT INTO appointments
+            (patient_id, doctor_id, appointment_date, start_time, end_time, reference_number, status, visit_reason)
+        VALUES
+            (:pid, :did, :date, :start, :end, :ref, 'Confirmed', :reason)
     ");
-    $catStmt->execute([':did' => $doctor_id]);
-    $catSlug  = $catStmt->fetchColumn();
-    $hourCap  = ($catSlug === 'psychiatrist') ? 2 : 5;
-
-    // Check the hour slot still has capacity
-    $hour = substr($start_time, 0, 2) . ':00:00';
-    $cap  = $pdo->prepare("
-        SELECT COUNT(*) AS cnt
-        FROM appointments
-        WHERE doctor_id        = :did
-          AND appointment_date = :date
-          AND TIME_FORMAT(start_time, '%H:00:00') = :hour
-          AND status NOT IN ('Cancelled','Rescheduled')
-    ");
-    $cap->execute([':did' => $doctor_id, ':date' => $date, ':hour' => $hour]);
-    if ((int)$cap->fetchColumn() >= $hourCap) {
-        $msg = $hourCap === 2
-            ? 'This psychiatrist can only take 2 appointments per hour. Please choose another time.'
-            : 'This time slot is fully booked. Please choose another.';
-        json_response(['success' => false, 'message' => $msg], 409);
-        exit;
-    }
-
-    $transaction_uuid = 'TXN-' . strtoupper(bin2hex(random_bytes(8)));
-
-    // Persist booking intent to the database.
-    // This is critical: the session is often lost after the browser round-trips
-    // through eSewa's payment page (cross-domain redirect drops the session cookie).
-    // Storing in the DB ensures PaymentController can always retrieve the intent
-    // using only the transaction_uuid that eSewa echoes back in the callback.
-    $pdo->prepare("
-        INSERT INTO pending_bookings
-            (transaction_uuid, patient_id, doctor_id, appointment_date,
-             start_time, end_time, reason, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
-        ON DUPLICATE KEY UPDATE
-            patient_id       = VALUES(patient_id),
-            doctor_id        = VALUES(doctor_id),
-            appointment_date = VALUES(appointment_date),
-            start_time       = VALUES(start_time),
-            end_time         = VALUES(end_time),
-            reason           = VALUES(reason),
-            created_at       = NOW()
-    ")->execute([
-        $transaction_uuid,
-        $patient_id,
-        $doctor_id,
-        $date,
-        $start_time,
-        $end_time,
-        $reason ?: null,
+    $stmt->execute([
+        ':pid'    => $patient_id,
+        ':did'    => $doctor_id,
+        ':date'   => $date,
+        ':start'  => $start_time,
+        ':end'    => $end_time,
+        ':ref'    => $ref,
+        ':reason' => $reason ?: null,
     ]);
 
-    // Also keep session as a best-effort fallback
-    $_SESSION['pending_booking'] = [
-        'transaction_uuid' => $transaction_uuid,
-        'patient_id'       => $patient_id,
-        'doctor_id'        => $doctor_id,
+    $doc = get_doctor_by_id($doctor_id);
+
+    $h    = (int) substr($start_time, 0, 2);
+    $m    = substr($start_time, 3, 2);
+    $ampm = $h >= 12 ? 'PM' : 'AM';
+    $h12  = $h % 12 ?: 12;
+    $timeFormatted = "{$h12}:{$m} {$ampm}";
+
+    $_SESSION['booking_confirmation'] = [
+        'reference_number' => $ref,
+        'doctor_name'      => $doc['name']      ?? 'Unknown',
+        'specialty'        => $doc['specialty']  ?? '',
         'date'             => $date,
-        'start_time'       => $start_time,
-        'end_time'         => $end_time,
-        'reason'           => $reason ?: null,
+        'time'             => $timeFormatted,
+        'status'           => 'Confirmed',
     ];
 
-    // If online payments are disabled, confirm the appointment directly without eSewa
-    $paymentsEnabled = get_setting('payments', true);
-    if (!$paymentsEnabled) {
-        // Generate a unique reference number
-        $refChk = $pdo->prepare("SELECT id FROM appointments WHERE reference_number = :r");
-        do {
-            $ref = 'DBK-' . date('Y') . '-' . str_pad(random_int(1, 9999), 4, '0', STR_PAD_LEFT);
-            $refChk->execute([':r' => $ref]);
-        } while ($refChk->fetch());
-
-        $ins = $pdo->prepare("
-            INSERT INTO appointments
-                (patient_id, doctor_id, appointment_date, start_time, end_time, reference_number, status, visit_reason)
-            VALUES
-                (:pid, :did, :date, :start, :end, :ref, 'Confirmed', :reason)
-        ");
-        $ins->execute([
-            ':pid'    => $patient_id,
-            ':did'    => $doctor_id,
-            ':date'   => $date,
-            ':start'  => $start_time,
-            ':end'    => $end_time,
-            ':ref'    => $ref,
-            ':reason' => $reason ?: null,
-        ]);
-        $appt_id = (int)$pdo->lastInsertId();
-
-        // Clean up pending booking
-        $pdo->prepare("DELETE FROM pending_bookings WHERE transaction_uuid = ?")->execute([$transaction_uuid]);
-
-        // Store confirmation in session for the confirm page
-        $_SESSION['booking_confirmation'] = [
-            'reference_number' => $ref,
-            'appointment_id'   => $appt_id,
-            'doctor_id'        => $doctor_id,
-            'date'             => $date,
-            'start_time'       => $start_time,
-            'end_time'         => $end_time,
-        ];
-
-        json_response([
-            'success'          => true,
-            'payment_required' => false,
-            'redirect'         => BASE_URL . '/booking/confirm',
-            'reference_number' => $ref,
-        ]);
-        exit;
-    }
-
-    // Build eSewa payment fields
-    $amount    = number_format(500.00, 2, '.', '');
-    $tax       = number_format(0.00,   2, '.', '');
-    $total     = number_format(500.00, 2, '.', '');
-    $signature = esewa_signature($total, $transaction_uuid);
-
-    json_response([
-        'success'   => true,
-        'esewa_url' => ESEWA_GATEWAY_URL,
-        'fields'    => [
-            'amount'                  => $amount,
-            'tax_amount'              => $tax,
-            'total_amount'            => $total,
-            'transaction_uuid'        => $transaction_uuid,
-            'product_code'            => ESEWA_PRODUCT_CODE,
-            'product_service_charge'  => '0.00',
-            'product_delivery_charge' => '0.00',
-            'success_url'             => BASE_URL . '/payment/success',
-            'failure_url'             => BASE_URL . '/payment/failure',
-            'signed_field_names'      => 'total_amount,transaction_uuid,product_code',
-            'signature'               => $signature,
-        ],
-    ]);
+    json_response(['success' => true, 'redirect' => BASE_URL . '/booking/confirm']);
 }
-
 //  Page: /appointments/{id}/reschedule 
 function reschedule_page(int $appt_id)
 {
     if (session_status() === PHP_SESSION_NONE) session_start();
-    $authUser   = require_auth();
+    $authUser   = require_patient();
     $patient_id = (int) $authUser['id'];
 
     $appt = get_appointment_by_id($appt_id);
 
-    // Security: Check existence and ownership
     if (!$appt || (int)$appt['patient_id'] !== $patient_id) {
         http_response_code(404);
         echo '<h1>Appointment not found.</h1>';
         exit;
     }
 
-    // Logic: Do not allow rescheduling if the lifecycle is complete/cancelled
     if (in_array($appt['status'], ['Cancelled', 'Completed', 'Rescheduled'])) {
         redirect('/dashboard');
     }
@@ -485,7 +322,7 @@ function reschedule_page(int $appt_id)
 //  Page: /doctors/{id} 
 function doctor_booking_page(int $doctor_id)
 {
-    $authUser = require_auth();
+    $authUser = require_patient();
     $doctor = get_doctor_by_id($doctor_id);
 
     if (!$doctor) {
@@ -503,44 +340,23 @@ function doctor_booking_page(int $doctor_id)
     ]);
 }
 
-//  API: GET /api/slots?doctor_id=X&date=YYYY-MM-DD
+//  API: GET /api/slots?doctor_id=X&date=YYYY-MM-DD 
 function api_get_slots()
 {
     $doctor_id = (int) ($_GET['doctor_id'] ?? 0);
     $date      = trim($_GET['date']        ?? '');
 
     if (!$doctor_id || !$date) {
-        json_response(['success' => false, 'booked' => [], 'hour_cap' => 5]);
-        exit;
+        json_response(['success' => false, 'booked' => []]);
     }
-
-    // Inform the frontend if the requested date is a blocked holiday
-    require_once BASE_PATH . '/app/models/SystemSettingsModel.php';
-    if (is_holiday($date)) {
-        json_response([
-            'success'    => true,
-            'is_holiday' => true,
-            'booked'     => [],
-            'hour_cap'   => 5,
-        ]);
-        exit;
-    }
-
-    // Determine per-hour cap: psychiatrists max 2, others max 5
-    $pdo     = db_connect();
-    $catStmt = $pdo->prepare("SELECT c.slug FROM doctors d JOIN categories c ON c.id=d.category_id WHERE d.id=:did");
-    $catStmt->execute([':did' => $doctor_id]);
-    $catSlug  = $catStmt->fetchColumn();
-    $hourCap  = ($catSlug === 'psychiatrist') ? 2 : 5;
 
     $booked = get_booked_slots($doctor_id, $date);
-    json_response(['success' => true, 'is_holiday' => false, 'booked' => $booked, 'hour_cap' => $hourCap]);
+    json_response(['success' => true, 'booked' => $booked]);
 }
-
 //  API: GET /api/patient/appointments 
 function api_patient_appointments()
 {
-    $authUser   = require_auth_api();
+    $authUser   = require_patient_api();
     $patient_id = (int) $authUser['id'];
     $data = get_patient_appointments_list($patient_id);
     json_response(['success' => true, 'data' => $data]);
@@ -549,13 +365,12 @@ function api_patient_appointments()
 //  API: GET /api/appointments/:id 
 function api_get_appointment_detail(int $id)
 {
-    $authUser   = require_auth_api();
+    $authUser   = require_patient_api();
     $patient_id = (int) $authUser['id'];
     $appt = get_appointment_detail_with_comment($id);
     if (!$appt) {
         json_response(['success' => false, 'message' => 'Not found.'], 404);
     }
-    // Access control: Ensure user only sees their own data
     if ((int)$appt['patient_id'] !== (int)$patient_id) {
         json_response(['success' => false, 'message' => 'Forbidden.'], 403);
     }
@@ -565,7 +380,7 @@ function api_get_appointment_detail(int $id)
 //  API: GET /api/appointments/:id/comments 
 function api_get_comments(int $id)
 {
-    $authUser   = require_auth_api();
+    $authUser   = require_patient_api();
     $patient_id = (int) $authUser['id'];
 
     // Verify ownership
@@ -580,63 +395,107 @@ function api_get_comments(int $id)
 //  API: POST /api/appointments/:id/comments
 function api_post_comment(int $id)
 {
-    $authUser   = require_auth_api();
+    $authUser   = require_patient_api();
     $patient_id = (int) $authUser['id'];
 
+    // Verify ownership
     $appt = get_appointment_by_id($id);
     if (!$appt || (int)$appt['patient_id'] !== (int)$patient_id) {
         json_response(['success' => false, 'message' => 'Forbidden.'], 403);
     }
-    $body      = json_decode(file_get_contents('php://input'), true) ?? [];
-    $message   = trim($body['message']   ?? '');
-    $parent_id = isset($body['parent_id']) ? (int)$body['parent_id'] : null;
+    $body    = json_decode(file_get_contents('php://input'), true) ?? [];
+    $message = trim($body['message'] ?? '');
     if ($message === '') {
         json_response(['success' => false, 'message' => 'Message cannot be empty.'], 422);
     }
-    $result = create_appointment_comment($id, (int)$patient_id, $message, $parent_id);
-    if (isset($result['error'])) {
-        json_response(['success' => false, 'message' => $result['error']], 422);
-    }
-    json_response(['success' => true, 'data' => $result], 201);
+    $comment = create_appointment_comment($id, (int)$patient_id, $message);
+    json_response(['success' => true, 'data' => $comment], 201);
 }
 
-
-// Page: /chat/:appointment_id  — REMOVED (chat feature removed)
-// function chat_page was here
-
-// Page: GET /lab-report/:appointment_id — serve the lab report file
-function lab_report_download(int $appointment_id): void
+//  API: GET /api/messages/:appointment_id 
+function api_get_messages(int $appointment_id): void
 {
-    $user = require_auth();
-    $patient_id = (int)$user['id'];
+    $authUser   = require_patient_api();
+    $patient_id = (int) $authUser['id'];
+
+    $appt = get_appointment_by_id($appointment_id);
+    if (!$appt || (int)$appt['patient_id'] !== $patient_id) {
+        json_response(['success' => false, 'message' => 'Forbidden.'], 403);
+    }
 
     $pdo  = db_connect();
-    $stmt = $pdo->prepare("
-        SELECT lr.file_path, lr.original_name, a.patient_id
-        FROM lab_reports lr
-        JOIN appointments a ON a.id = lr.appointment_id
-        WHERE lr.appointment_id = ?
-    ");
-    $stmt->execute([$appointment_id]);
-    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    $stmt = $pdo->prepare(
+        "SELECT m.id, m.sender_id, m.sender_role, m.message, m.is_read,
+                m.created_at, u.name AS sender_name
+         FROM messages m
+         JOIN users u ON u.id = m.sender_id
+         WHERE m.appointment_id = :appt_id
+         ORDER BY m.created_at ASC"
+    );
+    $stmt->execute([':appt_id' => $appointment_id]);
+    $messages = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    if (!$row || (int)$row['patient_id'] !== $patient_id) {
+    // Mark unread messages as read for this patient
+    $pdo->prepare(
+        "UPDATE messages SET is_read = 1
+         WHERE appointment_id = :appt_id AND sender_role = 'doctor' AND is_read = 0"
+    )->execute([':appt_id' => $appointment_id]);
+
+    json_response(['success' => true, 'data' => $messages]);
+}
+
+//  API: POST /api/messages/:appointment_id 
+function api_send_message(int $appointment_id): void
+{
+    $authUser   = require_patient_api();
+    $patient_id = (int) $authUser['id'];
+
+    $appt = get_appointment_by_id($appointment_id);
+    if (!$appt || (int)$appt['patient_id'] !== $patient_id) {
+        json_response(['success' => false, 'message' => 'Forbidden.'], 403);
+    }
+
+    $body    = json_decode(file_get_contents('php://input'), true) ?? [];
+    $message = trim($body['message'] ?? '');
+    if ($message === '') {
+        json_response(['success' => false, 'message' => 'Message cannot be empty.'], 422);
+    }
+
+    $pdo  = db_connect();
+    $stmt = $pdo->prepare(
+        "INSERT INTO messages (appointment_id, sender_id, sender_role, message)
+         VALUES (:appt_id, :sender_id, 'patient', :message)"
+    );
+    $stmt->execute([
+        ':appt_id'   => $appointment_id,
+        ':sender_id' => $patient_id,
+        ':message'   => $message,
+    ]);
+    $new_id = (int) $pdo->lastInsertId();
+
+    $row = $pdo->prepare(
+        "SELECT m.id, m.sender_id, m.sender_role, m.message, m.is_read,
+                m.created_at, u.name AS sender_name
+         FROM messages m JOIN users u ON u.id = m.sender_id
+         WHERE m.id = :id"
+    );
+    $row->execute([':id' => $new_id]);
+    $msg = $row->fetch(PDO::FETCH_ASSOC);
+
+    json_response(['success' => true, 'data' => $msg], 201);
+}
+
+// ── Page: /chat/:appointment_id ───────────────────────────────────────────────
+function chat_page(int $appointment_id): void
+{
+    $user = require_patient();
+
+    $appt = get_appointment_by_id($appointment_id);
+    if (!$appt || (int)$appt['patient_id'] !== (int)$user['id']) {
         http_response_code(403);
         echo '<h1>Forbidden</h1>';
         exit;
     }
 
-    $path = BASE_PATH . '/' . ltrim($row['file_path'], '/');
-    if (!file_exists($path)) {
-        http_response_code(404);
-        echo '<h1>File not found</h1>';
-        exit;
-    }
-
-    $mime = mime_content_type($path) ?: 'application/octet-stream';
-    header('Content-Type: ' . $mime);
-    header('Content-Disposition: inline; filename="' . rawurlencode($row['original_name']) . '"');
-    header('Content-Length: ' . filesize($path));
-    readfile($path);
-    exit;
+    render('patient/chat', compact('user', 'appt'));
 }
