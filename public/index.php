@@ -1,5 +1,12 @@
 <?php
 
+// Use a project-local session directory so the dev server doesn't need
+// write access to /var/lib/php/sessions.
+$_sessionPath = realpath(__DIR__ . '/../tmp/sessions');
+if ($_sessionPath && is_dir($_sessionPath)) {
+    session_save_path($_sessionPath);
+}
+
 session_start();
 
 define('BASE_PATH', realpath(__DIR__ . '/..'));
@@ -47,59 +54,46 @@ function request_is($path) {
     return $uri === $path;
 }
 
-// ── Controllers ───────────────────────────────────────────────────────────────
+// Controllers
 
 require_once BASE_PATH . '/app/controllers/AuthController.php';
+require_once BASE_PATH . '/app/controllers/PaymentController.php';
 require_once BASE_PATH . '/app/controllers/PatientController.php';
 require_once BASE_PATH . '/app/controllers/DoctorController.php';
 require_once BASE_PATH . '/app/controllers/PageController.php';
+require_once BASE_PATH . '/app/controllers/AdminController.php';
+require_once BASE_PATH . '/app/controllers/ChatbotController.php';
+require_once BASE_PATH . '/app/controllers/LabAdminController.php';
 
-// ── Routing ───────────────────────────────────────────────────────────────────
+// Routing
 
 $rawUri = rtrim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/') ?: '/';
 $uri    = (BASE_PREFIX !== '' && strpos($rawUri, BASE_PREFIX) === 0)
     ? substr($rawUri, strlen(BASE_PREFIX))
     : $rawUri;
-
-// Support direct front-controller access when .htaccess rewrite is unavailable.
-if (strpos($uri, '/index.php') === 0) {
-    $uri = substr($uri, strlen('/index.php'));
-}
-
-if (isset($_GET['route']) && trim($_GET['route'], '/') !== '') {
-    $uri = '/' . trim($_GET['route'], '/');
-}
-
 $uri = $uri === '' ? '/' : $uri;
 $method = $_SERVER['REQUEST_METHOD'];
 
-// Home — show about/home page by default
+// Home
 if ($uri === '/')                              { about_page(); }
 if ($uri === '/about'   && $method === 'GET') { about_page(); }
 if ($uri === '/contact' && $method === 'GET') { contact_page(); }
-if ($uri === '/admin'   && $method === 'GET') { admin_page(); }
 
 // Auth
-if ($uri === '/login'  && $method === 'GET')  { login_get();    }
-if ($uri === '/login'  && $method === 'POST') { login_post();   }
-if ($uri === '/signup' && $method === 'GET')  { signup_get();   }
-if ($uri === '/signup' && $method === 'POST') { signup_post();  }
-if ($uri === '/logout' && $method === 'GET')  { logout();       }
-if ($uri === '/forgot-password' && $method === 'GET')  { forgot_password_get();        }
-if ($uri === '/forgot-password' && $method === 'POST') { forgot_password_post();       }
-if ($uri === '/forgot-password/verify' && $method === 'GET')  { forgot_password_verify_get();  }
-if ($uri === '/forgot-password/verify' && $method === 'POST') { forgot_password_verify_post(); }
-if ($uri === '/forgot-password/reset' && $method === 'GET')   { forgot_password_reset_get();   }
-if ($uri === '/forgot-password/reset' && $method === 'POST')  { forgot_password_reset_post();  }
+if ($uri === '/login'  && $method === 'GET')  { login_get();   }
+if ($uri === '/login'  && $method === 'POST') { login_post();  }
+if ($uri === '/signup' && $method === 'GET')  { signup_get();  }
+if ($uri === '/signup' && $method === 'POST') { signup_post(); }
+if ($uri === '/logout' && $method === 'GET')  { logout();      }
 
 // Patient pages
-if ($uri === '/categories'      && $method === 'GET')  { categories_page();      }
-if ($uri === '/dashboard'       && $method === 'GET')  { dashboard_page();       }
-if ($uri === '/profile'         && $method === 'GET')  { profile_page();         }
-if ($uri === '/booking/confirm' && $method === 'GET')  { booking_confirm_page(); }
+if ($uri === '/categories'      && $method === 'GET') { categories_page();      }
+if ($uri === '/dashboard'       && $method === 'GET') { dashboard_page();       }
+if ($uri === '/profile'         && $method === 'GET') { profile_page();         }
+if ($uri === '/booking/confirm' && $method === 'GET') { booking_confirm_page(); }
 if (preg_match('#^/doctors/(\d+)$#', $uri, $m) && $method === 'GET') { doctor_booking_page((int)$m[1]); }
 if (preg_match('#^/appointments/(\d+)/reschedule$#', $uri, $m) && $method === 'GET') { reschedule_page((int)$m[1]); }
-if (preg_match('#^/chat/(\d+)$#', $uri, $m) && $method === 'GET') { chat_page((int)$m[1]); }
+if (preg_match('#^/lab-report/(\d+)$#', $uri, $m) && $method === 'GET') { lab_report_download((int)$m[1]); }
 
 // Doctor portal pages
 if ($uri === '/doctor/dashboard'    && $method === 'GET') { doctor_dashboard_page();    }
@@ -108,23 +102,22 @@ if ($uri === '/doctor/patients'     && $method === 'GET') { doctor_patients_page
 if ($uri === '/doctor/availability' && $method === 'GET') { doctor_availability_page(); }
 if ($uri === '/doctor/profile'      && $method === 'GET') { doctor_profile_page();      }
 
-// Doctor chat page
-if (preg_match('#^/doctor/chat/(\d+)$#', $uri, $m) && $method === 'GET') { doctor_chat_page((int)$m[1]); }
+// Doctor lab report upload
+if ($uri === '/doctor/api/lab-report' && $method === 'POST') { api_doctor_lab_report(); }
 
 // Doctor API routes (/doctor/api/*)
-if ($uri === '/doctor/api/appointments'       && $method === 'GET')                { api_doctor_appointments();       }
-if ($uri === '/doctor/api/stats'              && $method === 'GET')                { api_doctor_stats();              }
-if ($uri === '/doctor/api/appointment-detail' && $method === 'GET')                { api_doctor_appointment_detail(); }
-if ($uri === '/doctor/api/update-status'      && $method === 'POST')               { api_doctor_update_status();      }
+if ($uri === '/doctor/api/appointments'       && $method === 'GET')                 { api_doctor_appointments();       }
+if ($uri === '/doctor/api/stats'              && $method === 'GET')                 { api_doctor_stats();              }
+if ($uri === '/doctor/api/appointment-detail' && $method === 'GET')                 { api_doctor_appointment_detail(); }
+if ($uri === '/doctor/api/update-status'      && $method === 'POST')                { api_doctor_update_status();      }
 if ($uri === '/doctor/api/availability'       && in_array($method, ['GET','POST'])) { api_doctor_availability();       }
 if ($uri === '/doctor/api/profile'            && in_array($method, ['GET','POST'])) { api_doctor_profile();            }
-if ($uri === '/doctor/api/patients'           && $method === 'GET')                { api_doctor_patients();           }
-if ($uri === '/doctor/api/comment'            && $method === 'POST')               { api_doctor_comment();            }
-if ($uri === '/doctor/api/slots'              && $method === 'GET')                { api_doctor_slots();              }
-if (preg_match('#^/doctor/api/messages/(\d+)$#', $uri, $m) && $method === 'GET')  { api_doctor_get_messages((int)$m[1]); }
-if (preg_match('#^/doctor/api/messages/(\d+)$#', $uri, $m) && $method === 'POST') { api_doctor_send_message((int)$m[1]); }
+if ($uri === '/doctor/api/patients'           && $method === 'GET')                 { api_doctor_patients();           }
+if ($uri === '/doctor/api/comment'            && $method === 'POST')                { api_doctor_comment();            }
+if ($uri === '/doctor/api/slots'              && $method === 'GET')                 { api_doctor_slots();              }
 
-// API routes
+
+// Patient API routes
 if ($uri === '/api/categories'        && $method === 'GET')  { api_get_categories();  }
 if ($uri === '/api/slots'             && $method === 'GET')  { api_get_slots();        }
 if ($uri === '/api/doctors'           && $method === 'GET')  { api_get_doctors();      }
@@ -135,12 +128,35 @@ if ($uri === '/api/settings/password' && $method === 'POST') { api_change_passwo
 if (preg_match('#^/api/appointments/(\d+)/cancel$#',     $uri, $m) && $method === 'PATCH') { api_cancel_appointment((int)$m[1]);     }
 if (preg_match('#^/api/appointments/(\d+)/reschedule$#', $uri, $m) && $method === 'POST')  { api_reschedule_appointment((int)$m[1]); }
 if (preg_match('#^/api/appointments/(\d+)/comments$#',   $uri, $m) && $method === 'GET')   { api_get_comments((int)$m[1]);           }
-if (preg_match('#^/api/appointments/(\d+)/comments$#',   $uri, $m) && $method === 'POST')  { api_post_comment((int)$m[1]);            }
+if (preg_match('#^/api/appointments/(\d+)/comments$#',   $uri, $m) && $method === 'POST')  { api_post_comment((int)$m[1]);           }
 if (preg_match('#^/api/appointments/(\d+)$#',            $uri, $m) && $method === 'GET')   { api_get_appointment_detail((int)$m[1]); }
 if ($uri === '/api/patient/appointments'                 && $method === 'GET') { api_patient_appointments(); }
 
-if (preg_match('#^/api/messages/(\d+)$#', $uri, $m) && $method === 'GET')  { api_get_messages((int)$m[1]); }
-if (preg_match('#^/api/messages/(\d+)$#', $uri, $m) && $method === 'POST') { api_send_message((int)$m[1]); }
+// Admin pages
+if ($uri === '/admin/dashboard'             && $method === 'GET')   { admin_dashboard_page();              }
+if ($uri === '/admin/transactions'          && $method === 'GET')   { admin_transactions_page();           }
+if ($uri === '/admin/chatbot-escalations'   && $method === 'GET')   { admin_chatbot_escalations_page();    }
+
+// Admin API routes
+if ($uri === '/admin/api/transactions'      && $method === 'GET')   { api_admin_transactions();            }
+if ($uri === '/admin/api/chatbot/escalations' && $method === 'GET') { api_admin_chatbot_escalations();     }
+if (preg_match('#^/admin/api/chatbot/escalations/(\d+)$#', $uri, $m) && $method === 'PATCH') { api_admin_chatbot_update((int)$m[1]); }
+
+// Chatbot API routes (patient)
+if ($uri === '/api/chatbot/message'  && $method === 'POST') { api_chatbot_message();  }
+if ($uri === '/api/chatbot/escalate' && $method === 'POST') { api_chatbot_escalate(); }
+
+// Payment routes
+if ($uri === '/api/payment/initiate' && $method === 'POST') { api_payment_initiate(); }
+if ($uri === '/payment/success'      && $method === 'GET')  { payment_success_page(); }
+if ($uri === '/payment/failure'      && $method === 'GET')  { payment_failure_page(); }
+
+// Lab admin
+if ($uri === '/lab-admin/dashboard'              && $method === 'GET')  { lab_admin_dashboard_page();         }
+if ($uri === '/lab-admin/api/find-patient'       && $method === 'GET')  { api_lab_admin_find_patient();       }
+if ($uri === '/lab-admin/api/patient-appointments' && $method === 'GET') { api_lab_admin_patient_appointments(); }
+if ($uri === '/lab-admin/api/upload-report'      && $method === 'POST') { api_lab_admin_upload_report();      }
+if ($uri === '/lab-admin/profile'              && $method === 'GET')  { lab_admin_profile_page();           }
 
 // 404
 http_response_code(404);

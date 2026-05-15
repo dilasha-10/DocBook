@@ -212,13 +212,6 @@ function api_lab_admin_upload_report(): void
     $labAdmin = require_lab_admin_api();
     $pdo      = db_connect();
 
-    // Block if lab reports feature is disabled
-    require_once BASE_PATH . '/app/models/SystemSettingsModel.php';
-    if (!get_setting('lab_reports', true)) {
-        json_response(['error' => true, 'message' => 'Lab reports feature is currently disabled by the administrator.'], 403);
-        exit;
-    }
-
     $appointmentId = (int)($_POST['appointment_id'] ?? 0);
     if (!$appointmentId) {
         json_response(['error' => true, 'message' => 'appointment_id is required'], 400);
@@ -289,44 +282,6 @@ function api_lab_admin_upload_report(): void
             notes         = VALUES(notes),
             uploaded_at   = NOW()
     ")->execute([$appointmentId, $labAdmin['id'], $publicPath, $originalName, $notes ?: null]);
-
-    // ── Notify patient and doctor ────────────────────────────────────────────
-    try {
-        require_once BASE_PATH . '/app/models/NotificationModel.php';
-
-        // Full appointment row (with reference_number and date)
-        $apptFull = $pdo->prepare("
-            SELECT a.id, a.appointment_date, a.start_time, a.reference_number,
-                   a.patient_id, a.doctor_id
-            FROM   appointments a
-            WHERE  a.id = ?
-            LIMIT  1
-        ");
-        $apptFull->execute([$appointmentId]);
-        $apptRow = $apptFull->fetch(PDO::FETCH_ASSOC);
-
-        // Patient row
-        $patStmt = $pdo->prepare("SELECT id, name FROM users WHERE id = ? LIMIT 1");
-        $patStmt->execute([$apptRow['patient_id']]);
-        $patientRow = $patStmt->fetch(PDO::FETCH_ASSOC);
-
-        // Doctor row (user_id needed for notification_insert recipient)
-        $docStmt = $pdo->prepare("
-            SELECT d.id AS doctor_id, u.id AS user_id, u.name
-            FROM   doctors d
-            JOIN   users   u ON u.id = d.user_id
-            WHERE  d.id = ?
-            LIMIT  1
-        ");
-        $docStmt->execute([$apptRow['doctor_id']]);
-        $doctorRow = $docStmt->fetch(PDO::FETCH_ASSOC);
-
-        notify_lab_report_uploaded($apptRow, $patientRow, $doctorRow, $labAdmin['name']);
-
-    } catch (Throwable $e) {
-        error_log('notify_lab_report_uploaded error: ' . $e->getMessage());
-        // Non-fatal — upload succeeded, notification failure should not block response
-    }
 
     json_response([
         'success'   => true,

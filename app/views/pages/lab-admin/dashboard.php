@@ -1,21 +1,6 @@
 <?php
 $title = 'Lab Dashboard';
 
-require_once BASE_PATH . '/app/models/SystemSettingsModel.php';
-if (!get_setting('lab_reports', true)) {
-    // Feature disabled — show notice and stop
-    echo '<div style="max-width:600px;margin:80px auto;text-align:center;padding:40px;background:var(--surface);border:1px solid var(--border);border-radius:16px;">'
-       . '<div style="font-size:48px;margin-bottom:16px;">🔒</div>'
-       . '<h2 style="color:var(--text);margin-bottom:8px;">Lab Reports Disabled</h2>'
-       . '<p style="color:var(--muted);font-size:14px;">The Lab Reports feature has been disabled by the administrator. Please contact the admin to re-enable it.</p>'
-       . '</div>';
-    // Render layout with the notice
-    $content = ob_get_clean();
-    require BASE_PATH . '/app/views/layouts/app-lab-admin.php';
-    exit;
-}
-
-
 $extra_styles = <<<CSS
 <style>
 /* ─── Page layout ─────────────────────────────────────── */
