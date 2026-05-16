@@ -208,6 +208,14 @@
 </head>
 <body>
 
+<!-- Broadcast Notification Banner -->
+<?php if (isset($user)): ?>
+<div id="broadcastBanner" style="display:none; background:#fef08a; color:#713f12; padding:10px 48px 10px 20px; text-align:center; font-size:14px; font-weight:600; position:relative; z-index:1000; border-bottom:1px solid #fde047;"><i class="fa fa-bullhorn" style="margin-right:8px;opacity:.8;"></i>
+    <span id="broadcastBannerText"></span>
+    <button onclick="dismissBroadcastBanner()" style="background:none;border:none;color:#713f12;font-size:18px;cursor:pointer;position:absolute;right:16px;top:50%;transform:translateY(-50%);opacity:.7;">&#x2715;</button>
+</div>
+<?php endif; ?>
+
 <!-- TOP NAVBAR -->
 <nav class="navbar">
     <div class="navbar-inner">
@@ -221,8 +229,10 @@
         <!-- Desktop nav links -->
         <div class="nav-links">
             <a href="<?= BASE_URL ?>/about"      class="nav-link <?php echo request_is('/about')      ? 'active' : ''; ?>">About</a>
+            <?php if (($user['role'] ?? '') !== 'admin'): ?>
             <a href="<?= BASE_URL ?>/dashboard"  class="nav-link <?php echo request_is('/dashboard')  ? 'active' : ''; ?>">My Appointments</a>
             <a href="<?= BASE_URL ?>/categories" class="nav-link <?php echo request_is('/categories') ? 'active' : ''; ?>">Find Doctors</a>
+            <?php endif; ?>
             <a href="<?= BASE_URL ?>/contact"    class="nav-link <?php echo request_is('/contact')    ? 'active' : ''; ?>">Contact</a>
         </div>
 
@@ -302,6 +312,18 @@
             <a href="<?= BASE_URL ?>/admin/audit-trail" class="sidebar-link <?php echo request_is('/admin/audit-trail') ? 'active' : ''; ?>">
                 <i class="fa fa-shield-halved sidebar-icon"></i>
                 <span>Audit Trail</span>
+            </a>
+            <a href="<?= BASE_URL ?>/admin/departments" class="sidebar-link <?php echo request_is('/admin/departments') ? 'active' : ''; ?>">
+                <i class="fa fa-hospital sidebar-icon"></i>
+                <span>Departments</span>
+            </a>
+            <a href="<?= BASE_URL ?>/admin/appointments" class="sidebar-link <?php echo request_is('/admin/appointments') ? 'active' : ''; ?>">
+                <i class="fa fa-calendar-check sidebar-icon"></i>
+                <span>Appointments</span>
+            </a>
+            <a href="<?= BASE_URL ?>/admin/support-tickets" class="sidebar-link <?php echo request_is('/admin/support-tickets') ? 'active' : ''; ?>">
+                <i class="fa fa-headset sidebar-icon"></i>
+                <span>Support Tickets</span>
             </a>
             <?php else: ?>
             <div class="sidebar-section-label">Main</div>
@@ -501,6 +523,40 @@
         }
     }
 
+    function notifRedirectUrl(n) {
+        var apptId = n.appointment_id ? parseInt(n.appointment_id) : null;
+        var type   = (n.type || '').trim();
+
+        // Lab report uploaded → open appointment panel scrolled to lab section
+        if ((type === 'lab_report_uploaded' || type === 'lab_report_ready') && apptId) {
+            return BASE_URL + '/dashboard?lab=' + apptId;
+        }
+        // Appointment booked / confirmed / reminder → open appointment panel
+        if ((type === 'appointment_booked' || type === 'appointment_confirmed' ||
+             type === 'appointment_pending' || type === 'appointment_reminder') && apptId) {
+            return BASE_URL + '/dashboard?appt=' + apptId;
+        }
+        // Cancelled / rescheduled / completed
+        if (type === 'appointment_cancelled' || type === 'appointment_rescheduled' ||
+            type === 'appointment_completed') {
+            return BASE_URL + '/dashboard' + (apptId ? '?appt=' + apptId : '');
+        }
+        // Payment
+        if (type === 'payment_received' || type === 'payment_failed' || type === 'refund') {
+            return BASE_URL + '/dashboard' + (apptId ? '?appt=' + apptId : '');
+        }
+        // System / broadcast → notifications page
+        if (type === 'system_maintenance' || type === 'targeted') {
+            return BASE_URL + '/notifications';
+        }
+        // Admin types
+        if (type === 'chatbot_escalation') return BASE_URL + '/admin/chatbot-escalations';
+        if (type === 'support_ticket')     return BASE_URL + '/admin/support-tickets';
+        // Any other appointment-related type with an apptId → dashboard
+        if (apptId) return BASE_URL + '/dashboard?appt=' + apptId;
+        return BASE_URL + '/notifications';
+    }
+
     function renderNotifications(items) {
         if (!items || !items.length) {
             listEl.innerHTML = '<div class="notif-empty"><i class="fa fa-bell-slash"></i>No notifications yet</div>';
@@ -509,7 +565,7 @@
         listEl.innerHTML = items.slice(0, 15).map(function(n) {
             var icon  = typeIcon[n.type] || 'fa-bell';
             var unread = n.is_read == 0;
-            return '<div class="notif-item ' + (unread ? 'unread' : '') + '" data-id="' + n.id + '">' +
+            return '<div class="notif-item ' + (unread ? 'unread' : '') + '" data-id="' + n.id + '" data-url="' + notifRedirectUrl(n) + '" style="cursor:pointer;">' +
                 '<div class="notif-icon type-' + n.type + '"><i class="fa ' + icon + '"></i></div>' +
                 '<div class="notif-body">' +
                     '<div class="notif-title">' + escHtml(n.title) + '</div>' +
@@ -520,16 +576,19 @@
             '</div>';
         }).join('');
 
-        // Click to mark read
+        // Click: mark read then redirect
         listEl.querySelectorAll('.notif-item').forEach(function(el) {
             el.addEventListener('click', function() {
-                var id = parseInt(el.dataset.id);
+                var id  = parseInt(el.dataset.id);
+                var url = el.dataset.url;
                 el.classList.remove('unread');
                 el.querySelector('.notif-dot').style.display = 'none';
                 fetch(BASE_URL + '/api/notifications/read', {
                     method: 'POST',
                     headers: {'Content-Type':'application/json'},
                     body: JSON.stringify({id: id})
+                }).finally(function() {
+                    if (url) window.location.href = url;
                 });
             });
         });
@@ -588,6 +647,43 @@
         });
     });
 
+
+    // ── Broadcast Banner ─────────────────────────────────────
+    (function() {
+        var DISMISS_HOURS = 24;
+        fetch(BASE_URL + '/api/notifications?limit=10')
+            .then(function(r){ return r.json(); })
+            .then(function(d) {
+                var notifs = d.notifications || [];
+                var broadcast = notifs.find(function(n) {
+                    return (n.type === 'system_maintenance' || n.type === 'targeted') && n.is_read == 0;
+                });
+                if (!broadcast) return;
+
+                var dismissKey = 'broadcastDismissed_' + broadcast.id;
+                var dismissedAt = localStorage.getItem(dismissKey);
+                if (dismissedAt) {
+                    var hoursSince = (Date.now() - parseInt(dismissedAt)) / (1000 * 60 * 60);
+                    if (hoursSince < DISMISS_HOURS) return;
+                    localStorage.removeItem(dismissKey);
+                }
+
+                var banner = document.getElementById('broadcastBanner');
+                var text   = document.getElementById('broadcastBannerText');
+                if (banner && text) {
+                    text.textContent = broadcast.title + ': ' + broadcast.message;
+                    banner.style.display = 'block';
+                    banner.dataset.notifId = broadcast.id;
+                }
+            }).catch(function(){});
+    })();
+
+    window.dismissBroadcastBanner = function() {
+        var banner = document.getElementById('broadcastBanner');
+        var notifId = banner ? banner.dataset.notifId : null;
+        if (notifId) localStorage.setItem('broadcastDismissed_' + notifId, Date.now().toString());
+        if (banner) banner.style.display = 'none';
+    };
     function escHtml(s) {
         return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     }

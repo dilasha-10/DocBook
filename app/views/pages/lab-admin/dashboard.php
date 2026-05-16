@@ -500,6 +500,43 @@ document.addEventListener('DOMContentLoaded', function(){
         var el = document.getElementById(id);
         if (el) el.addEventListener('keydown', function(e){ if (e.key === 'Enter') searchPatients(); });
     });
+
+    // ── Deep link from notification: ?appt_id=X ──────────────────────────
+    var params = new URLSearchParams(window.location.search);
+    var apptId = params.get('appt_id');
+    if (apptId) {
+        window.history.replaceState({}, '', window.location.pathname);
+
+        // Use lab admin patient-appointments API via appointment detail
+        // First get appointment info to find patient_id
+        fetch(BASE_URL + '/lab-admin/api/appointment-by-id?id=' + apptId)
+            .then(function(r){ return r.json(); })
+            .then(function(d) {
+                if (!d.success || !d.appointment) return;
+                var patientId = d.appointment.patient_id;
+
+                // Load appointments for that patient
+                loadAppointments(patientId);
+
+                // Show the appointments section
+                document.getElementById('apptSection').classList.add('show');
+
+                // Poll until the appointment card renders, then open it
+                var attempts = 0;
+                var interval = setInterval(function() {
+                    attempts++;
+                    var card = document.getElementById('card-' + apptId);
+                    if (card) {
+                        clearInterval(interval);
+                        card.classList.add('open');
+                        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    } else if (attempts > 40) {
+                        clearInterval(interval);
+                    }
+                }, 100);
+            })
+            .catch(function(){});
+    }
 });
 </script>
 JS;

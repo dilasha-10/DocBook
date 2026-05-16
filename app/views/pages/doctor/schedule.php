@@ -3,11 +3,57 @@ $title = 'My Schedule';
 ob_start();
 ?>
 
+<style>
+/* Side panel */
+.schedule-side-panel {
+    position: fixed; top: 0; right: -500px; width: 500px; height: 100vh;
+    background: var(--surface); border-left: 1px solid var(--border);
+    z-index: 500; overflow-y: auto; transition: right .3s ease;
+    display: flex; flex-direction: column;
+}
+.schedule-side-panel.open { right: 0; }
+.ssp-header {
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: flex-start; justify-content: space-between;
+    position: sticky; top: 0; background: var(--surface); z-index: 1;
+}
+.ssp-header h2 { font-size: 17px; font-weight: 700; margin: 0 0 3px; }
+.ssp-header p  { font-size: 13px; color: var(--muted); margin: 0; }
+.ssp-close {
+    background: none; border: none; font-size: 20px;
+    cursor: pointer; color: var(--muted); padding: 2px 6px;
+    border-radius: 4px; line-height: 1;
+}
+.ssp-close:hover { color: var(--text); }
+.ssp-body { padding: 20px 24px; flex: 1; }
+
+.detail-row { display: flex; gap: 8px; margin-bottom: 10px; font-size: 13px; }
+.detail-label { color: var(--muted); font-weight: 600; min-width: 90px; }
+.detail-value { color: var(--text); }
+
+.lab-box {
+    border-radius: 10px; padding: 12px 14px; margin: 16px 0;
+    border: 1px solid;
+}
+.lab-box.uploaded { background: rgba(99,179,237,.07); border-color: rgba(99,179,237,.3); }
+.lab-box.pending  { background: rgba(234,179,8,.07);  border-color: rgba(234,179,8,.3); }
+.lab-box-title {
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .07em; margin-bottom: 6px;
+}
+.lab-box.uploaded .lab-box-title { color: #63b3ed; }
+.lab-box.pending  .lab-box-title { color: #d69e2e; }
+
+.appt-clickable { cursor: pointer; }
+.appt-clickable:hover { border-color: var(--blue) !important; box-shadow: 0 4px 16px rgba(74,144,226,.12); }
+</style>
+
 <div class="view-container">
     <div class="view-header" style="justify-content:space-between;">
         <div class="greeting">
             <h1>My Schedule</h1>
-            <p>View your schedule and manage lab reports</p>
+            <p>Click an appointment to view details</p>
         </div>
         <div style="margin-right: 24px;">
             <input type="date" id="schedule-date-picker"
@@ -22,53 +68,26 @@ ob_start();
     </div>
 </div>
 
-<!-- Lab Report Upload Modal -->
-<div id="labReportModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center;">
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px 32px;width:100%;max-width:420px;margin:0 16px;position:relative;">
-        <button onclick="closeLabModal()" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted);">&times;</button>
-        <h3 style="margin:0 0 6px;font-size:17px;font-weight:700;">Upload Lab Report</h3>
-        <p id="labModalPatient" style="margin:0 0 20px;font-size:13px;color:var(--muted);"></p>
-
-        <div id="labDropZone"
-             style="border:2px dashed var(--border2);border-radius:10px;padding:28px 20px;text-align:center;cursor:pointer;transition:border-color .2s;margin-bottom:16px;"
-             onclick="document.getElementById('labFileInput').click()"
-             ondragover="event.preventDefault();this.style.borderColor='var(--blue)'"
-             ondragleave="this.style.borderColor='var(--border2)'"
-             ondrop="handleLabDrop(event)">
-            <i class="fa fa-cloud-arrow-up" style="font-size:28px;color:var(--hint);margin-bottom:8px;display:block;"></i>
-            <span id="labDropLabel" style="font-size:13px;color:var(--muted);">Click or drag &amp; drop a file here<br><span style="font-size:11px;">PDF, JPG, PNG · Max 10 MB</span></span>
+<!-- Side panel -->
+<div id="scheduleSidePanel" class="schedule-side-panel">
+    <div class="ssp-header">
+        <div>
+            <h2 id="sspPatientName">—</h2>
+            <p id="sspDateTime">—</p>
         </div>
-        <input type="file" id="labFileInput" accept=".pdf,.jpg,.jpeg,.png" style="display:none;" onchange="handleLabFileSelect(event)">
-
-        <div id="labFileInfo" style="display:none;margin-bottom:16px;padding:10px 14px;background:rgba(99,179,237,.1);border:1px solid rgba(99,179,237,.3);border-radius:8px;font-size:13px;color:var(--text);display:none;align-items:center;gap:10px;">
-            <i class="fa fa-file" style="color:#63b3ed;"></i>
-            <span id="labFileName"></span>
-            <button onclick="clearLabFile()" style="margin-left:auto;background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;">&times;</button>
-        </div>
-
-        <div id="labUploadProgress" style="display:none;margin-bottom:12px;">
-            <div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden;">
-                <div id="labProgressBar" style="height:100%;background:var(--blue);width:0%;transition:width .3s;"></div>
-            </div>
-        </div>
-
-        <div id="labUploadMsg" style="display:none;margin-bottom:12px;font-size:13px;border-radius:8px;padding:8px 12px;"></div>
-
-        <button id="labUploadBtn" onclick="submitLabReport()"
-                style="width:100%;padding:11px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
-            <i class="fa fa-upload"></i> Upload Report
-        </button>
+        <button class="ssp-close" onclick="closeSsp()">×</button>
+    </div>
+    <div class="ssp-body">
+        <div id="sspContent"><p style="color:var(--muted);">Loading...</p></div>
     </div>
 </div>
+<div id="sspOverlay" onclick="closeSsp()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:499;"></div>
 
 <?php
 $content = ob_get_clean();
 
 $extra_scripts = <<<'JS'
 <script>
-var _labApptId   = null;
-var _labFile     = null;
-
 function loadScheduleAppointments() {
     const date = document.getElementById('schedule-date-picker').value;
     const list = document.getElementById('schedule-appointment-list');
@@ -84,17 +103,7 @@ function loadScheduleAppointments() {
             list.innerHTML = d.appointments.map(a => {
                 const badgeClass = a.status === 'Confirmed' ? 'badge-confirmed' : 'badge-pending';
                 const reason = a.visit_reason || 'General consultation';
-
-                // Lab report button — shown for all non-cancelled appointments
-                const canUpload = (a.status !== 'Cancelled' && a.status !== 'Rescheduled');
-                const labBtn = canUpload
-                    ? '<button onclick="openLabModal(' + a.id + ',\'' + escHtml(a.patient_name) + '\')" '
-                      + 'style="padding:5px 12px;background:rgba(99,179,237,.15);color:#63b3ed;border:1px solid rgba(99,179,237,.3);'
-                      + 'border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:5px;">'
-                      + '<i class="fa fa-flask"></i> Lab Report</button>'
-                    : '';
-
-                return '<div class="appointment-item" style="cursor:default;">'
+                return '<div class="appointment-item appt-clickable" onclick="openSsp(' + a.id + ',\'' + escHtml(a.patient_name) + '\',\'' + a.time + '\',\'' + a.status + '\')">'
                     + '<div class="appt-time">' + a.time + '</div>'
                     + '<div class="appt-details">'
                     + '<div class="appt-icon"><i class="fas fa-user"></i></div>'
@@ -104,7 +113,7 @@ function loadScheduleAppointments() {
                     + '</div></div>'
                     + '<div class="appt-actions" style="gap:8px;">'
                     + '<span class="badge ' + badgeClass + '">' + escHtml(a.status) + '</span>'
-                    + labBtn
+                    + '<span style="font-size:12px;color:var(--muted);"><i class="fa fa-chevron-right"></i></span>'
                     + '</div>'
                     + '</div>';
             }).join('');
@@ -114,135 +123,120 @@ function loadScheduleAppointments() {
         });
 }
 
-function escHtml(s) {
-    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
+function openSsp(apptId, patientName, time, status) {
+    document.getElementById('sspPatientName').textContent = patientName;
+    document.getElementById('sspDateTime').textContent = document.getElementById('schedule-date-picker').value + ' · ' + time + ' · ' + status;
+    document.getElementById('sspContent').innerHTML = '<p style="color:var(--muted);">Loading...</p>';
+    document.getElementById('scheduleSidePanel').classList.add('open');
+    document.getElementById('sspOverlay').style.display = 'block';
 
-// ── Lab Report Modal ──────────────────────────────────────────────────────────
-
-function openLabModal(apptId, patientName) {
-    _labApptId = apptId;
-    _labFile   = null;
-    document.getElementById('labModalPatient').textContent = 'Patient: ' + patientName + ' · Appointment #' + apptId;
-    document.getElementById('labFileInput').value = '';
-    document.getElementById('labDropLabel').innerHTML = 'Click or drag & drop a file here<br><span style="font-size:11px;">PDF, JPG, PNG · Max 10 MB</span>';
-    document.getElementById('labFileInfo').style.display = 'none';
-    document.getElementById('labUploadProgress').style.display = 'none';
-    document.getElementById('labProgressBar').style.width = '0%';
-    clearLabMsg();
-    var modal = document.getElementById('labReportModal');
-    modal.style.display = 'flex';
-}
-
-function closeLabModal() {
-    document.getElementById('labReportModal').style.display = 'none';
-    _labApptId = null;
-    _labFile   = null;
-}
-
-function handleLabFileSelect(e) {
-    var file = e.target.files[0];
-    if (file) setLabFile(file);
-}
-
-function handleLabDrop(e) {
-    e.preventDefault();
-    document.getElementById('labDropZone').style.borderColor = 'var(--border2)';
-    var file = e.dataTransfer.files[0];
-    if (file) setLabFile(file);
-}
-
-function setLabFile(file) {
-    var allowed = ['application/pdf','image/jpeg','image/jpg','image/png'];
-    if (!allowed.includes(file.type)) {
-        showLabMsg('Only PDF, JPG, and PNG files are allowed.', 'error');
-        return;
-    }
-    if (file.size > 10 * 1024 * 1024) {
-        showLabMsg('File size exceeds 10 MB.', 'error');
-        return;
-    }
-    _labFile = file;
-    clearLabMsg();
-    var info = document.getElementById('labFileInfo');
-    document.getElementById('labFileName').textContent = file.name + ' (' + (file.size / 1024).toFixed(1) + ' KB)';
-    info.style.display = 'flex';
-    document.getElementById('labDropLabel').innerHTML = '<span style="color:#22C55E;font-weight:600;">File selected ✓</span>';
-}
-
-function clearLabFile() {
-    _labFile = null;
-    document.getElementById('labFileInput').value = '';
-    document.getElementById('labFileInfo').style.display = 'none';
-    document.getElementById('labDropLabel').innerHTML = 'Click or drag & drop a file here<br><span style="font-size:11px;">PDF, JPG, PNG · Max 10 MB</span>';
-}
-
-function showLabMsg(text, type) {
-    var el = document.getElementById('labUploadMsg');
-    el.textContent = text;
-    el.style.display = 'block';
-    el.style.background = type === 'error' ? 'rgba(239,68,68,.1)' : 'rgba(34,197,94,.1)';
-    el.style.color       = type === 'error' ? '#ef4444'             : '#22C55E';
-    el.style.border      = '1px solid ' + (type === 'error' ? 'rgba(239,68,68,.3)' : 'rgba(34,197,94,.3)');
-}
-
-function clearLabMsg() {
-    document.getElementById('labUploadMsg').style.display = 'none';
-}
-
-function submitLabReport() {
-    if (!_labApptId) return;
-    if (!_labFile) { showLabMsg('Please select a file first.', 'error'); return; }
-
-    var btn = document.getElementById('labUploadBtn');
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Uploading…';
-    document.getElementById('labUploadProgress').style.display = 'block';
-
-    var formData = new FormData();
-    formData.append('appointment_id', _labApptId);
-    formData.append('report', _labFile);
-
-    var xhr = new XMLHttpRequest();
-    xhr.open('POST', BASE_URL + '/doctor/api/lab-report');
-
-    xhr.upload.addEventListener('progress', function(e) {
-        if (e.lengthComputable) {
-            document.getElementById('labProgressBar').style.width = Math.round((e.loaded / e.total) * 100) + '%';
-        }
-    });
-
-    xhr.onload = function() {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fa fa-upload"></i> Upload Report';
-        try {
-            var res = JSON.parse(xhr.responseText);
-            if (res.success) {
-                showLabMsg('Lab report uploaded successfully!', 'success');
-                setTimeout(closeLabModal, 1500);
+    fetch(BASE_URL + '/doctor/api/appointment-detail?id=' + apptId)
+        .then(r => r.json())
+        .then(d => {
+            if (!d.success) { document.getElementById('sspContent').innerHTML = '<p style="color:var(--muted);">Failed to load.</p>'; return; }
+            var a = d.appointment;
+            var comments = a.comments || [];
+            var labHtml;
+            if (a.lab_report) {
+                var reportUrl = BASE_URL + '/lab-report/' + apptId;
+                labHtml = '<div class="lab-box uploaded">'
+                    + '<div class="lab-box-title"><i class="fa fa-flask" style="margin-right:4px;"></i>Lab Report</div>'
+                    + '<a href="' + reportUrl + '" target="_blank" style="color:#63b3ed;font-weight:600;font-size:13px;">'
+                    + '<i class="fa fa-download" style="margin-right:4px;"></i>' + escHtml(a.lab_report.original_name) + '</a>'
+                    + '<div style="font-size:11px;color:var(--hint);margin-top:4px;">Uploaded ' + fmtDt(a.lab_report.uploaded_at) + '</div>'
+                    + '</div>';
             } else {
-                showLabMsg(res.message || 'Upload failed.', 'error');
+                labHtml = '<div class="lab-box pending">'
+                    + '<div class="lab-box-title"><i class="fa fa-flask" style="margin-right:4px;"></i>Lab Report</div>'
+                    + '<div style="font-size:13px;color:#d69e2e;"><i class="fa fa-triangle-exclamation" style="margin-right:4px;"></i>No report uploaded yet</div>'
+                    + '<div style="font-size:11px;color:var(--hint);margin-top:4px;">Lab Admin will upload after the appointment.</div>'
+                    + '</div>';
             }
-        } catch(e) {
-            showLabMsg('Server error. Please try again.', 'error');
-        }
-    };
 
-    xhr.onerror = function() {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fa fa-upload"></i> Upload Report';
-        showLabMsg('Network error. Please try again.', 'error');
-    };
+            // Details
+            var detailsHtml = '<div style="margin-bottom:16px;">'
+                + '<div class="detail-row"><span class="detail-label">Patient</span><span class="detail-value">' + escHtml(a.patient_name || patientName) + '</span></div>'
+                + '<div class="detail-row"><span class="detail-label">Reason</span><span class="detail-value">' + escHtml(a.visit_reason || 'General consultation') + '</span></div>'
+                + '<div class="detail-row"><span class="detail-label">Status</span><span class="detail-value">' + escHtml(a.status) + '</span></div>'
+                + '<div class="detail-row"><span class="detail-label">Ref #</span><span class="detail-value">' + escHtml(a.reference_number || '—') + '</span></div>'
+                + '</div>';
 
-    xhr.send(formData);
+            // Comments (already loaded above)
+            var commentsHtml = '';
+            if (comments.length) {
+                commentsHtml = '<div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-top:16px;">'
+                    + '<div style="padding:10px 14px;border-bottom:1px solid var(--border);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--hint);background:var(--bg);">'
+                    + '<i class="fa fa-comments" style="margin-right:5px;"></i>Notes &amp; Replies</div>'
+                    + '<div style="padding:14px;">'
+                    + comments.map(c => {
+                        var isDoc = c.author_role === 'doctor';
+                        return '<div style="padding:10px 12px;border-radius:10px;margin-bottom:10px;'
+                            + (isDoc ? 'background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.2);' : 'background:rgba(99,102,241,.07);border:1px solid rgba(99,102,241,.2);margin-left:18px;')
+                            + '">'
+                            + '<div style="font-size:11px;font-weight:700;margin-bottom:4px;color:' + (isDoc ? '#22C55E' : '#818cf8') + ';">'
+                            + '<i class="fa ' + (isDoc ? 'fa-stethoscope' : 'fa-user') + '" style="margin-right:4px;"></i>'
+                            + (isDoc ? 'You' : 'Patient') + ' · ' + fmtDt(c.created_at)
+                            + '</div>'
+                            + '<div style="font-size:13px;color:var(--text);">' + escHtml(c.message) + '</div>'
+                            + '</div>';
+                    }).join('')
+                    + '</div></div>';
+            }
+
+            document.getElementById('sspContent').innerHTML = detailsHtml + labHtml + commentsHtml;
+        })
+        .catch(function() {
+            document.getElementById('sspContent').innerHTML = '<p style="color:var(--muted);">Failed to load details.</p>';
+        });
 }
 
-// Close modal on backdrop click
-document.getElementById('labReportModal').addEventListener('click', function(e) {
-    if (e.target === this) closeLabModal();
-});
+function closeSsp() {
+    document.getElementById('scheduleSidePanel').classList.remove('open');
+    document.getElementById('sspOverlay').style.display = 'none';
+}
 
-loadScheduleAppointments();
+function escHtml(s) {
+    return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function fmtDt(s) {
+    if (!s) return '';
+    return new Date(s.replace(' ','T')).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
+}
+
+// ── Deep link from notification: ?appt_id=X ──────────────────────────────
+(function() {
+    var params = new URLSearchParams(window.location.search);
+    var apptId = params.get('appt_id');
+    if (!apptId) { loadScheduleAppointments(); return; }
+
+    // Fetch the appointment to get its actual date
+    fetch(BASE_URL + '/doctor/api/appointment-detail?id=' + apptId)
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            if (d.success && d.appointment) {
+                var appt = d.appointment;
+                // Use 'date' field (appointment_date returned as 'date' from API)
+                var apptDate = appt.date || appt.appointment_date || null;
+                if (apptDate) {
+                    document.getElementById('schedule-date-picker').value = apptDate;
+                }
+                // Load appointments for that date, then open the side panel
+                loadScheduleAppointments();
+                setTimeout(function() {
+                    openSsp(
+                        parseInt(apptId),
+                        appt.patient_name || '',
+                        appt.time || '',
+                        appt.status || ''
+                    );
+                }, 700);
+            } else {
+                loadScheduleAppointments();
+            }
+            window.history.replaceState({}, '', window.location.pathname);
+        })
+        .catch(function() { loadScheduleAppointments(); });
+})();
 </script>
 JS;
 

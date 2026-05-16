@@ -1,5 +1,7 @@
 <?php
-
+date_default_timezone_set('Asia/Kathmandu');
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
 $_sessionPath = realpath(__DIR__ . '/../tmp/sessions');
 if ($_sessionPath && is_dir($_sessionPath)) {
     session_save_path($_sessionPath);
@@ -73,6 +75,10 @@ require_once BASE_PATH . '/app/controllers/SystemSettingsController.php';
 require_once BASE_PATH . '/app/controllers/ChatbotController.php';
 require_once BASE_PATH . '/app/controllers/LabAdminController.php';
 require_once BASE_PATH . '/app/controllers/NotificationController.php';
+require_once BASE_PATH . '/app/controllers/DepartmentController.php';
+require_once BASE_PATH . '/app/controllers/SupportTicketController.php';
+require_once BASE_PATH . '/app/controllers/AnnouncementController.php';
+require_once BASE_PATH . '/app/controllers/AppointmentAuditController.php';
 
 // URI normalisation
 // Strip the sub-folder prefix from REQUEST_URI so all routes can be written as root-relative paths.
@@ -96,6 +102,20 @@ if ($uri === '/login'  && $method === 'POST') { login_post();  }
 if ($uri === '/signup' && $method === 'GET')  { signup_get();  }
 if ($uri === '/signup' && $method === 'POST') { signup_post(); }
 if ($uri === '/logout' && $method === 'GET')  { logout();      }
+
+// Signup email OTP verification
+if ($uri === '/signup/verify-email' && $method === 'GET')  { signup_verify_email_get();  }
+if ($uri === '/signup/verify-email' && $method === 'POST') { signup_verify_email_post(); }
+if ($uri === '/signup/resend-otp'   && $method === 'POST') { signup_resend_otp_post();   }
+
+// Password reset — magic link (race-condition safe)
+if ($uri === '/forgot-password' && $method === 'GET')  { forgot_password_get();  }
+if ($uri === '/forgot-password' && $method === 'POST') { forgot_password_post(); }
+if ($uri === '/reset-password'  && $method === 'GET')  { reset_password_get();   }
+if ($uri === '/reset-password'  && $method === 'POST') { reset_password_post();  }
+
+
+
 
 // Patient portal — pages
 if ($uri === '/categories'      && $method === 'GET') { categories_page();      }
@@ -180,6 +200,10 @@ if ($uri === '/admin/chatbot-escalations' && $method === 'GET') { admin_chatbot_
 if ($uri === '/admin/notifications'       && $method === 'GET') { admin_notifications_page();       }
 if ($uri === '/admin/audit-trail'         && $method === 'GET') { admin_audit_trail_page();         }
 if ($uri === '/admin/system-settings'     && $method === 'GET') { admin_system_settings_page();     }
+if ($uri === '/admin/departments'         && $method === 'GET') { admin_departments_page();          }
+if ($uri === '/admin/support-tickets'     && $method === 'GET') { admin_support_tickets_page();      }
+if ($uri === '/admin/appointments'        && $method === 'GET') { admin_appointments_page();         }
+if ($uri === '/admin/announcements'       && $method === 'GET') { admin_announcements_page();        }
 
 // Admin portal — API
 if ($uri === '/admin/api/transactions'               && $method === 'GET')  { api_admin_transactions();               }
@@ -222,6 +246,41 @@ if ($uri === '/lab-admin/profile'                  && $method === 'GET')  { lab_
 if ($uri === '/lab-admin/api/find-patient'         && $method === 'GET')  { api_lab_admin_find_patient();         }
 if ($uri === '/lab-admin/api/patient-appointments' && $method === 'GET')  { api_lab_admin_patient_appointments(); }
 if ($uri === '/lab-admin/api/upload-report'        && $method === 'POST') { api_lab_admin_upload_report();        }
+if ($uri === '/lab-admin/api/appointment-by-id'    && $method === 'GET')  { api_lab_admin_appointment_by_id();    }
+if ($uri === '/lab-admin/notifications'            && $method === 'GET')  { lab_admin_notifications_page();       }
+
+
+// ── Admin: Department API (Dev2) ──────────────────────────────────────────────
+if ($uri === '/admin/api/departments'           && $method === 'GET')    { api_admin_departments_list();        }
+if ($uri === '/admin/api/departments'           && $method === 'POST')   { api_admin_department_create();       }
+if ($uri === '/admin/api/specializations'       && $method === 'GET')    { api_admin_specializations_list();    }
+if ($uri === '/admin/api/specializations'       && $method === 'POST')   { api_admin_specialization_create();   }
+if (preg_match('#^/admin/api/departments/(\d+)$#',     $uri, $m) && $method === 'PUT')    { api_admin_department_update((int)$m[1]);    }
+if (preg_match('#^/admin/api/departments/(\d+)$#',     $uri, $m) && $method === 'DELETE') { api_admin_department_delete((int)$m[1]);    }
+if (preg_match('#^/admin/api/specializations/(\d+)$#', $uri, $m) && $method === 'PUT')    { api_admin_specialization_update((int)$m[1]); }
+if (preg_match('#^/admin/api/specializations/(\d+)$#', $uri, $m) && $method === 'DELETE') { api_admin_specialization_delete((int)$m[1]); }
+
+// ── Admin: Support Ticket API (Dev2) ─────────────────────────────────────────
+if ($uri === '/admin/api/support-tickets'                    && $method === 'GET')   { api_admin_support_tickets();                }
+if (preg_match('#^/admin/api/support-tickets/(\d+)$#', $uri, $m) && $method === 'GET')   { api_admin_support_ticket_detail((int)$m[1]); }
+if (preg_match('#^/admin/api/support-tickets/(\d+)$#', $uri, $m) && $method === 'PATCH') { api_admin_support_ticket_update((int)$m[1]); }
+
+// ── Admin: Appointment Audit API (Dev2) ──────────────────────────────────────
+if ($uri === '/admin/api/appointments'         && $method === 'GET')  { api_admin_appointments_list(); }
+if ($uri === '/admin/api/appointments/doctors' && $method === 'GET')  { api_admin_doctors_list();      }
+if (preg_match('#^/admin/api/appointments/(\d+)/cancel$#', $uri, $m) && $method === 'POST') { api_admin_cancel_appointment((int)$m[1]); }
+
+// ── Admin: Announcement API (Dev2) ───────────────────────────────────────────
+if ($uri === '/admin/api/announcements'        && $method === 'GET')  { api_admin_announcements_list();  }
+if ($uri === '/admin/api/announcements'        && $method === 'POST') { api_admin_announcement_create(); }
+if (preg_match('#^/admin/api/announcements/(\d+)$#',        $uri, $m) && $method === 'PUT')    { api_admin_announcement_update((int)$m[1]); }
+if (preg_match('#^/admin/api/announcements/(\d+)$#',        $uri, $m) && $method === 'DELETE') { api_admin_announcement_delete((int)$m[1]); }
+if (preg_match('#^/admin/api/announcements/(\d+)/toggle$#', $uri, $m) && $method === 'POST')   { api_admin_announcement_toggle((int)$m[1]); }
+if ($uri === '/api/announcements/active'       && $method === 'GET')  { api_active_announcements();      }
+
+// ── Patient: Support Ticket API (Dev2) ───────────────────────────────────────
+if ($uri === '/api/support-tickets' && $method === 'POST') { api_patient_submit_ticket(); }
+if ($uri === '/api/support-tickets' && $method === 'GET')  { api_patient_tickets();       }
 
 // 404 fallback
 http_response_code(404);

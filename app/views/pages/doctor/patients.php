@@ -305,29 +305,25 @@ function loadApptThread() {
             var labText = document.getElementById('dspLabText');
             if (appt.lab_report) {
                 labBox.className = 'lab-status-box uploaded';
+                var reportUrl = BASE_URL + '/lab-report/' + appt.id;
                 labText.innerHTML = '<strong style="color:#63b3ed;"><i class="fa fa-check-circle"></i> Report uploaded</strong>'
-                    + ' &mdash; <span style="color:var(--muted);">' + escHtml(appt.lab_report.original_name) + '</span>'
+                    + ' &mdash; <a href="' + reportUrl + '" target="_blank" style="color:#63b3ed;font-weight:600;">'
+                    + '<i class="fa fa-download" style="margin-right:3px;"></i>' + escHtml(appt.lab_report.original_name) + '</a>'
                     + '<br><span style="font-size:11px;color:var(--hint);">Uploaded ' + fmtDt(appt.lab_report.uploaded_at) + '</span>';
             } else {
                 labBox.className = 'lab-status-box pending';
                 labText.innerHTML = '<span style="color:#d69e2e;"><i class="fa fa-triangle-exclamation"></i> No lab report uploaded yet.</span>'
-                    + '<br><span style="font-size:11px;color:var(--hint);">Upload from the Schedule page before adding notes.</span>';
+                    + '<br><span style="font-size:11px;color:var(--hint);">Lab Admin will upload the report after the appointment.</span>';
             }
 
             // Comment thread
             renderThread(appt.comments || [], appt.lab_report);
 
-            // Comment entry label
+            // Comment entry - always enabled for doctor
             var label = document.querySelector('#dspCommentEntry label');
-            if (!appt.lab_report) {
-                label.innerHTML = '<i class="fa fa-lock" style="margin-right:4px;color:#d69e2e;"></i><span style="color:#d69e2e;">Upload lab report first to add notes</span>';
-                document.getElementById('dspCommentInput').disabled = true;
-                document.getElementById('dspPostBtn').disabled = true;
-            } else {
-                label.innerHTML = '<i class="fa fa-pen" style="margin-right:4px;"></i>Add Clinical Note';
-                document.getElementById('dspCommentInput').disabled = false;
-                document.getElementById('dspPostBtn').disabled = false;
-            }
+            label.innerHTML = '<i class="fa fa-pen" style="margin-right:4px;"></i>Add Clinical Note';
+            document.getElementById('dspCommentInput').disabled = false;
+            document.getElementById('dspPostBtn').disabled = false;
         });
 }
 
@@ -383,8 +379,6 @@ function postDoctorComment() {
     var inp = document.getElementById('dspCommentInput');
     var msg = inp.value.trim();
     if (!msg) { showMsg('dspCommentMsg', 'Note cannot be empty.', 'error'); return; }
-    if (!_dspLabUploaded) { showMsg('dspCommentMsg', 'Please upload the lab report before adding notes.', 'error'); return; }
-
     var btn = document.getElementById('dspPostBtn');
     btn.disabled = true;
     btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Saving…';
@@ -414,7 +408,50 @@ function postDoctorComment() {
         });
 }
 
-loadPatients();
+// Deep link from notification: ?appt_id=X → open patient panel + select appointment
+(function() {
+    var params = new URLSearchParams(window.location.search);
+    var apptId = params.get('appt_id');
+    if (!apptId) { loadPatients(); return; }
+
+    // Fetch appointment detail first to get patient_id
+    fetch(BASE_URL + '/doctor/api/appointment-detail?id=' + apptId)
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            loadPatients();
+            window.history.replaceState({}, '', window.location.pathname);
+            if (!d.success || !d.appointment) return;
+
+            var patientId = d.appointment.patient_id;
+
+            // Wait for patient cards to render, then open the panel
+            setTimeout(function() {
+                // openDsp fetches appointments async — we intercept after it populates the select
+                openDsp(patientId);
+
+                // Poll until the select has options (max 3s), then select the right appointment
+                var attempts = 0;
+                var interval = setInterval(function() {
+                    attempts++;
+                    var sel = document.getElementById('dspApptSelect');
+                    // Check if options are loaded (more than just the placeholder)
+                    if (sel && sel.options.length > 1) {
+                        clearInterval(interval);
+                        for (var i = 0; i < sel.options.length; i++) {
+                            if (sel.options[i].value == apptId) {
+                                sel.value = apptId;
+                                sel.dispatchEvent(new Event('change'));
+                                break;
+                            }
+                        }
+                    } else if (attempts > 30) {
+                        clearInterval(interval); // give up after 3s
+                    }
+                }, 100);
+            }, 500);
+        })
+        .catch(function() { loadPatients(); });
+})();
 </script>
 JS;
 
