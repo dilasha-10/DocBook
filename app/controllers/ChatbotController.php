@@ -22,23 +22,23 @@ function chatbot_faq_match(string $input): ?string
         ],
         // Booking
         [
-            'patterns' => ['how.*book', 'book.*appointment', 'make.*appointment', 'schedule.*appointment', 'how do i book', 'want to book'],
-            'answer'   => "To book an appointment:\n1. Click **Find Doctors** in the top menu.\n2. Choose a specialization.\n3. Select a doctor and pick an available slot.\n4. Confirm and complete payment via eSewa if required.\n\nYou will see the booking under **Upcoming Appointments** on your dashboard once the doctor accepts.",
+            'patterns' => ['how.*book', 'book.*appointment', 'make.*appointment', 'how do i book', 'want to book', 'new appointment', 'set.*appointment'],
+            'answer'   => "To book an appointment:\n1. Click **Find Doctors** in the top menu.\n2. Choose a specialization — e.g. Cardiologist, Dermatologist.\n3. Select a doctor and pick an available date and time slot.\n4. Complete payment via **eSewa** if a fee applies.\n\nOnce the doctor confirms, you'll see it under **Upcoming Appointments** on your dashboard and receive a notification.",
         ],
         // Cancel
         [
             'patterns' => ['cancel', 'cancell', 'how.*cancel', 'delete.*appointment'],
-            'answer'   => "To cancel an appointment:\n1. Go to your **Dashboard**.\n2. Find the appointment in the Upcoming list.\n3. Click **Cancel** and confirm.\n\nCancellations cannot be undone. For refund requests please contact admin support.",
+            'answer'   => "To cancel an appointment:\n1. Go to your **Dashboard**.\n2. Find the appointment under **Upcoming Appointments**.\n3. Click **Cancel** and confirm.\n\n**Refund Policy:**\n• Cancel **at least 1 day before** your appointment — full refund within 3–5 business days.\n• Cancel **on the day of** your appointment — 50% refund.\n• **No-show** (missed without cancelling) — no refund.\n\nRefunds are returned to your original eSewa account. Contact support if you don't receive it within 5 business days.",
         ],
         // Reschedule
         [
-            'patterns' => ['reschedul', 'change.*date', 'change.*time', 'move.*appointment', 'postpone'],
-            'answer'   => "To reschedule an appointment:\n1. Go to your **Dashboard**.\n2. Find the upcoming appointment.\n3. Click **Reschedule** and choose a new date/time.\n\nThe doctor will be notified automatically.",
+            'patterns' => ['reschedul', 'change.*appointment', 'change.*date', 'change.*time', 'move.*appointment', 'postpone', 'different.*time', 'different.*date', 'shift.*appointment'],
+            'answer'   => "To reschedule an appointment:\n1. Go to your **Dashboard**.\n2. Find the appointment under **Upcoming Appointments**.\n3. Click **Reschedule** and pick a new available date and time.\n4. Confirm — the doctor is notified automatically. No extra payment needed.\n\n**Rescheduling Policy:**\n• You can reschedule up to **2 hours before** the appointment time.\n• Only **Confirmed** or **Pending** appointments can be rescheduled — not Completed or Cancelled.\n• Each appointment can be rescheduled a maximum of **2 times**.",
         ],
         // Payment / eSewa
         [
             'patterns' => ['pay', 'payment', 'esewa', 'refund', 'fee', 'cost', 'price', 'charge', 'how much'],
-            'answer'   => "Payments are processed securely through **eSewa**. You will be redirected to eSewa at checkout.\n\nFor refund requests, contact admin — refunds are reviewed within 2 business days.",
+            'answer'   => "Payments are processed securely through **eSewa**.\n\n**Refund Policy:**\n• Cancel **at least 1 day before** → full refund (3–5 business days)\n• Cancel **on the day of** the appointment → 50% refund\n• No-show → no refund\n\nRefunds go back to your eSewa account. To request a refund, go to your Dashboard → cancel the appointment, or raise a **Support Ticket** if the appointment has already passed.",
         ],
         // Appointment status
         [
