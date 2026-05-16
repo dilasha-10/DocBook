@@ -254,11 +254,13 @@ function api_doctor_appointment_detail(): void
 
     $stmt = $pdo->prepare("
         SELECT a.id, a.appointment_date, a.start_time, a.end_time,
-               a.status, a.visit_reason, a.patient_id,
-               d.id AS doctor_id, u.name AS doctor_name, d.specialty AS doctor_specialty
+               a.status, a.visit_reason, a.reference_number, a.patient_id,
+               d.id AS doctor_id, u.name AS doctor_name, d.specialty AS doctor_specialty,
+               pu.name AS patient_name
         FROM appointments a
-        JOIN doctors d ON a.doctor_id = d.id
-        JOIN users   u ON d.user_id   = u.id
+        JOIN doctors d  ON a.doctor_id   = d.id
+        JOIN users   u  ON d.user_id     = u.id
+        JOIN users   pu ON a.patient_id  = pu.id
         WHERE a.id = ? AND a.doctor_id = ?
     ");
     $stmt->execute([$appointmentId, $doctorId]);
@@ -293,6 +295,8 @@ function api_doctor_appointment_detail(): void
         'time'             => date('g:i A', $startTs),
         'status'           => $appt['status'],
         'visit_reason'     => $appt['visit_reason'],
+        'reference_number' => $appt['reference_number'],
+        'patient_name'     => $appt['patient_name'],
         'duration_minutes' => (int)(($endTs - $startTs) / 60),
         'doctor'           => ['id' => (int)$appt['doctor_id'], 'name' => $appt['doctor_name'], 'specialty' => $appt['doctor_specialty']],
         'comments'         => $comments,
@@ -556,87 +560,16 @@ function api_doctor_comment(): void
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// API: POST /doctor/api/lab-report
+// API: POST /doctor/api/lab-report  — DISABLED: only lab admin may upload reports
 // FormData: appointment_id, report (file)
 // Uploads a lab report for an appointment. Only the doctor assigned to the
 // appointment may upload. One report per appointment (upsert).
 // ══════════════════════════════════════════════════════════════════════════════
 function api_doctor_lab_report(): void
 {
-    $doctorId = require_doctor_auth_api();
-    $pdo      = db_connect();
-
-    $appointmentId = (int)($_POST['appointment_id'] ?? 0);
-    if (!$appointmentId) {
-        json_response(['error' => true, 'message' => 'Appointment ID is required'], 400);
-    }
-
-    // Verify appointment belongs to this doctor
-    $appt = $pdo->prepare("SELECT id FROM appointments WHERE id = ? AND doctor_id = ?");
-    $appt->execute([$appointmentId, $doctorId]);
-    if (!$appt->fetch()) {
-        json_response(['error' => true, 'message' => 'Appointment not found or unauthorised'], 404);
-    }
-
-    // File validation
-    if (empty($_FILES['report']) || $_FILES['report']['error'] !== UPLOAD_ERR_OK) {
-        json_response(['error' => true, 'message' => 'No file uploaded or upload error'], 400);
-    }
-
-    $file         = $_FILES['report'];
-    $originalName = basename($file['name']);
-    $ext          = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
-    $allowed      = ['pdf', 'jpg', 'jpeg', 'png'];
-
-    if (!in_array($ext, $allowed)) {
-        json_response(['error' => true, 'message' => 'Only PDF, JPG, and PNG files are allowed'], 400);
-    }
-    if ($file['size'] > 5 * 1024 * 1024) {
-        json_response(['error' => true, 'message' => 'File size exceeds 5 MB limit'], 400);
-    }
-
-    $uploadDir = BASE_PATH . '/public/uploads/lab-reports/';
-    if (!is_dir($uploadDir)) {
-        mkdir($uploadDir, 0755, true);
-    }
-
-    // Get doctor's user_id for uploader field
-    $dRow = $pdo->prepare("SELECT user_id FROM doctors WHERE id = ?")->execute([$doctorId]);
-    $dStmt = $pdo->prepare("SELECT user_id FROM doctors WHERE id = ?");
-    $dStmt->execute([$doctorId]);
-    $dRow = $dStmt->fetch(PDO::FETCH_ASSOC);
-
-    $filename   = 'report_' . $appointmentId . '_' . time() . '.' . $ext;
-    $destPath   = $uploadDir . $filename;
-    $publicPath = 'public/uploads/lab-reports/' . $filename;
-
-    if (!move_uploaded_file($file['tmp_name'], $destPath)) {
-        json_response(['error' => true, 'message' => 'Failed to save file'], 500);
-    }
-
-    // Remove old file if exists
-    $old = $pdo->prepare("SELECT file_path FROM lab_reports WHERE appointment_id = ?");
-    $old->execute([$appointmentId]);
-    $oldRow = $old->fetch(PDO::FETCH_ASSOC);
-    if ($oldRow) {
-        $oldFile = BASE_PATH . '/' . $oldRow['file_path'];
-        if (file_exists($oldFile)) @unlink($oldFile);
-    }
-
-    // Upsert
-    $pdo->prepare("
-        INSERT INTO lab_reports (appointment_id, uploaded_by, file_path, original_name, uploaded_at)
-        VALUES (?, ?, ?, ?, NOW())
-        ON DUPLICATE KEY UPDATE
-            uploaded_by   = VALUES(uploaded_by),
-            file_path     = VALUES(file_path),
-            original_name = VALUES(original_name),
-            uploaded_at   = NOW()
-    ")->execute([$appointmentId, $dRow['user_id'], $publicPath, $originalName]);
-
-    json_response(['success' => true, 'message' => 'Lab report uploaded successfully', 'file_path' => $publicPath]);
+    require_doctor_auth_api();
+    json_response(['error' => 'Lab report upload is restricted to Lab Admin only.'], 403);
 }
-
 // ══════════════════════════════════════════════════════════════════════════════
 // API: GET /doctor/api/slots?doctor_id=N&date=YYYY-MM-DD
 // No doctor auth required — also called by the patient booking side.
