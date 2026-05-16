@@ -182,7 +182,7 @@ function api_lab_admin_patient_appointments(): void
         LEFT JOIN categories c ON c.id  = d.category_id
         LEFT JOIN lab_reports lr ON lr.appointment_id = a.id
         WHERE a.patient_id = ?
-          AND a.status IN ('Confirmed', 'Completed')
+          AND a.status = 'Completed'
         ORDER BY a.appointment_date DESC
         LIMIT 50
     ");
@@ -217,18 +217,18 @@ function api_lab_admin_upload_report(): void
         json_response(['error' => true, 'message' => 'appointment_id is required'], 400);
     }
 
-    // Verify the appointment exists and belongs to a patient (confirmed/completed)
+    // Verify the appointment is Completed (past appointments only)
     $appt = $pdo->prepare("
         SELECT a.id, a.patient_id, a.status
         FROM appointments a
         WHERE a.id = ?
-          AND a.status IN ('Confirmed', 'Completed')
+          AND a.status = 'Completed'
         LIMIT 1
     ");
     $appt->execute([$appointmentId]);
     $apptRow = $appt->fetch(PDO::FETCH_ASSOC);
     if (!$apptRow) {
-        json_response(['error' => true, 'message' => 'Appointment not found or not eligible for lab report upload'], 404);
+        json_response(['error' => true, 'message' => 'Lab reports can only be uploaded for completed appointments.'], 404);
     }
 
     // File validation
@@ -297,4 +297,41 @@ function lab_admin_profile_page(): void
 {
     $user = require_lab_admin();
     render_lab_admin('profile', ['user' => $user]);
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// API: GET /lab-admin/api/appointment-by-id?id=X
+// Returns appointment info including patient_id for deep linking
+// ══════════════════════════════════════════════════════════════════════════════
+function api_lab_admin_appointment_by_id(): void
+{
+    require_lab_admin_api();
+    $pdo   = db_connect();
+    $id    = (int)($_GET['id'] ?? 0);
+    if (!$id) { json_response(['success' => false, 'message' => 'id required'], 400); }
+
+    $stmt = $pdo->prepare("
+        SELECT a.id, a.patient_id, a.appointment_date, a.start_time, a.status,
+               u.name AS patient_name
+        FROM appointments a
+        JOIN users u ON u.id = a.patient_id
+        WHERE a.id = ? AND a.status = 'Completed'
+        LIMIT 1
+    ");
+    $stmt->execute([$id]);
+    $appt = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$appt) {
+        json_response(['success' => false, 'message' => 'Appointment not found'], 404);
+    }
+    json_response(['success' => true, 'appointment' => $appt]);
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Page: GET /lab-admin/notifications
+// ══════════════════════════════════════════════════════════════════════════════
+function lab_admin_notifications_page(): void
+{
+    $user = require_lab_admin();
+    render_lab_admin('notifications', ['user' => $user, 'title' => 'Notifications']);
 }

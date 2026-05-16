@@ -212,6 +212,210 @@ var BASE_URL = "<?= BASE_URL ?>";
         });
         sidebarOverlay.addEventListener('click', closeSidebarMobile);
     }
+<<<<<<< HEAD
+=======
+
+    // ── Notification Bell ─────────────────────────────────────
+    <?php if (isset($doctor)): ?>
+    var bellBtn      = document.getElementById('notifBellBtn');
+    var dropdown     = document.getElementById('notifDropdown');
+    var badge        = document.getElementById('notifBadge');
+    var sidebarBadge = document.getElementById('sidebarNotifBadge');
+    var listEl       = document.getElementById('notifList');
+    var markAllBtn   = document.getElementById('notifMarkAll');
+    var dropdownOpen = false;
+
+    var typeIcon = {
+        appointment_booked:      'fa-calendar-check',
+        appointment_cancelled:   'fa-calendar-xmark',
+        appointment_confirmed:   'fa-calendar-circle-user',
+        appointment_rescheduled: 'fa-calendar-pen',
+        lab_report_uploaded:     'fa-file-medical',
+        system_maintenance:      'fa-triangle-exclamation',
+        targeted:                'fa-bell',
+    };
+
+    function timeAgo(dateStr) {
+        var diff = Math.floor((Date.now() - new Date(dateStr)) / 1000);
+        if (diff < 60)    return 'Just now';
+        if (diff < 3600)  return Math.floor(diff/60) + 'm ago';
+        if (diff < 86400) return Math.floor(diff/3600) + 'h ago';
+        return Math.floor(diff/86400) + 'd ago';
+    }
+
+
+    // ── Broadcast Banner ─────────────────────────────────────
+    (function() {
+        var DISMISS_HOURS = 24; // banner stays hidden for 24h after dismissal
+        fetch(BASE_URL + '/api/notifications?limit=10')
+            .then(function(r){ return r.json(); })
+            .then(function(d) {
+                var notifs = d.notifications || [];
+                var broadcast = notifs.find(function(n) {
+                    return (n.type === 'system_maintenance' || n.type === 'targeted') && n.is_read == 0;
+                });
+                if (!broadcast) return;
+
+                // Check if user dismissed this specific notification recently
+                var dismissKey = 'broadcastDismissed_' + broadcast.id;
+                var dismissedAt = localStorage.getItem(dismissKey);
+                if (dismissedAt) {
+                    var hoursSince = (Date.now() - parseInt(dismissedAt)) / (1000 * 60 * 60);
+                    if (hoursSince < DISMISS_HOURS) return; // still within cooldown
+                    localStorage.removeItem(dismissKey); // cooldown expired, show again
+                }
+
+                var banner = document.getElementById('broadcastBanner');
+                var text   = document.getElementById('broadcastBannerText');
+                if (banner && text) {
+                    text.textContent = broadcast.title + ': ' + broadcast.message;
+                    banner.style.display = 'block';
+                    banner.dataset.notifId = broadcast.id;
+                }
+            }).catch(function(){});
+    })();
+
+    window.dismissBroadcastBanner = function() {
+        var banner = document.getElementById('broadcastBanner');
+        var notifId = banner ? banner.dataset.notifId : null;
+        if (notifId) {
+            localStorage.setItem('broadcastDismissed_' + notifId, Date.now().toString());
+        }
+        if (banner) banner.style.display = 'none';
+    };
+    function escHtml(s) {
+        return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function setBadge(count) {
+        if (count > 0) {
+            badge.textContent = count > 99 ? '99+' : count;
+            badge.classList.add('visible');
+            if (sidebarBadge) { sidebarBadge.textContent = count > 99 ? '99+' : count; sidebarBadge.classList.add('visible'); }
+        } else {
+            badge.classList.remove('visible');
+            if (sidebarBadge) sidebarBadge.classList.remove('visible');
+        }
+    }
+
+    function doctorNotifRedirectUrl(n) {
+        var apptId = n.appointment_id ? parseInt(n.appointment_id) : null;
+        var type   = (n.type || '').trim();
+
+        // Lab report uploaded → patients page, auto-open that patient panel
+        if ((type === 'lab_report_uploaded' || type === 'lab_report_ready') && apptId) {
+            return BASE_URL + '/doctor/patients?appt_id=' + apptId;
+        }
+        // Appointment notifications → schedule page, jump to that date and open panel
+        if ((type === 'appointment_booked' || type === 'appointment_confirmed' ||
+             type === 'appointment_pending' || type === 'appointment_reminder' ||
+             type === 'appointment_cancelled' || type === 'appointment_rescheduled' ||
+             type === 'appointment_completed') && apptId) {
+            return BASE_URL + '/doctor/schedule?appt_id=' + apptId;
+        }
+        // System / broadcast → doctor notifications page
+        if (type === 'system_maintenance' || type === 'targeted') {
+            return BASE_URL + '/doctor/notifications';
+        }
+        if (apptId) return BASE_URL + '/doctor/schedule?appt_id=' + apptId;
+        return BASE_URL + '/notifications';
+    }
+
+    function renderNotifications(items) {
+        if (!items || !items.length) {
+            listEl.innerHTML = '<div class="notif-empty"><i class="fa fa-bell-slash"></i>No notifications yet</div>';
+            return;
+        }
+        listEl.innerHTML = items.slice(0, 15).map(function(n) {
+            var icon   = typeIcon[n.type] || 'fa-bell';
+            var unread = n.is_read == 0;
+            return '<div class="notif-item ' + (unread ? 'unread' : '') + '" data-id="' + n.id + '" data-url="' + doctorNotifRedirectUrl(n) + '" style="cursor:pointer;">' +
+                '<div class="notif-icon type-' + n.type + '"><i class="fa ' + icon + '"></i></div>' +
+                '<div class="notif-body">' +
+                    '<div class="notif-title">' + escHtml(n.title)      + '</div>' +
+                    '<div class="notif-msg">'   + escHtml(n.message)    + '</div>' +
+                    '<div class="notif-time">'  + timeAgo(n.created_at) + '</div>' +
+                '</div>' +
+                '<div class="notif-dot"></div>' +
+            '</div>';
+        }).join('');
+
+        // Click: mark read then redirect
+        listEl.querySelectorAll('.notif-item').forEach(function(el) {
+            el.addEventListener('click', function() {
+                var id  = parseInt(el.dataset.id);
+                var url = el.dataset.url;
+                el.classList.remove('unread');
+                var dot = el.querySelector('.notif-dot');
+                if (dot) dot.style.display = 'none';
+                fetch(BASE_URL + '/api/notifications/read', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({id: id})
+                }).finally(function() {
+                    if (!url) return;
+                    // If already on the target page, force reload with params
+                    var currentPath = window.location.pathname;
+                    var targetPath  = url.split('?')[0];
+                    if (currentPath === targetPath) {
+                        window.location.replace(url);
+                    } else {
+                        window.location.href = url;
+                    }
+                });
+            });
+        });
+    }
+
+    function loadNotifications() {
+        fetch(BASE_URL + '/api/notifications?limit=15')
+            .then(function(r){ return r.json(); })
+            .then(function(d) {
+                setBadge(d.unread_count || 0);
+                renderNotifications(d.notifications || []);
+            })
+            .catch(function(){});
+    }
+
+    function pollBadge() {
+        fetch(BASE_URL + '/api/notifications/unread-count')
+            .then(function(r){ return r.json(); })
+            .then(function(d){ setBadge(d.count || 0); })
+            .catch(function(){});
+    }
+    pollBadge();
+    setInterval(pollBadge, 60000);
+
+    bellBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        dropdownOpen = !dropdownOpen;
+        dropdown.classList.toggle('open', dropdownOpen);
+        if (dropdownOpen) loadNotifications();
+    });
+
+    document.addEventListener('click', function(e) {
+        if (dropdownOpen && !dropdown.contains(e.target) && e.target !== bellBtn) {
+            dropdownOpen = false;
+            dropdown.classList.remove('open');
+        }
+    });
+
+    markAllBtn.addEventListener('click', function() {
+        fetch(BASE_URL + '/api/notifications/read', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({all: true})
+        }).then(function() {
+            setBadge(0);
+            listEl.querySelectorAll('.notif-item').forEach(function(el) {
+                el.classList.remove('unread');
+                var dot = el.querySelector('.notif-dot');
+                if (dot) dot.style.display = 'none';
+            });
+        });
+    });
+    <?php endif; ?>
+>>>>>>> 6d104ef (Fixed: notification redirection for patient, doctor, admin and lab admin notification system)
 })();
 </script>
 
