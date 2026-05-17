@@ -16,7 +16,7 @@ function db_connect() {
     $dsn = "mysql:host=$host;port=$port;dbname=$dbname;charset=$charset";
     try {
         $pdo = new PDO($dsn, $user, $pass);
-        $pdo->exec("SET time_zone = '+05:45'");  // also fix MySQL session timezone
+        $pdo->exec("SET time_zone = '+05:45'");
         return $pdo;
     } catch (PDOException $e) {
         die("Connection failed: " . $e->getMessage());
