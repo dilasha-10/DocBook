@@ -1,13 +1,11 @@
 <?php
 
-// ============================================================
 //  DepartmentModel.php
 //  CRUD for categories (departments) and specializations.
-// ============================================================
 
 require_once __DIR__ . '/../../config/database.php';
 
-// ── Categories (Departments) ─────────────────────────────────
+// Categories (Departments) 
 
 function get_all_departments(): array
 {
@@ -82,7 +80,7 @@ function delete_department(int $id): array
     return ['success' => true];
 }
 
-// ── Specializations ──────────────────────────────────────────
+// Specializations
 
 function get_specializations_by_department(int $category_id): array
 {
@@ -150,8 +148,4 @@ function delete_specialization(int $id): array
     $stmt = $pdo->prepare("DELETE FROM specializations WHERE id = ?");
     $stmt->execute([$id]);
     return ['success' => true];
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> 5353f4c (Final complete work)

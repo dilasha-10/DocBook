@@ -1,13 +1,7 @@
 <?php
 
 require_once BASE_PATH . '/app/models/User.php';
-require_once BASE_PATH . '/app/models/PasswordResetModel.php';
-require_once BASE_PATH . '/app/core/Mailer.php';
 
-<<<<<<< HEAD
-// ── Auth helpers ──────────────────────────────────────────────────────────────
-=======
-// ─────────────────────────────────────────────────────────────────────────────
 // Brute-force / rate-limit helpers
 //
 // Rules (both must pass to allow a login attempt):
@@ -16,7 +10,6 @@ require_once BASE_PATH . '/app/core/Mailer.php';
 //
 // All attempts are stored in `login_attempts` and automatically expire
 // (rows older than 1 hour are ignored; a daily cleanup is run lazily).
-// ─────────────────────────────────────────────────────────────────────────────
 
 const LOGIN_MAX_PER_IP    = 20;   // hard cap per IP per hour
 const LOGIN_MAX_PER_EMAIL = 5;    // account lockout threshold per hour
@@ -100,10 +93,7 @@ function maybe_prune_attempts(): void
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // Auth helpers
-// ─────────────────────────────────────────────────────────────────────────────
->>>>>>> 5353f4c (Final complete work)
 
 function auth_user(): ?array
 {
@@ -130,313 +120,16 @@ function require_auth_api(): array
     return $user;
 }
 
-<<<<<<< HEAD
-function redirect_forbidden(): void
-{
-    redirect('/403');
-}
-
-function require_role(string $role): array
-{
-    $user = require_auth();
-    if (($user['role'] ?? '') !== $role) {
-        redirect_forbidden();
-    }
-    return $user;
-}
-
-function require_role_api(string $role): array
-{
-    $user = require_auth_api();
-    if (($user['role'] ?? '') !== $role) {
-        json_response(['success' => false, 'message' => 'Forbidden.'], 403);
-    }
-    return $user;
-}
-
-function require_patient(): array
-{
-    return require_role('patient');
-}
-
-function require_patient_api(): array
-{
-    return require_role_api('patient');
-}
-
-function require_admin(): array
-{
-    return require_role('admin');
-}
-
-// ── GET /login ────────────────────────────────────────────────────────────────
-=======
-// ─────────────────────────────────────────────────────────────────────────────
 // Login
-// ─────────────────────────────────────────────────────────────────────────────
->>>>>>> 5353f4c (Final complete work)
 
 function login_get(): void
 {
     if (session_status() === PHP_SESSION_NONE) session_start();
-<<<<<<< HEAD
-    if (!empty($_SESSION['user_id'])) {
-        $user = auth_user();
-        if (($user['role'] ?? '') === 'admin') {
-            redirect('/admin');
-        }
-        if (($user['role'] ?? '') === 'doctor') {
-            redirect('/doctor/dashboard');
-        }
-        redirect('/dashboard');
-    }
-=======
     if (!empty($_SESSION['user_id'])) redirect('/dashboard');
->>>>>>> 5353f4c (Final complete work)
     include BASE_PATH . '/app/views/auth/login.php';
     exit;
 }
 
-<<<<<<< HEAD
-function forgot_password_get(): void
-{
-    if (session_status() === PHP_SESSION_NONE) session_start();
-    $errors = [];
-    $message = '';
-    $email = $_SESSION['password_reset_email'] ?? '';
-    include BASE_PATH . '/app/views/auth/forgot-password.php';
-    exit;
-}
-
-function forgot_password_post(): void
-{
-    if (session_status() === PHP_SESSION_NONE) session_start();
-
-    ensure_password_reset_table();
-
-    $email = trim($_POST['email'] ?? ($_SESSION['password_reset_email'] ?? ''));
-    $errors = [];
-    $message = '';
-
-    if ($email === '') {
-        $errors['email'] = 'Email is required.';
-    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $errors['email'] = 'Please enter a valid email address.';
-    }
-
-    $user = empty($errors) ? find_user_by_email($email) : null;
-    if (!$user && empty($errors)) {
-        $errors['email'] = 'No account found for that email address.';
-    }
-
-    if (!empty($errors)) {
-        include BASE_PATH . '/app/views/auth/forgot-password.php';
-        exit;
-    }
-
-    $otp = (string) random_int(100000, 999999);
-    $otpHash = password_hash($otp, PASSWORD_DEFAULT);
-    $expiresAt = (new DateTimeImmutable('+1 hour'))->format('Y-m-d H:i:s');
-
-    upsert_password_reset_request((int) $user['id'], $email, $otpHash, $expiresAt);
-
-    $subject = 'DocBook password reset OTP';
-    $htmlBody = render_password_reset_email($user['name'] ?? 'User', $otp, $expiresAt);
-    $textBody = sprintf(
-        "Hello %s,\n\nYour DocBook password reset OTP is %s.\nIt expires in 1 hour.\n\nIf you did not request this, ignore this email.\n",
-        $user['name'] ?? 'User',
-        $otp
-    );
-
-    if (!send_smtp_mail($email, $subject, $htmlBody, $textBody, MAIL_FROM_EMAIL, MAIL_FROM_NAME)) {
-        $errors['general'] = 'We could not send the OTP email right now. Please try again in a moment.';
-        include BASE_PATH . '/app/views/auth/forgot-password.php';
-        exit;
-    }
-
-    session_regenerate_id(true);
-    $_SESSION['password_reset_user_id'] = (int) $user['id'];
-    $_SESSION['password_reset_email'] = $email;
-    unset($_SESSION['password_reset_verified_user_id']);
-
-    redirect('/forgot-password/verify?sent=1');
-}
-
-function forgot_password_verify_get(): void
-{
-    if (session_status() === PHP_SESSION_NONE) session_start();
-
-    $userId = (int) ($_SESSION['password_reset_user_id'] ?? 0);
-    if ($userId <= 0) {
-        redirect('/forgot-password');
-    }
-
-    $resetRequest = find_active_password_reset_by_user_id($userId);
-    if (!$resetRequest) {
-        unset($_SESSION['password_reset_user_id'], $_SESSION['password_reset_email']);
-        redirect('/forgot-password');
-    }
-
-    if (new DateTimeImmutable($resetRequest['expires_at']) < new DateTimeImmutable()) {
-        clear_password_reset_request((int) $resetRequest['id']);
-        unset($_SESSION['password_reset_user_id'], $_SESSION['password_reset_email']);
-        redirect('/forgot-password?expired=1');
-    }
-
-    $errors = [];
-    $message = !empty($_GET['sent']) ? 'We sent a 6-digit OTP to your email address.' : '';
-    $email = $_SESSION['password_reset_email'] ?? ($resetRequest['email'] ?? '');
-    include BASE_PATH . '/app/views/auth/forgot-password-verify.php';
-    exit;
-}
-
-function forgot_password_verify_post(): void
-{
-    if (session_status() === PHP_SESSION_NONE) session_start();
-
-    $userId = (int) ($_SESSION['password_reset_user_id'] ?? 0);
-    if ($userId <= 0) {
-        redirect('/forgot-password');
-    }
-
-    $errors = [];
-    $message = '';
-    $otp = trim($_POST['otp'] ?? '');
-
-    $resetRequest = find_active_password_reset_by_user_id($userId);
-    if (!$resetRequest) {
-        unset($_SESSION['password_reset_user_id'], $_SESSION['password_reset_email']);
-        $errors['general'] = 'Your OTP request expired. Please request a new code.';
-        include BASE_PATH . '/app/views/auth/forgot-password-verify.php';
-        exit;
-    }
-
-    $expiresAt = new DateTimeImmutable($resetRequest['expires_at']);
-    if ($expiresAt < new DateTimeImmutable()) {
-        clear_password_reset_request((int) $resetRequest['id']);
-        unset($_SESSION['password_reset_user_id'], $_SESSION['password_reset_email']);
-        redirect('/forgot-password?expired=1');
-    }
-
-    if ($otp === '') {
-        $errors['otp'] = 'OTP is required.';
-    } elseif (!preg_match('/^\d{6}$/', $otp)) {
-        $errors['otp'] = 'OTP must be a 6-digit code.';
-    } elseif (!password_verify($otp, $resetRequest['otp_hash'])) {
-        $attempts = increment_password_reset_attempts((int) $resetRequest['id']);
-        if ($attempts >= 5) {
-            clear_password_reset_request((int) $resetRequest['id']);
-            unset($_SESSION['password_reset_user_id'], $_SESSION['password_reset_email']);
-            $errors['general'] = 'Too many incorrect attempts. Please request a new OTP.';
-        } else {
-            $errors['otp'] = 'The OTP you entered is incorrect.';
-        }
-    }
-
-    if (!empty($errors)) {
-        $email = $_SESSION['password_reset_email'] ?? ($resetRequest['email'] ?? '');
-        include BASE_PATH . '/app/views/auth/forgot-password-verify.php';
-        exit;
-    }
-
-    mark_password_reset_verified((int) $resetRequest['id']);
-    session_regenerate_id(true);
-    $_SESSION['password_reset_verified_user_id'] = $userId;
-    unset($_SESSION['password_reset_user_id']);
-
-    redirect('/forgot-password/reset');
-}
-
-function forgot_password_reset_get(): void
-{
-    if (session_status() === PHP_SESSION_NONE) session_start();
-
-    $userId = (int) ($_SESSION['password_reset_verified_user_id'] ?? 0);
-    if ($userId <= 0) {
-        redirect('/forgot-password');
-    }
-
-    $resetRequest = find_verified_password_reset_by_user_id($userId);
-    if (!$resetRequest) {
-        unset($_SESSION['password_reset_verified_user_id'], $_SESSION['password_reset_email']);
-        redirect('/forgot-password');
-    }
-
-    if (new DateTimeImmutable($resetRequest['expires_at']) < new DateTimeImmutable()) {
-        clear_password_reset_request((int) $resetRequest['id']);
-        unset($_SESSION['password_reset_verified_user_id'], $_SESSION['password_reset_email']);
-        redirect('/forgot-password?expired=1');
-    }
-
-    $errors = [];
-    $message = '';
-    $email = $_SESSION['password_reset_email'] ?? ($resetRequest['email'] ?? '');
-    include BASE_PATH . '/app/views/auth/forgot-password-reset.php';
-    exit;
-}
-
-function forgot_password_reset_post(): void
-{
-    if (session_status() === PHP_SESSION_NONE) session_start();
-
-    $userId = (int) ($_SESSION['password_reset_verified_user_id'] ?? 0);
-    if ($userId <= 0) {
-        redirect('/forgot-password');
-    }
-
-    $errors = [];
-    $message = '';
-    $newPassword = $_POST['password'] ?? '';
-    $confirmPassword = $_POST['confirm_password'] ?? '';
-
-    $resetRequest = find_verified_password_reset_by_user_id($userId);
-    if (!$resetRequest) {
-        unset($_SESSION['password_reset_verified_user_id'], $_SESSION['password_reset_email']);
-        redirect('/forgot-password');
-    }
-
-    if ($newPassword === '') {
-        $errors['password'] = 'Password is required.';
-    } elseif (strlen($newPassword) < 12) {
-        $errors['password'] = 'Password must be at least 12 characters.';
-    } elseif (!preg_match('/[A-Z]/', $newPassword)) {
-        $errors['password'] = 'Password must include at least one uppercase letter.';
-    } elseif (!preg_match('/[a-z]/', $newPassword)) {
-        $errors['password'] = 'Password must include at least one lowercase letter.';
-    } elseif (!preg_match('/[0-9]/', $newPassword)) {
-        $errors['password'] = 'Password must include at least one number.';
-    } elseif (!preg_match('/[!@#$%^&*()\\-_=+\\[\\]{};:\'\",.<>?\/\\\\`~|]/', $newPassword)) {
-        $errors['password'] = 'Password must include at least one special character.';
-    }
-
-    if ($confirmPassword === '') {
-        $errors['confirm_password'] = 'Please confirm your password.';
-    } elseif ($newPassword !== $confirmPassword) {
-        $errors['confirm_password'] = 'Passwords do not match.';
-    }
-
-    if (!empty($errors)) {
-        $email = $_SESSION['password_reset_email'] ?? ($resetRequest['email'] ?? '');
-        include BASE_PATH . '/app/views/auth/forgot-password-reset.php';
-        exit;
-    }
-
-    update_user_password($userId, password_hash($newPassword, PASSWORD_BCRYPT));
-    clear_password_reset_request((int) $resetRequest['id']);
-
-    unset(
-        $_SESSION['password_reset_user_id'],
-        $_SESSION['password_reset_verified_user_id'],
-        $_SESSION['password_reset_email']
-    );
-
-    redirect('/login?reset=1');
-}
-
-// ── POST /login ───────────────────────────────────────────────────────────────
-
-=======
->>>>>>> 5353f4c (Final complete work)
 function login_post(): void
 {
     if (session_status() === PHP_SESSION_NONE) session_start();
@@ -448,7 +141,7 @@ function login_post(): void
     $ip       = get_client_ip();
     $errors   = [];
 
-    // ── Rate-limit: IP (20 attempts / hour across all accounts) ──────────────
+    // Rate-limit: IP (20 attempts / hour across all accounts) 
     if (count_recent_attempts('ip_address', $ip) >= LOGIN_MAX_PER_IP) {
         $wait = (int) ceil(seconds_until_unlock('ip_address', $ip) / 60);
         $errors['general'] = "Too many login attempts from your network. Please try again in {$wait} minute(s).";
@@ -456,7 +149,7 @@ function login_post(): void
         exit;
     }
 
-    // ── Rate-limit: email (5 attempts / hour — account lockout) ──────────────
+    // Rate-limit: email (5 attempts / hour — account lockout)
     if ($email !== '' && count_recent_attempts('email', $email) >= LOGIN_MAX_PER_EMAIL) {
         $wait = (int) ceil(seconds_until_unlock('email', $email) / 60);
         $errors['general'] = "Too many failed login attempts. Please try again in {$wait} minute(s).";
@@ -475,8 +168,6 @@ function login_post(): void
     if (empty($errors)) {
         $user = find_user_by_email($email);
         if (!$user || !password_verify($password, (string) $user['password'])) {
-<<<<<<< HEAD
-=======
             // Record the failed attempt for rate-limiting
             record_failed_attempt($email, $ip);
             audit_log(
@@ -486,7 +177,6 @@ function login_post(): void
                 'LOGIN_FAILED', 'auth',
                 'Failed login attempt for email: ' . $email . ' from IP: ' . $ip
             );
->>>>>>> 5353f4c (Final complete work)
             $errors['general'] = 'Incorrect email or password.';
         }
     }
@@ -501,18 +191,6 @@ function login_post(): void
     $_SESSION['user_name'] = $user['name'];
     $_SESSION['user_role'] = $user['role'];
 
-<<<<<<< HEAD
-    if (($user['role'] ?? '') === 'admin') {
-        redirect('/admin');
-    }
-    if (($user['role'] ?? '') === 'doctor') {
-        redirect('/doctor/dashboard');
-    }
-    redirect('/dashboard');
-}
-
-// ── GET /signup ───────────────────────────────────────────────────────────────
-=======
     audit_log((int) $user['id'], $user['name'], $user['role'], 'LOGIN', 'auth', 'User logged in.');
 
     $dest = match ($user['role']) {
@@ -524,13 +202,10 @@ function login_post(): void
     redirect($dest);
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // Signup (Step 1 of 2) — collect details, send OTP
-// ─────────────────────────────────────────────────────────────────────────────
 
 require_once BASE_PATH . '/app/models/SignupOtpModel.php';
 require_once BASE_PATH . '/app/core/Mailer.php';
->>>>>>> 5353f4c (Final complete work)
 
 function signup_get(): void
 {
@@ -540,11 +215,6 @@ function signup_get(): void
     exit;
 }
 
-<<<<<<< HEAD
-// ── POST /signup ──────────────────────────────────────────────────────────────
-
-=======
->>>>>>> 5353f4c (Final complete work)
 function signup_post(): void
 {
     if (session_status() === PHP_SESSION_NONE) session_start();
@@ -560,7 +230,7 @@ function signup_post(): void
     $role            = 'patient';
     $errors          = [];
 
-    // ── Field validation ──────────────────────────────────────────────────────
+    // Field validation
 
     if ($firstName === '') {
         $errors['first_name'] = 'First name is required.';
@@ -633,7 +303,7 @@ function signup_post(): void
         exit;
     }
 
-    // ── Send OTP ──────────────────────────────────────────────────────────────
+    // Send OTP
 
     ensure_signup_otps_table();
 
@@ -655,7 +325,7 @@ function signup_post(): void
         exit;
     }
 
-    // ── Store pending registration in session (not DB) ────────────────────────
+    // Store pending registration in session (not DB)
     session_regenerate_id(true);
     $_SESSION['signup_pending'] = [
         'name'            => $name,
@@ -669,9 +339,7 @@ function signup_post(): void
     redirect('/signup/verify-email');
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // Signup (Step 2 of 2) — OTP verification
-// ─────────────────────────────────────────────────────────────────────────────
 
 function signup_verify_email_get(): void
 {
@@ -730,7 +398,7 @@ function signup_verify_email_post(): void
         exit;
     }
 
-    // ── OTP correct — create the account ─────────────────────────────────────
+    // OTP correct — create the account
     mark_signup_otp_verified((int) $otpRecord['id']);
     delete_signup_otp($email);
 
@@ -746,9 +414,6 @@ function signup_verify_email_post(): void
     redirect('/login?registered=1');
 }
 
-<<<<<<< HEAD
-// ── GET /logout ───────────────────────────────────────────────────────────────
-=======
 function signup_resend_otp_post(): void
 {
     if (session_status() === PHP_SESSION_NONE) session_start();
@@ -774,23 +439,17 @@ function signup_resend_otp_post(): void
     redirect('/signup/verify-email?resent=1');
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // Logout
-// ─────────────────────────────────────────────────────────────────────────────
->>>>>>> 5353f4c (Final complete work)
 
 function logout(): void
 {
     if (session_status() === PHP_SESSION_NONE) session_start();
-<<<<<<< HEAD
-=======
 
     $uid   = $_SESSION['user_id']   ?? null;
     $uname = $_SESSION['user_name'] ?? null;
     $urole = $_SESSION['user_role'] ?? null;
     if ($uid) audit_log((int) $uid, $uname, $urole, 'LOGOUT', 'auth', 'User logged out.');
 
->>>>>>> 5353f4c (Final complete work)
     $_SESSION = [];
     if (ini_get('session.use_cookies')) {
         $p = session_get_cookie_params();
@@ -800,9 +459,7 @@ function logout(): void
     redirect('/login');
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // Password Reset — Magic Link
-// ─────────────────────────────────────────────────────────────────────────────
 
 require_once BASE_PATH . '/app/models/PasswordResetModel.php';
 
@@ -816,7 +473,7 @@ function forgot_password_get(): void
     exit;
 }
 
-// Step 1: Submit email → send magic link
+// Step 1: Submit email: send magic link
 function forgot_password_post(): void
 {
     if (session_status() === PHP_SESSION_NONE) session_start();
@@ -838,7 +495,7 @@ function forgot_password_post(): void
         exit;
     }
 
-    // Always show success message — never reveal whether the account exists.
+    // Always show success message: never reveal whether the account exists (account enum prevention).
     $user      = find_user_by_email($email);
     $message   = 'If an account with that email exists, a password reset link has been sent.';
 
@@ -862,7 +519,7 @@ function forgot_password_post(): void
     exit;
 }
 
-// Step 2: User clicks link — show new-password form
+// Step 2: User clicks link: show new-password form
 function reset_password_get(): void
 {
     if (session_status() === PHP_SESSION_NONE) session_start();

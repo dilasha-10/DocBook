@@ -1,7 +1,12 @@
-<IfModule mod_rewrite.c>
-    RewriteEngine On
+Options -MultiViews
+RewriteEngine On
 
-    # Redirect all requests to the public/ directory
-    RewriteRule ^$ public/ [L]
-    RewriteRule (.*) public/$1 [L]
-</IfModule>
+# Set the base to the public/ folder
+RewriteBase /docbook/public/
+
+# Serve existing files and directories directly
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# Route everything else through index.php
+RewriteRule ^ index.php [QSA,L]

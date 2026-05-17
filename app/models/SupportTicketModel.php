@@ -1,9 +1,7 @@
 <?php
 
-// ============================================================
 //  SupportTicketModel.php
 //  CRUD for patient support tickets (D2-05).
-// ============================================================
 
 require_once __DIR__ . '/../../config/database.php';
 
@@ -157,8 +155,4 @@ function get_ticket_stats(): array
         FROM support_tickets
     ");
     return $stmt->fetch(PDO::FETCH_ASSOC) ?: ['total' => 0, 'open_count' => 0, 'in_progress_count' => 0, 'resolved_count' => 0];
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> 5353f4c (Final complete work)

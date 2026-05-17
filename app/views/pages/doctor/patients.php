@@ -3,53 +3,198 @@ $title = 'My Patients';
 ob_start();
 ?>
 
+<style>
+.patient-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+    cursor: pointer;
+    transition: border-color .15s, box-shadow .15s;
+}
+.patient-card:hover { border-color: var(--blue); box-shadow: 0 4px 16px rgba(74,144,226,.12); }
+.patient-card h3 { font-size: 15px; font-weight: 700; margin: 0 0 4px; }
+.patient-card p  { font-size: 13px; color: var(--muted); margin: 2px 0; }
+.patient-card .last-visit { font-size: 11px; color: var(--hint); margin-top: 8px; }
+
+/* Side panel */
+.doctor-side-panel {
+    position: fixed; top: 0; right: -480px; width: 480px; height: 100vh;
+    background: var(--surface); border-left: 1px solid var(--border);
+    z-index: 500; overflow-y: auto; transition: right .3s ease;
+    display: flex; flex-direction: column;
+}
+.doctor-side-panel.open { right: 0; }
+.dsp-header {
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: flex-start; justify-content: space-between;
+    position: sticky; top: 0; background: var(--surface); z-index: 1;
+}
+.dsp-header h2 { font-size: 17px; font-weight: 700; margin: 0 0 3px; }
+.dsp-header p  { font-size: 13px; color: var(--muted); margin: 0; }
+.dsp-close {
+    background: none; border: none; font-size: 20px;
+    cursor: pointer; color: var(--muted); padding: 2px 6px;
+    border-radius: 4px; line-height: 1;
+}
+.dsp-close:hover { color: var(--text); }
+.dsp-body { padding: 20px 24px; flex: 1; }
+
+/* Appointment selector */
+.appt-selector { margin-bottom: 20px; }
+.appt-selector label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--hint); display: block; margin-bottom: 6px; }
+.appt-selector select {
+    width: 100%; padding: 9px 12px;
+    background: var(--bg); border: 1px solid var(--border2);
+    border-radius: 8px; color: var(--text); font-size: 13px; font-weight: 600;
+    cursor: pointer;
+}
+
+/* Lab report status box */
+.lab-status-box {
+    border-radius: 10px; padding: 12px 14px; margin-bottom: 16px;
+    border: 1px solid;
+}
+.lab-status-box.uploaded {
+    background: rgba(99,179,237,.07); border-color: rgba(99,179,237,.3);
+}
+.lab-status-box.pending {
+    background: rgba(234,179,8,.07); border-color: rgba(234,179,8,.3);
+}
+.lab-status-box .lab-title {
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .07em; margin-bottom: 5px;
+}
+.lab-status-box.uploaded .lab-title { color: #63b3ed; }
+.lab-status-box.pending  .lab-title { color: #d69e2e; }
+
+/* Thread area */
+.thread-area { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.thread-header {
+    padding: 10px 14px; border-bottom: 1px solid var(--border);
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .07em; color: var(--hint);
+    background: var(--bg);
+}
+.thread-body { padding: 14px; }
+.thread-empty { font-size: 13px; color: var(--hint); padding: 4px 0; }
+
+/* Doctor comment box */
+.doctor-comment-entry { margin-bottom: 16px; }
+.doctor-comment-entry textarea {
+    width: 100%; padding: 10px 12px;
+    background: var(--bg); border: 1px solid var(--border2);
+    border-radius: 8px; color: var(--text); font-size: 13px;
+    resize: vertical; min-height: 72px; box-sizing: border-box;
+    font-family: inherit; line-height: 1.5;
+}
+.doctor-comment-entry textarea:focus { outline: none; border-color: var(--blue); }
+.btn-post-comment {
+    margin-top: 8px; padding: 8px 16px;
+    background: var(--blue); color: #fff; border: none;
+    border-radius: 7px; font-size: 13px; font-weight: 600;
+    cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+    transition: background .15s;
+}
+.btn-post-comment:hover { background: #3a8eef; }
+.btn-post-comment:disabled { opacity: .6; cursor: not-allowed; }
+
+/* Comment bubbles */
+.comment-bubble {
+    padding: 10px 12px; border-radius: 10px; margin-bottom: 10px;
+}
+.comment-bubble.doctor {
+    background: rgba(34,197,94,.07); border: 1px solid rgba(34,197,94,.2);
+}
+.comment-bubble.patient {
+    background: rgba(99,102,241,.07); border: 1px solid rgba(99,102,241,.2);
+    margin-left: 18px;
+}
+.comment-bubble .bubble-meta {
+    font-size: 11px; font-weight: 700; margin-bottom: 4px;
+}
+.comment-bubble.doctor  .bubble-meta { color: #22C55E; }
+.comment-bubble.patient .bubble-meta { color: #818cf8; }
+.comment-bubble .bubble-text { font-size: 13px; color: var(--text); line-height: 1.5; }
+
+.msg-box {
+    margin-top: 10px; padding: 8px 12px; border-radius: 7px;
+    font-size: 12px; display: none;
+}
+.msg-box.error   { background: rgba(239,68,68,.1); color: #ef4444; border: 1px solid rgba(239,68,68,.3); }
+.msg-box.success { background: rgba(34,197,94,.1);  color: #22C55E; border: 1px solid rgba(34,197,94,.3); }
+</style>
+
 <div class="view-container">
     <div class="view-header">
         <div class="greeting">
             <h1>My Patients</h1>
-            <p>View your patient directory</p>
+            <p>Patient directory and appointment notes</p>
         </div>
     </div>
     <div id="patient-list-container"
-         style="display:grid; gap:1.5rem; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); margin-top:20px;">
-        <!-- Filled by JS -->
+         style="display:grid;gap:1.25rem;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));margin-top:20px;">
+        <p style="color:var(--muted);">Loading patients…</p>
     </div>
 </div>
 
-<!-- Patient Detail Panel -->
-<div id="patient-detail-panel" class="patient-panel hidden">
-    <div class="panel-header">
-        <h2>Patient Details</h2>
-        <button class="btn-close" onclick="closePatientDetailPanel()">
-            <i class="fas fa-times"></i>
-        </button>
+<!-- Side panel -->
+<div id="doctorSidePanel" class="doctor-side-panel">
+    <div class="dsp-header">
+        <div>
+            <h2 id="dspPatientName">—</h2>
+            <p id="dspPatientContact">—</p>
+        </div>
+        <button class="dsp-close" onclick="closeDsp()">×</button>
     </div>
-    <div class="panel-body">
-        <div class="patient-info">
-            <div class="patient-avatar"><i class="fas fa-user"></i></div>
-            <h3 id="detail-patient-name"></h3>
-            <p id="detail-patient-email" style="color:#7f8c8d; font-size:14px;"></p>
-            <p id="detail-patient-phone" style="color:#7f8c8d; font-size:14px;"></p>
+    <div class="dsp-body">
+        <!-- Appointment picker -->
+        <div class="appt-selector">
+            <label><i class="fa fa-calendar" style="margin-right:4px;"></i>Select Appointment</label>
+            <select id="dspApptSelect" onchange="loadApptThread()">
+                <option value="">— choose an appointment —</option>
+            </select>
         </div>
-        <div class="comment-section">
-            <h4>Visit History &amp; Comments</h4>
-            <div class="comment-list" id="detail-comment-list">
-                <p style="color:var(--text-muted); font-size:14px;">Loading...</p>
+
+        <!-- Appointment detail section (shown after picking) -->
+        <div id="dspApptDetail" style="display:none;">
+
+            <!-- Lab report status -->
+            <div id="dspLabStatus" class="lab-status-box pending">
+                <div class="lab-title"><i class="fa fa-flask" style="margin-right:4px;"></i>Lab Report</div>
+                <div id="dspLabText" style="font-size:13px;color:var(--muted);">No report uploaded yet.</div>
             </div>
-        </div>
-        <div class="add-comment-section">
-            <h4>Add Comment</h4>
-            <textarea id="detail-comment-input" class="comment-input"
-                      placeholder="Enter your notes about this patient..."></textarea>
-            <button class="btn-primary" onclick="savePatientComment()">Save Comment</button>
+
+            <!-- Thread -->
+            <div class="thread-area" style="margin-bottom:16px;">
+                <div class="thread-header"><i class="fa fa-comments" style="margin-right:5px;"></i>Notes &amp; Replies</div>
+                <div class="thread-body" id="dspThreadBody">
+                    <p class="thread-empty">No notes yet.</p>
+                </div>
+            </div>
+
+            <!-- Doctor comment entry -->
+            <div class="doctor-comment-entry" id="dspCommentEntry">
+                <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--hint);display:block;margin-bottom:6px;">
+                    <i class="fa fa-lock" style="margin-right:4px;"></i>Add Note
+                </label>
+                <textarea id="dspCommentInput" placeholder="Write your clinical note for this patient…"></textarea>
+                <div>
+                    <button id="dspPostBtn" class="btn-post-comment" onclick="postDoctorComment()">
+                        <i class="fa fa-paper-plane"></i> Post Note
+                    </button>
+                </div>
+                <div id="dspCommentMsg" class="msg-box"></div>
+            </div>
+
         </div>
     </div>
 </div>
+<div id="dspOverlay" onclick="closeDsp()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:499;"></div>
 
 <?php
 $content = ob_get_clean();
-<<<<<<< HEAD
-=======
 
 $extra_scripts = <<<'JS'
 <script>
@@ -310,5 +455,4 @@ function postDoctorComment() {
 </script>
 JS;
 
->>>>>>> 6d104ef (Fixed: notification redirection for patient, doctor, admin and lab admin notification system)
 include BASE_PATH . '/app/views/layouts/app-doctor.php';

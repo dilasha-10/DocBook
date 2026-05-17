@@ -11,7 +11,7 @@
  * API functions return JSON via json_response().
  */
 
-// ── Auth helpers ───────────────────────────────────────────────────────────
+// Auth helpers
 
 /**
  * For page routes: redirects to /login if not a logged-in doctor.
@@ -21,11 +21,8 @@ function require_doctor_auth(): array
 {
     if (session_status() === PHP_SESSION_NONE) session_start();
 
-    if (empty($_SESSION['user_id'])) {
+    if (empty($_SESSION['user_id']) || ($_SESSION['user_role'] ?? '') !== 'doctor') {
         redirect('/login');
-    }
-    if (($_SESSION['user_role'] ?? '') !== 'doctor') {
-        redirect_forbidden();
     }
 
     $pdo  = db_connect();
@@ -40,7 +37,9 @@ function require_doctor_auth(): array
     $doctor = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$doctor) {
-        redirect_forbidden();
+        http_response_code(403);
+        echo '<h1>Doctor profile not found. Please contact admin.</h1>';
+        exit;
     }
 
     return $doctor;
@@ -54,11 +53,8 @@ function require_doctor_auth_api(): int
 {
     if (session_status() === PHP_SESSION_NONE) session_start();
 
-    if (empty($_SESSION['user_id'])) {
+    if (empty($_SESSION['user_id']) || ($_SESSION['user_role'] ?? '') !== 'doctor') {
         json_response(['error' => true, 'message' => 'Unauthorised'], 401);
-    }
-    if (($_SESSION['user_role'] ?? '') !== 'doctor') {
-        json_response(['error' => true, 'message' => 'Forbidden'], 403);
     }
 
     $pdo  = db_connect();
@@ -73,7 +69,7 @@ function require_doctor_auth_api(): int
     return (int)$row['id'];
 }
 
-// ── Helper: render a doctor page using app-doctor.php layout ──────────────
+// Helper: render a doctor page using app-doctor.php layout
 function render_doctor(string $view, array $data = []): void
 {
     extract($data);
@@ -87,9 +83,7 @@ function render_doctor(string $view, array $data = []): void
     exit;
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
 // PAGE: GET /doctor/dashboard
-// ══════════════════════════════════════════════════════════════════════════════
 function doctor_dashboard_page(): void
 {
     $doctor = require_doctor_auth();
@@ -133,45 +127,36 @@ function doctor_dashboard_page(): void
     render_doctor('dashboard', compact('doctor', 'appointments', 'today', 'stat_today', 'stat_pending', 'stat_week', 'stat_total'));
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
 // PAGE: GET /doctor/schedule
-// ══════════════════════════════════════════════════════════════════════════════
 function doctor_schedule_page(): void
 {
     $doctor = require_doctor_auth();
     render_doctor('schedule', compact('doctor'));
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
 // PAGE: GET /doctor/patients
-// ══════════════════════════════════════════════════════════════════════════════
 function doctor_patients_page(): void
 {
     $doctor = require_doctor_auth();
     render_doctor('patients', compact('doctor'));
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
 // PAGE: GET /doctor/availability
-// ══════════════════════════════════════════════════════════════════════════════
 function doctor_availability_page(): void
 {
     $doctor = require_doctor_auth();
     render_doctor('availability', compact('doctor'));
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
 // PAGE: GET /doctor/profile
-// ══════════════════════════════════════════════════════════════════════════════
+
 function doctor_profile_page(): void
 {
     $doctor = require_doctor_auth();
     render_doctor('drprofile', compact('doctor'));
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
 // API: GET /doctor/api/appointments?date=YYYY-MM-DD
-// ══════════════════════════════════════════════════════════════════════════════
 function api_doctor_appointments(): void
 {
     $doctorId = require_doctor_auth_api();
@@ -213,9 +198,7 @@ function api_doctor_appointments(): void
     json_response(['success' => true, 'date' => $date, 'doctor_id' => $doctorId, 'appointments' => $appointments]);
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
 // API: GET /doctor/api/stats
-// ══════════════════════════════════════════════════════════════════════════════
 function api_doctor_stats(): void
 {
     $doctorId  = require_doctor_auth_api();
@@ -243,9 +226,7 @@ function api_doctor_stats(): void
     json_response(['success' => true, 'today' => $todayCount, 'pending' => $pendingCount, 'week' => $weekCount, 'total_patients' => $totalPatients]);
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
 // API: GET /doctor/api/appointment-detail?id=N
-// ══════════════════════════════════════════════════════════════════════════════
 function api_doctor_appointment_detail(): void
 {
     $doctorId      = require_doctor_auth_api();
@@ -274,12 +255,21 @@ function api_doctor_appointment_detail(): void
         json_response(['error' => true, 'message' => 'Appointment not found'], 404);
     }
 
-    $stmt = $pdo->prepare("SELECT id, message, created_at FROM appointment_comments WHERE appointment_id = ? ORDER BY created_at ASC");
-    $stmt->execute([$appointmentId]);
-    $comments = [];
-    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $c) {
-        $comments[] = ['id' => (int)$c['id'], 'text' => $c['message'], 'date' => date('M j, Y', strtotime($c['created_at']))];
-    }
+    // Full threaded comments with author info
+    $cStmt = $pdo->prepare("
+        SELECT ac.id, ac.parent_id, ac.message, ac.created_at, ac.author_role, u.name
+        FROM appointment_comments ac
+        JOIN users u ON ac.user_id = u.id
+        WHERE ac.appointment_id = ?
+        ORDER BY ac.created_at ASC
+    ");
+    $cStmt->execute([$appointmentId]);
+    $comments = $cStmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Lab report info
+    $lrStmt = $pdo->prepare("SELECT file_path, original_name, uploaded_at FROM lab_reports WHERE appointment_id = ?");
+    $lrStmt->execute([$appointmentId]);
+    $labReport = $lrStmt->fetch(PDO::FETCH_ASSOC) ?: null;
 
     $startTs = strtotime($appt['start_time']);
     $endTs   = strtotime($appt['end_time']);
@@ -295,13 +285,13 @@ function api_doctor_appointment_detail(): void
         'duration_minutes' => (int)(($endTs - $startTs) / 60),
         'doctor'           => ['id' => (int)$appt['doctor_id'], 'name' => $appt['doctor_name'], 'specialty' => $appt['doctor_specialty']],
         'comments'         => $comments,
+        'lab_report'       => $labReport,
     ]]);
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
 // API: POST /doctor/api/update-status
 // Body JSON: { appointment_id: N, status: "Confirmed"|"Cancelled" }
-// ══════════════════════════════════════════════════════════════════════════════
+
 function api_doctor_update_status(): void
 {
     $doctorId      = require_doctor_auth_api();
@@ -324,9 +314,8 @@ function api_doctor_update_status(): void
     json_response(['success' => true, 'status' => $status]);
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
 // API: GET/POST /doctor/api/availability
-// ══════════════════════════════════════════════════════════════════════════════
+
 function api_doctor_availability(): void
 {
     $doctorId = require_doctor_auth_api();
@@ -396,9 +385,8 @@ function api_doctor_availability(): void
     }
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
 // API: GET/POST /doctor/api/profile
-// ══════════════════════════════════════════════════════════════════════════════
+
 function api_doctor_profile(): void
 {
     $doctorId = require_doctor_auth_api();
@@ -466,10 +454,9 @@ function api_doctor_profile(): void
     }
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// API: GET /doctor/api/patients          → list all unique patients
-//      GET /doctor/api/patients?id=N     → single patient with history
-// ══════════════════════════════════════════════════════════════════════════════
+// API: GET /doctor/api/patients          - list all unique patients
+//      GET /doctor/api/patients?id=N     - single patient with history
+
 function api_doctor_patients(): void
 {
     $doctorId  = require_doctor_auth_api();
@@ -520,10 +507,9 @@ function api_doctor_patients(): void
     json_response(['success' => true, 'patient' => ['id' => (int)$patient['id'], 'name' => $patient['name'], 'email' => $patient['email'], 'phone' => $patient['phone'], 'created_at' => $patient['created_at']], 'comment_history' => $comments, 'appointments' => $appointments]);
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
 // API: POST /doctor/api/comment
 // FormData: appointment_id, comment_text
-// ══════════════════════════════════════════════════════════════════════════════
+
 function api_doctor_comment(): void
 {
     $doctorId      = require_doctor_auth_api();
@@ -543,7 +529,7 @@ function api_doctor_comment(): void
     $dStmt->execute([$doctorId]);
     $dRow  = $dStmt->fetch(PDO::FETCH_ASSOC);
 
-    $pdo->prepare("INSERT INTO appointment_comments (appointment_id, user_id, message, created_at) VALUES (?, ?, ?, NOW())")->execute([$appointmentId, $dRow['user_id'], $commentText]);
+    $pdo->prepare("INSERT INTO appointment_comments (appointment_id, user_id, message, author_role, parent_id, created_at) VALUES (?, ?, ?, 'doctor', NULL, NOW())")->execute([$appointmentId, $dRow['user_id'], $commentText]);
     $commentId = (int)$pdo->lastInsertId();
 
     $stmt = $pdo->prepare("SELECT id, message AS comment_text, created_at FROM appointment_comments WHERE id = ?");
@@ -553,24 +539,18 @@ function api_doctor_comment(): void
     json_response(['success' => true, 'message' => 'Comment saved successfully', 'comment' => ['id' => (int)$comment['id'], 'text' => $comment['comment_text'], 'author' => 'Dr. ' . $dRow['name'], 'date' => date('M j, Y', strtotime($comment['created_at'])), 'appointment_id' => $appointmentId, 'visit_reason' => $appt['visit_reason'], 'appointment_date' => $appt['appointment_date'], 'appointment_time' => date('g:i A', strtotime($appt['start_time']))]]);
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-<<<<<<< HEAD
-=======
 // API: POST /doctor/api/lab-report  — DISABLED: only lab admin may upload reports
 // FormData: appointment_id, report (file)
 // Uploads a lab report for an appointment. Only the doctor assigned to the
 // appointment may upload. One report per appointment (upsert).
-// ══════════════════════════════════════════════════════════════════════════════
 function api_doctor_lab_report(): void
 {
     require_doctor_auth_api();
     json_response(['error' => 'Lab report upload is restricted to Lab Admin only.'], 403);
 }
-// ══════════════════════════════════════════════════════════════════════════════
->>>>>>> 5353f4c (Final complete work)
+
 // API: GET /doctor/api/slots?doctor_id=N&date=YYYY-MM-DD
 // No doctor auth required — also called by the patient booking side.
-// ══════════════════════════════════════════════════════════════════════════════
 function api_doctor_slots(): void
 {
     $doctorId = isset($_GET['doctor_id']) ? (int)$_GET['doctor_id'] : 0;
@@ -593,7 +573,7 @@ function api_doctor_slots(): void
     if ($avail) {
         $cur             = strtotime($avail['start_time']);
         $end             = strtotime($avail['end_time']);
-        $slotMinutes     = 30; // each appointment slot is 30 min
+        $slotMinutes     = 30; // each appointment slot is 30 min for psychiatrist
         $breakMinutes    = (int)$avail['break_minutes'];         // short break between every slot
         $intervalMinutes = (int)$avail['break_interval_minutes']; // long break every N minutes of work
         $longBreakMin    = (int)$avail['break_duration_minutes']; // long break duration
@@ -669,118 +649,32 @@ function api_doctor_slots(): void
 
     json_response(['success' => true, 'doctor_id' => $doctorId, 'date' => $date, 'day_of_week' => $dayOfWeek, 'slots' => $finalSlots]);
 }
-// ══════════════════════════════════════════════════════════════════════════════
-// PAGE: GET /doctor/chat/{appointment_id}
-// ══════════════════════════════════════════════════════════════════════════════
-function doctor_chat_page(int $appointment_id): void
+
+// Doctor notifications page
+
+/**
+ * GET /doctor/notifications
+ * Full notifications page for doctors.
+ */
+function doctor_notifications_page(): void
 {
-    $doctor = require_doctor_auth();
-    $pdo    = db_connect();
-    $drId   = (int)$doctor['id'];
+    if (session_status() === PHP_SESSION_NONE) session_start();
+    $user = require_auth();
 
-    // Fetch appointment and verify it belongs to this doctor
+    // Load doctor row so the layout has $doctor
+    $pdo  = db_connect();
     $stmt = $pdo->prepare("
-        SELECT a.id, a.appointment_date, a.start_time, a.end_time,
-               a.status, a.visit_reason, a.reference_number,
-               u.id AS patient_id, u.name AS patient_name
-        FROM appointments a
-        JOIN users u ON a.patient_id = u.id
-        WHERE a.id = ? AND a.doctor_id = ?
+        SELECT d.id, d.specialty, u.id AS user_id, u.name, u.email, u.photo
+        FROM   doctors d
+        JOIN   users   u ON u.id = d.user_id
+        WHERE  d.user_id = ?
     ");
-    $stmt->execute([$appointment_id, $drId]);
-    $appt = $stmt->fetch(PDO::FETCH_ASSOC);
+    $stmt->execute([$user['id']]);
+    $doctor = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if (!$appt) {
-        http_response_code(403);
-        echo '<h1>Forbidden — Appointment not found or does not belong to you.</h1>';
-        exit;
+    if (!$doctor) {
+        http_response_code(403); echo 'Access denied.'; exit;
     }
 
-    render_doctor('chat', compact('doctor', 'appt'));
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-// API: GET /doctor/api/messages/{appointment_id}
-// ══════════════════════════════════════════════════════════════════════════════
-function api_doctor_get_messages(int $appointment_id): void
-{
-    $doctorId = require_doctor_auth_api();
-    $pdo      = db_connect();
-
-    // Verify appointment belongs to this doctor
-    $chk = $pdo->prepare("SELECT id FROM appointments WHERE id = ? AND doctor_id = ?");
-    $chk->execute([$appointment_id, $doctorId]);
-    if (!$chk->fetch()) {
-        json_response(['success' => false, 'message' => 'Forbidden.'], 403);
-    }
-
-    $stmt = $pdo->prepare("
-        SELECT m.id, m.sender_id, m.sender_role, m.message, m.is_read,
-               m.created_at, u.name AS sender_name
-        FROM messages m
-        JOIN users u ON u.id = m.sender_id
-        WHERE m.appointment_id = :appt_id
-        ORDER BY m.created_at ASC
-    ");
-    $stmt->execute([':appt_id' => $appointment_id]);
-    $messages = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-    // Mark patient messages as read
-    $pdo->prepare("
-        UPDATE messages SET is_read = 1
-        WHERE appointment_id = :appt_id AND sender_role = 'patient' AND is_read = 0
-    ")->execute([':appt_id' => $appointment_id]);
-
-    json_response(['success' => true, 'data' => $messages]);
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-// API: POST /doctor/api/messages/{appointment_id}
-// Body JSON: { message: "..." }
-// ══════════════════════════════════════════════════════════════════════════════
-function api_doctor_send_message(int $appointment_id): void
-{
-    $doctorId = require_doctor_auth_api();
-    $pdo      = db_connect();
-
-    // Verify appointment belongs to this doctor
-    $chk = $pdo->prepare("SELECT id FROM appointments WHERE id = ? AND doctor_id = ?");
-    $chk->execute([$appointment_id, $doctorId]);
-    if (!$chk->fetch()) {
-        json_response(['success' => false, 'message' => 'Forbidden.'], 403);
-    }
-
-    $body    = json_decode(file_get_contents('php://input'), true) ?? [];
-    $message = trim($body['message'] ?? '');
-    if ($message === '') {
-        json_response(['success' => false, 'message' => 'Message cannot be empty.'], 422);
-    }
-
-    // Get doctor's user_id for the sender_id
-    $dStmt = $pdo->prepare("SELECT user_id FROM doctors WHERE id = ?");
-    $dStmt->execute([$doctorId]);
-    $dRow   = $dStmt->fetch(PDO::FETCH_ASSOC);
-    $userId = (int)$dRow['user_id'];
-
-    $stmt = $pdo->prepare("
-        INSERT INTO messages (appointment_id, sender_id, sender_role, message)
-        VALUES (:appt_id, :sender_id, 'doctor', :message)
-    ");
-    $stmt->execute([
-        ':appt_id'   => $appointment_id,
-        ':sender_id' => $userId,
-        ':message'   => $message,
-    ]);
-    $new_id = (int)$pdo->lastInsertId();
-
-    $row = $pdo->prepare("
-        SELECT m.id, m.sender_id, m.sender_role, m.message, m.is_read,
-               m.created_at, u.name AS sender_name
-        FROM messages m JOIN users u ON u.id = m.sender_id
-        WHERE m.id = ?
-    ");
-    $row->execute([$new_id]);
-    $newMsg = $row->fetch(PDO::FETCH_ASSOC);
-
-    json_response(['success' => true, 'data' => $newMsg]);
+    render('doctor/notifications', ['doctor' => $doctor]);
 }

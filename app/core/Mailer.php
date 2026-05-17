@@ -24,11 +24,7 @@ function render_password_reset_email(string $name, string $otp, string $expiresA
             <p style="font-size:15px;line-height:1.7;margin:0 0 18px;">Hello {$safeName},</p>
             <p style="font-size:15px;line-height:1.7;margin:0 0 18px;">Use this one-time password to verify your password reset request:</p>
             <div style="font-size:34px;letter-spacing:6px;font-weight:700;text-align:center;padding:18px 16px;background:#eef8fc;border:1px dashed #5ab8d0;border-radius:14px;margin:22px 0;color:#1a2a3a;">{$safeOtp}</div>
-<<<<<<< HEAD
-            <p style="font-size:14px;line-height:1.7;margin:0 0 8px;">This code expires at {$safeExpiry}.</p>
-=======
             <p style="font-size:14px;line-height:1.7;margin:0 0 8px;">This code expires in 15 minutes.</p>
->>>>>>> 5353f4c (Final complete work)
             <p style="font-size:14px;line-height:1.7;margin:0;">If you did not request this reset, you can safely ignore this email.</p>
         </div>
     </div>
@@ -177,11 +173,8 @@ function smtp_format_address(string $email, string $name): string
 {
     return sprintf('%s <%s>', $name, $email);
 }
-<<<<<<< HEAD
-=======
-// ─────────────────────────────────────────────────────────────────────────────
+
 // Email templates — added for magic-link reset and signup OTP
-// ─────────────────────────────────────────────────────────────────────────────
 
 function render_signup_otp_email(string $firstName, string $otp, string $expiresAt): string
 {
@@ -253,4 +246,3 @@ function render_magic_link_reset_email(string $name, string $resetUrl, string $e
 </html>
 HTML;
 }
->>>>>>> 5353f4c (Final complete work)

@@ -4,7 +4,7 @@ ob_start();
 
 $extra_styles = <<<CSS
 <style>
-/* ── Layout ─────────────────────────────────────────────── */
+/*  Layout */
 .ss-wrap {
     padding: 40px 24px 80px;
     max-width: 860px;
@@ -14,7 +14,7 @@ $extra_styles = <<<CSS
 .page-title  { font-size: 22px; font-weight: 800; color: var(--text); margin: 0; display:flex; align-items:center; gap:10px; }
 .page-subtitle { font-size: 13px; color: var(--muted); margin: 4px 0 0; }
 
-/* ── Section cards ──────────────────────────────────────── */
+/*  Section cards  */
 .ss-card {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -42,7 +42,7 @@ $extra_styles = <<<CSS
 .ss-card-desc   { font-size:12px; color:var(--muted); margin-top:2px; }
 .ss-card-body   { padding: 20px 24px; }
 
-/* ── Form rows ──────────────────────────────────────────── */
+/*  Form rows  */
 .ss-field-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -83,7 +83,7 @@ $extra_styles = <<<CSS
     margin-top: 4px;
 }
 
-/* ── Toggle switches ─────────────────────────────────────── */
+/*  Toggle switches  */
 .toggle-row {
     display: flex;
     align-items: center;
@@ -120,7 +120,7 @@ $extra_styles = <<<CSS
 }
 .toggle-input:checked + .toggle-track::after { transform: translateX(20px); }
 
-/* ── Save button ─────────────────────────────────────────── */
+/*  Save button  */
 .btn-save {
     display: inline-flex; align-items: center; gap: 8px;
     padding: 10px 24px;
@@ -152,7 +152,7 @@ $extra_styles = <<<CSS
 .save-msg.ok  { color: var(--green); display:inline; }
 .save-msg.err { color: var(--red);   display:inline; }
 
-/* ── Holidays table ──────────────────────────────────────── */
+/*  Holidays table  */
 .holiday-add-row {
     display: flex; gap: 10px; margin-bottom: 16px;
 }
@@ -238,7 +238,7 @@ $extra_styles = <<<CSS
 }
 .empty-icon { font-size: 24px; margin-bottom: 6px; }
 
-/* ── Skeleton loader ─────────────────────────────────────── */
+/*  Skeleton loader  */
 .skel {
     background: linear-gradient(90deg, var(--surface2) 25%, var(--border) 50%, var(--surface2) 75%);
     background-size: 200% 100%;
@@ -248,7 +248,7 @@ $extra_styles = <<<CSS
 }
 @keyframes skel-shine { from{background-position:200% 0} to{background-position:-200% 0} }
 
-/* ── Confirm Dialog ─────────────────────────────────────── */
+/*  Confirm Dialog  */
 #del-confirm-overlay {
     display: none;
     position: fixed;
@@ -317,7 +317,7 @@ $extra_styles = <<<CSS
 }
 #del-confirm-box .dcb-delete:hover { opacity: .88; }
 
-/* ── Toast ───────────────────────────────────────────────── */
+/*  Toast  */
 #ss-toast {
     position: fixed;
     bottom: 28px; right: 28px;
@@ -354,7 +354,7 @@ ob_start();
         <p class="page-subtitle">Configure global scheduling constraints and feature toggles</p>
     </div>
 
-    <!-- ── Section 1 · Working Hours ──────────────────────────── -->
+    <!--  Section 1 · Working Hours  -->
     <div class="ss-card" id="card-hours">
         <div class="ss-card-header">
             <div class="ss-card-icon icon-blue"><i class="fa fa-clock"></i></div>
@@ -385,7 +385,7 @@ ob_start();
         </div>
     </div>
 
-    <!-- ── Section 2 · Slot Configuration ────────────────────── -->
+    <!--  Section 2 · Slot Configuration  -->
     <div class="ss-card" id="card-slots">
         <div class="ss-card-header">
             <div class="ss-card-icon icon-green"><i class="fa fa-calendar-check"></i></div>
@@ -412,7 +412,7 @@ ob_start();
         </div>
     </div>
 
-    <!-- ── Section 3 · Feature Toggles ───────────────────────── -->
+    <!--  Section 3 · Feature Toggles  -->
     <div class="ss-card" id="card-toggles">
         <div class="ss-card-header">
             <div class="ss-card-icon icon-purple"><i class="fa fa-toggle-on"></i></div>
@@ -455,7 +455,7 @@ ob_start();
         </div>
     </div>
 
-    <!-- ── Section 4 · Holidays ───────────────────────────────── -->
+    <!--  Section 4 · Holidays  -->
     <div class="ss-card" id="card-holidays">
         <div class="ss-card-header">
             <div class="ss-card-icon icon-orange"><i class="fa fa-calendar-xmark"></i></div>
@@ -499,13 +499,13 @@ ob_start();
 (function () {
     'use strict';
 
-    // ── Section→setting key map ──────────────────────────────
+    //  Section - setting key map 
     const SECTIONS = {
         hours: ['work_start', 'work_end'],
         slots: ['max_per_day'],
     };
 
-    // ── Load all settings & holidays on page load ────────────
+    //  Load all settings & holidays on page load 
     async function init() {
         try {
             const res  = await fetch(BASE_URL + '/admin/api/system-settings');
@@ -532,7 +532,7 @@ ob_start();
         }
     }
 
-    // ── Save a named section ─────────────────────────────────
+    //  Save a named section 
     window.saveSection = async function (section) {
         const keys    = SECTIONS[section];
         const payload = {};
@@ -544,7 +544,7 @@ ob_start();
         await savePayload(payload, `msg-${section}`);
     };
 
-    // ── Save a single toggle immediately ─────────────────────
+    //  Save a single toggle immediately 
     window.saveToggle = async function (el) {
         const key     = el.dataset.setting;
         const payload = { [key]: el.checked ? '1' : '0' };
@@ -588,7 +588,7 @@ ob_start();
         }
     }
 
-    // ── Add holiday ──────────────────────────────────────────
+    //  Add holiday 
     window.addHoliday = async function () {
         const dateEl  = document.getElementById('new_holiday_date');
         const labelEl = document.getElementById('new_holiday_label');
@@ -620,7 +620,7 @@ ob_start();
         }
     };
 
-    // ── Delete holiday ───────────────────────────────────────
+    //  Delete holiday 
     var _pendingDelId = null;
 
     window.deleteHoliday = function (id) {
@@ -698,7 +698,7 @@ ob_start();
             </table>`;
     }
 
-    // ── Toast helper ─────────────────────────────────────────
+    //  Toast helper 
     function toast(msg, type) {
         const el = document.getElementById('ss-toast');
         el.textContent = msg;

@@ -22,7 +22,7 @@ ob_start();
 
 $extra_styles = <<<CSS
 <style>
-/* ── Dashboard action buttons ── */
+/*  Dashboard action buttons  */
 .appt-actions {
     display: flex;
     flex-wrap: wrap;
@@ -377,7 +377,9 @@ function renderDetailPanel(appt, comments) {
         + (appt.reference_number ? '<div class="detail-field"><span class="detail-field-label">Reference</span><span class="detail-field-value" style="font-family:monospace;">' + escHtml(appt.reference_number) + '</span></div>' : '')
         + (appt.visit_reason ? '<div class="detail-field"><span class="detail-field-label">Visit Reason</span><span class="detail-field-value">' + escHtml(appt.visit_reason) + '</span></div>' : '')
         + labHTML
-        + '<div class="detail-notes-box" id="commentThread"><span class="detail-field-label"><i class="fa fa-stethoscope" style="margin-right:5px;"></i>Doctor\'s Notes &amp; Replies</span><div style="margin-top:10px;">' + threadHTML + '</div></div>';
+        + '<div class="detail-notes-box" id="commentThread"><span class="detail-field-label"><i class="fa fa-stethoscope" style="margin-right:5px;"></i>Doctor\'s Notes &amp; Replies</span>'
+        + '<p style="margin:8px 0 0;font-size:12px;color:var(--hint);"><i class="fa fa-circle-info" style="margin-right:4px;"></i>You can reply to your doctor\'s notes a maximum of <strong>2 times</strong> per appointment.</p>'
+        + '<div style="margin-top:10px;">' + threadHTML + '</div></div>';
 }
 
 function sendReply(apptId, parentCommentId) {
@@ -414,7 +416,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('detailCloseBtn').addEventListener('click', closeDetailPanel);
     document.addEventListener('keydown', function(e){ if (e.key === 'Escape') { closeDetailPanel(); closeCancelModal(); } });
 
-    // ── Deep link from notification click ────────────────────────────────────
+    //  Deep link from notification click 
     var params  = new URLSearchParams(window.location.search);
     var apptId  = params.get('appt');
     var labId   = params.get('lab');

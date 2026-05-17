@@ -1,14 +1,12 @@
 <?php
 
-// ============================================================
-//  SupportTicketController.php — D2-05
+//  SupportTicketController.php
 //  Admin: Patient Support & Inquiries
-// ============================================================
 
 require_once BASE_PATH . '/app/models/SupportTicketModel.php';
 require_once BASE_PATH . '/app/models/NotificationModel.php';
 
-// ── Admin Pages ──────────────────────────────────────────────
+// Admin Pages
 
 function admin_support_tickets_page(): void
 {
@@ -16,7 +14,7 @@ function admin_support_tickets_page(): void
     render('admin/support_tickets', ['user' => $user]);
 }
 
-// ── Admin API ────────────────────────────────────────────────
+// Admin API
 
 function api_admin_support_tickets(): void
 {
@@ -89,7 +87,7 @@ function api_admin_support_ticket_update(int $id): void
     json_response(['success' => true]);
 }
 
-// ── Patient API (submit ticket) ──────────────────────────────
+// Patient API (submit ticket)
 
 function api_patient_submit_ticket(): void
 {
@@ -121,8 +119,4 @@ function api_patient_tickets(): void
     $user = require_auth_api();
     $tickets = get_patient_tickets((int)$user['id']);
     json_response(['success' => true, 'tickets' => $tickets]);
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> 5353f4c (Final complete work)

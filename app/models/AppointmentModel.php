@@ -2,67 +2,7 @@
 
 require_once __DIR__ . '/../../config/database.php';
 
-// Upcoming appointments (today or future, not cancelled/completed)
-function get_upcoming_appointments($patient_id) {
-    $pdo = db_connect();
-    $stmt = $pdo->prepare("
-        SELECT
-            a.id,
-            a.appointment_date   AS date,
-            a.start_time         AS time,
-            a.end_time,
-            a.status,
-            a.visit_reason,
-            a.reference_number,
-            u.name               AS doctor_name,
-            d.specialty,
-            c.name               AS category
-        FROM appointments a
-        JOIN doctors    d ON a.doctor_id   = d.id
-        JOIN users     u ON d.user_id     = u.id
-        JOIN categories c ON d.category_id = c.id
-        WHERE a.patient_id = :pid
-          AND a.appointment_date >= CURDATE()
-          AND a.status NOT IN ('Cancelled', 'Completed', 'Rescheduled')
-        ORDER BY a.appointment_date ASC, a.start_time ASC
-    ");
-    $stmt->execute([':pid' => $patient_id]);
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
-}
-
-// Past appointments (before today OR completed/cancelled)
-function get_past_appointments($patient_id) {
-    $pdo = db_connect();
-    $stmt = $pdo->prepare("
-        SELECT
-            a.id,
-            a.appointment_date   AS date,
-            a.start_time         AS time,
-            a.end_time,
-            a.status,
-            a.visit_reason,
-            a.reference_number,
-            u.name               AS doctor_name,
-            d.specialty,
-            c.name               AS category
-        FROM appointments a
-        JOIN doctors    d ON a.doctor_id   = d.id
-        JOIN users     u ON d.user_id     = u.id
-        JOIN categories c ON d.category_id = c.id
-        WHERE a.patient_id = :pid
-          AND (
-              a.appointment_date < CURDATE()
-              OR a.status IN ('Completed', 'Cancelled', 'Rescheduled')
-          )
-        ORDER BY a.appointment_date DESC, a.start_time DESC
-    ");
-    $stmt->execute([':pid' => $patient_id]);
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
-}
-
-// Fetch a single appointment by ID (with doctor info)
-
-// Auto-mark confirmed appointments as Completed if their date has passed
+// Auto-mark confirmed appointments as Completed if their end time has passed
 function auto_complete_past_appointments(): void
 {
     $pdo = db_connect();
@@ -74,6 +14,67 @@ function auto_complete_past_appointments(): void
     ")->execute();
 }
 
+// Upcoming appointments: end_time is still in the future, not cancelled/completed
+function get_upcoming_appointments($patient_id) {
+    auto_complete_past_appointments();
+    $pdo = db_connect();
+    $stmt = $pdo->prepare("
+        SELECT
+            a.id,
+            a.appointment_date   AS date,
+            a.start_time         AS time,
+            a.end_time,
+            a.status,
+            a.visit_reason,
+            a.reference_number,
+            u.name               AS doctor_name,
+            d.specialty,
+            c.name               AS category
+        FROM appointments a
+        JOIN doctors    d ON a.doctor_id   = d.id
+        JOIN users      u ON d.user_id     = u.id
+        JOIN categories c ON d.category_id = c.id
+        WHERE a.patient_id = :pid
+          AND CONCAT(a.appointment_date, ' ', a.end_time) > NOW()
+          AND a.status NOT IN ('Cancelled', 'Completed', 'Rescheduled')
+        ORDER BY a.appointment_date ASC, a.start_time ASC
+    ");
+    $stmt->execute([':pid' => $patient_id]);
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+// Past appointments: end_time has passed OR status is completed/cancelled/rescheduled
+function get_past_appointments($patient_id) {
+    auto_complete_past_appointments();
+    $pdo = db_connect();
+    $stmt = $pdo->prepare("
+        SELECT
+            a.id,
+            a.appointment_date   AS date,
+            a.start_time         AS time,
+            a.end_time,
+            a.status,
+            a.visit_reason,
+            a.reference_number,
+            u.name               AS doctor_name,
+            d.specialty,
+            c.name               AS category
+        FROM appointments a
+        JOIN doctors    d ON a.doctor_id   = d.id
+        JOIN users      u ON d.user_id     = u.id
+        JOIN categories c ON d.category_id = c.id
+        WHERE a.patient_id = :pid
+          AND (
+              CONCAT(a.appointment_date, ' ', a.end_time) <= NOW()
+              OR a.status IN ('Completed', 'Cancelled', 'Rescheduled')
+          )
+        ORDER BY a.appointment_date DESC, a.start_time DESC
+    ");
+    $stmt->execute([':pid' => $patient_id]);
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+// Fetch a single appointment by ID (with doctor info)
 function get_appointment_by_id(int $id): ?array
 {
     $pdo  = db_connect();
@@ -99,7 +100,7 @@ function get_appointment_by_id(int $id): ?array
     return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
 }
 
-// Reschedule: release old slot and book new one
+// Reschedule: atomically release old slot and book new one
 function reschedule_appointment(int $id, string $new_date, string $new_start, string $new_end, int $patient_id): array
 {
     $pdo = db_connect();
@@ -148,10 +149,10 @@ function reschedule_appointment(int $id, string $new_date, string $new_start, st
         $upd = $pdo->prepare("UPDATE appointments SET status = 'Rescheduled' WHERE id = :id");
         $upd->execute([':id' => $id]);
 
-        // Carry forward reschedule count (max 2 enforced in controller)
+        // Carry forward reschedule count
         $newRescheduleCount = (int)($appt['reschedule_count'] ?? 0) + 1;
 
-        // Create new appointment carrying reschedule_count forward
+        // Create new appointment
         $ins = $pdo->prepare("
             INSERT INTO appointments
                 (patient_id, doctor_id, appointment_date, start_time, end_time, reference_number, status, visit_reason, reschedule_count)
@@ -178,7 +179,7 @@ function reschedule_appointment(int $id, string $new_date, string $new_start, st
     }
 }
 
-// Cancel: update status, free slot, write audit log — all in one transaction
+// Cancel: update status and write audit log in one transaction
 function cancel_appointment(int $id, int $patient_id): array
 {
     $pdo = db_connect();
@@ -196,11 +197,10 @@ function cancel_appointment(int $id, int $patient_id): array
 
     $pdo->beginTransaction();
     try {
-        // Update status to Cancelled
         $upd = $pdo->prepare("UPDATE appointments SET status = 'Cancelled' WHERE id = :id");
         $upd->execute([':id' => $id]);
 
-        // Write audit log entry (best-effort — table may not exist yet)
+        // Write audit log entry (best-effort)
         try {
             $log = $pdo->prepare("
                 INSERT INTO appointment_audit_log
@@ -224,20 +224,22 @@ function cancel_appointment(int $id, int $patient_id): array
 
 // Aggregate stats for dashboard header cards
 function get_appointment_stats($patient_id) {
+    auto_complete_past_appointments();
     $pdo = db_connect();
     $stmt = $pdo->prepare("
         SELECT
-            SUM(CASE WHEN appointment_date >= CURDATE()
+            SUM(CASE WHEN CONCAT(appointment_date, ' ', end_time) > NOW()
                       AND status NOT IN ('Cancelled','Completed','Rescheduled') THEN 1 ELSE 0 END) AS upcoming,
-            COUNT(*)                                                                   AS total,
-            SUM(CASE WHEN status = 'Pending'                      THEN 1 ELSE 0 END) AS pending
+            COUNT(*)                                                                               AS total,
+            SUM(CASE WHEN status = 'Pending' THEN 1 ELSE 0 END)                                  AS pending
         FROM appointments
         WHERE patient_id = :pid
     ");
     $stmt->execute([':pid' => $patient_id]);
     return $stmt->fetch(PDO::FETCH_ASSOC) ?: ['upcoming' => 0, 'total' => 0, 'pending' => 0];
 }
-// ── GET /api/appointments/:id — detail with lab report and doctor comment ──────
+
+// Detail view with lab report and doctor comment
 function get_appointment_detail_with_comment(int $id): ?array
 {
     $pdo  = db_connect();
@@ -274,7 +276,7 @@ function get_appointment_detail_with_comment(int $id): ?array
     return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
 }
 
-// ── GET /api/appointments/:id/comments — full threaded comment list ────────────
+// Full threaded comment list for an appointment
 function get_appointment_comments(int $appointment_id): array
 {
     $pdo  = db_connect();
@@ -290,11 +292,7 @@ function get_appointment_comments(int $appointment_id): array
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
-// ── POST /api/appointments/:id/comments — patient posts a reply ───────────────
-// Rules:
-//   - patient can only reply to a doctor's top-level comment (parent_id required)
-//   - only allowed after lab report is uploaded
-//   - max 2 patient replies total per appointment
+// Patient posts a reply to a doctor comment
 function create_appointment_comment(int $appointment_id, int $user_id, string $message, ?int $parent_id = null): array
 {
     $pdo = db_connect();
@@ -306,7 +304,7 @@ function create_appointment_comment(int $appointment_id, int $user_id, string $m
         return ['error' => 'You have reached the maximum of 2 replies for this appointment.'];
     }
 
-    // parent_id must be a doctor comment
+    // parent_id must reference a doctor comment
     if ($parent_id) {
         $par = $pdo->prepare("SELECT id FROM appointment_comments WHERE id = ? AND appointment_id = ? AND author_role = 'doctor'");
         $par->execute([$parent_id, $appointment_id]);
@@ -337,9 +335,10 @@ function create_appointment_comment(int $appointment_id, int $user_id, string $m
     return $fetch->fetch(PDO::FETCH_ASSOC) ?: [];
 }
 
-// ── GET /api/patient/appointments — list with doctor name and status ──────────
+// Full appointments list split into upcoming/past — used by appointments page
 function get_patient_appointments_list(int $patient_id): array
 {
+    auto_complete_past_appointments();
     $pdo  = db_connect();
     $stmt = $pdo->prepare("
         SELECT
@@ -354,7 +353,7 @@ function get_patient_appointments_list(int $patient_id): array
             d.specialty,
             c.name              AS category,
             CASE
-                WHEN a.appointment_date >= CURDATE()
+                WHEN CONCAT(a.appointment_date, ' ', a.end_time) > NOW()
                  AND a.status NOT IN ('Cancelled','Completed','Rescheduled')
                 THEN 'upcoming'
                 ELSE 'past'
@@ -365,7 +364,7 @@ function get_patient_appointments_list(int $patient_id): array
         JOIN categories c ON d.category_id = c.id
         WHERE a.patient_id = :pid
         ORDER BY
-            CASE WHEN a.appointment_date >= CURDATE()
+            CASE WHEN CONCAT(a.appointment_date, ' ', a.end_time) > NOW()
                   AND a.status NOT IN ('Cancelled','Completed','Rescheduled')
                  THEN 0 ELSE 1 END ASC,
             a.appointment_date ASC,

@@ -1,11 +1,7 @@
 <?php
 
-// ============================================================
 //  AuditLogModel.php
 //  All database operations for the audit_logs table.
-// ============================================================
-
-// ── Write ────────────────────────────────────────────────────
 
 /**
  * Record one admin action.
@@ -49,7 +45,7 @@ function audit_log(
     }
 }
 
-// ── Read ─────────────────────────────────────────────────────
+// Read
 
 /**
  * Fetch audit logs with optional filters + pagination.

@@ -5,7 +5,7 @@ ob_start();
 
 $extra_styles = <<<CSS
 <style>
-/* ── Page layout ── */
+/*  Page layout  */
 .admin-wrap {
     padding: 28px 24px 48px;
     max-width: 1200px;
@@ -34,7 +34,7 @@ $extra_styles = <<<CSS
     margin: 4px 0 0;
 }
 
-/* ── Summary cards ── */
+/*  Summary cards  */
 .summary-row {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -71,7 +71,7 @@ $extra_styles = <<<CSS
 .summary-card-value.green { color: #1a6644; }
 [data-theme="dark"] .summary-card-value.green { color: #4ddb96; }
 
-/* ── Filter bar ── */
+/*  Filter bar  */
 .filter-bar {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -160,7 +160,7 @@ $extra_styles = <<<CSS
 
 .btn-reset:hover { background: var(--border); color: var(--text); }
 
-/* ── Table ── */
+/*  Table  */
 .table-card {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -234,7 +234,7 @@ $extra_styles = <<<CSS
     color: var(--text);
 }
 
-/* ── State views ── */
+/*  State views  */
 .table-loading,
 .table-empty {
     text-align: center;
@@ -390,7 +390,7 @@ $extra_scripts = <<<JS
 <script>
 (function () {
 
-    /* ── DOM refs ── */
+    /*  DOM refs  */
     var inputFrom   = document.getElementById('filterDateFrom');
     var inputTo     = document.getElementById('filterDateTo');
     var inputStatus = document.getElementById('filterStatus');
@@ -409,7 +409,7 @@ $extra_scripts = <<<JS
     var sumPaid    = document.getElementById('sumPaid');
     var sumFailed  = document.getElementById('sumFailed');
 
-    /* ── Helpers ── */
+    /*  Helpers  */
     function fmt(num) {
         return Number(num).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
@@ -448,7 +448,7 @@ $extra_scripts = <<<JS
             .replace(/"/g, '&quot;');
     }
 
-    /* ── Fetch & render ── */
+    /*  Fetch & render  */
     function load() {
         stateLoading.style.display = '';
         stateEmpty.style.display   = 'none';
@@ -511,7 +511,7 @@ $extra_scripts = <<<JS
         });
     }
 
-    /* ── Events ── */
+    /*  Events  */
     btnApply.addEventListener('click', load);
 
     btnReset.addEventListener('click', function () {
@@ -526,7 +526,7 @@ $extra_scripts = <<<JS
         if (e.key === 'Enter') load();
     });
 
-    /* ── Initial load ── */
+    /*  Initial load  */
     load();
 
 })();

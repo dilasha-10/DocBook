@@ -7,15 +7,9 @@ $extra_styles = <<<CSS
 <style>
 .adm-wrap {
     padding: 40px 24px 60px;
-    max-width: 900px;
+    max-width: 960px;
     margin: 0 auto;
 }
-<<<<<<< HEAD
-.page-header { margin-bottom: 32px; }
-.page-title    { font-size: 22px; font-weight: 800; color: var(--text); margin: 0; }
-.page-subtitle { font-size: 13px; color: var(--muted); margin: 4px 0 0; }
-
-=======
 .page-header { margin-bottom: 24px; }
 .page-title    { font-size: 22px; font-weight: 800; color: var(--text); margin: 0; }
 .page-subtitle { font-size: 13px; color: var(--muted); margin: 4px 0 0; }
@@ -48,7 +42,6 @@ $extra_styles = <<<CSS
 
 .section-label { font-size: 12px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: .6px; margin-bottom: 14px; }
 
->>>>>>> 5353f4c (Final complete work)
 .nav-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -62,11 +55,7 @@ $extra_styles = <<<CSS
     border-radius: 16px;
     padding: 22px 20px;
     text-decoration: none;
-<<<<<<< HEAD
-    display: flex; align-items: flex-start; gap: 18px;
-=======
     display: flex; align-items: flex-start; gap: 16px;
->>>>>>> 5353f4c (Final complete work)
     transition: border-color .15s, box-shadow .15s;
 }
 .nav-tile:hover {
@@ -83,23 +72,12 @@ $extra_styles = <<<CSS
 .icon-purple { background: #f3e8ff; color: #7e22ce; }
 .icon-teal   { background: #ccfbf1; color: #0f766e; }
 .icon-rose   { background: #ffe4e6; color: #be123c; }
-<<<<<<< HEAD
-.icon-orange { background: #ffedd5; color: #c2410c; }
-.icon-green  { background: #dcfce7; color: #15803d; }
-.icon-indigo { background: #e0e7ff; color: #4338ca; }
-
-.nav-tile-body { min-width: 0; }
-.nav-tile-label { font-size: 15px; font-weight: 800; color: var(--text); margin-bottom: 5px; }
-.nav-tile-desc  { font-size: 13px; color: var(--muted); line-height: 1.5; }
-.nav-tile-arrow { font-size: 12px; color: var(--blue); font-weight: 700; margin-top: 10px; display: block; }
-=======
 .icon-green  { background: #dcfce7; color: #15803d; }
 .icon-indigo { background: #e0e7ff; color: #4338ca; }
 
 .nav-tile-label { font-size: 14px; font-weight: 800; color: var(--text); margin-bottom: 4px; }
 .nav-tile-desc  { font-size: 12px; color: var(--muted); line-height: 1.5; }
 .nav-tile-arrow { font-size: 12px; color: var(--blue); font-weight: 700; margin-top: 8px; display: block; }
->>>>>>> 5353f4c (Final complete work)
 </style>
 CSS;
 
@@ -207,18 +185,6 @@ ob_start();
             </div>
         </a>
 
-<<<<<<< HEAD
-        <a href="<?= BASE_URL ?>/admin/announcements" class="nav-tile">
-            <div class="nav-tile-icon icon-orange"><i class="fa fa-megaphone"></i></div>
-            <div class="nav-tile-body">
-                <div class="nav-tile-label">Announcements</div>
-                <div class="nav-tile-desc">Post system-wide banners for holidays, maintenance, or notices.</div>
-                <span class="nav-tile-arrow">Go to Announcements →</span>
-            </div>
-        </a>
-
-=======
->>>>>>> 5353f4c (Final complete work)
         <a href="<?= BASE_URL ?>/admin/support-tickets" class="nav-tile">
             <div class="nav-tile-icon icon-rose"><i class="fa fa-headset"></i></div>
             <div class="nav-tile-body">

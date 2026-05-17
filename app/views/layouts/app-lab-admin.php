@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="<?= BASE_URL ?>/css/style.css">
     <?php if (isset($extra_styles)) echo $extra_styles; ?>
     <style>
-    /* ── Notification Bell ── */
+    /* Notification Bell */
     .notif-wrap-btn { position:relative; }
     .notif-bell-btn { background:none;border:none;cursor:pointer;color:var(--text);font-size:18px;padding:6px;position:relative;border-radius:8px;transition:background .15s; }
     .notif-bell-btn:hover { background:var(--hover); }
@@ -72,7 +72,7 @@
 </div>
 <?php endif; ?>
 
-<!-- TOP NAVBAR — consistent with doc & patient portals -->
+<!-- TOP NAVBAR - consistent with doc & patient portals -->
 <nav class="navbar">
     <div class="navbar-inner">
         <!-- Sidebar toggle (desktop only) -->
@@ -215,7 +215,7 @@
 
 <script src="<?= BASE_URL ?>/js/main.js"></script>
 <script>
-// ── Notification deep link for lab admin ─────────────────────────────────
+// Notification deep link for lab admin
 (function() {
     var params = new URLSearchParams(window.location.search);
     var apptId = params.get('appt_id');
@@ -225,7 +225,7 @@
 })();
 
 <?php if (isset($user)): ?>
-// ── Notification Bell ─────────────────────────────────────────────────────
+// Notification Bell
 var bellBtn      = document.getElementById('notifBellBtn');
 var dropdown     = document.getElementById('notifDropdown');
 var badge        = document.getElementById('notifBadge');
@@ -268,7 +268,7 @@ function setBadge(count) {
 function labNotifRedirectUrl(n) {
     var apptId = n.appointment_id ? parseInt(n.appointment_id) : null;
     var type   = (n.type || '').trim();
-    // New appointment booked → dashboard to upload
+    // New appointment booked - dashboard to upload
     if (type === 'appointment_booked' && apptId) {
         return BASE_URL + '/lab-admin/dashboard?appt_id=' + apptId;
     }

@@ -1,13 +1,11 @@
 <?php
 
-// ============================================================
-//  AnnouncementController.php — D2-03
+//  AnnouncementController.php
 //  Admin: Broadcast System-Wide Announcements
-// ============================================================
 
 require_once BASE_PATH . '/app/models/AnnouncementModel.php';
 
-// ── Admin Page ───────────────────────────────────────────────
+// Admin Page
 
 function admin_announcements_page(): void
 {
@@ -15,7 +13,7 @@ function admin_announcements_page(): void
     render('admin/announcements', ['user' => $user]);
 }
 
-// ── Admin API ────────────────────────────────────────────────
+// Admin API
 
 function api_admin_announcements_list(): void
 {
@@ -98,15 +96,11 @@ function api_admin_announcement_toggle(int $id): void
     json_response(['success' => true]);
 }
 
-// ── Public API (for dashboards to fetch active banners) ──────
+// Public API (for dashboards to fetch active banners) 
 
 function api_active_announcements(): void
 {
     $user = auth_user();
     $role = $user['role'] ?? 'patient';
     json_response(['success' => true, 'announcements' => get_active_announcements($role)]);
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> 5353f4c (Final complete work)

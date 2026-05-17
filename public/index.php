@@ -1,6 +1,4 @@
 <?php
-<<<<<<< HEAD
-=======
 date_default_timezone_set('Asia/Kathmandu');
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
@@ -8,7 +6,6 @@ $_sessionPath = realpath(__DIR__ . '/../tmp/sessions');
 if ($_sessionPath && is_dir($_sessionPath)) {
     session_save_path($_sessionPath);
 }
->>>>>>> 6d104ef (Fixed: notification redirection for patient, doctor, admin and lab admin notification system)
 
 session_start();
 
@@ -23,8 +20,9 @@ define('BASE_PREFIX', $base);
 
 require_once BASE_PATH . '/config/database.php';
 
-// Helpers
+// Global helper functions
 
+// Loads a view file from app/views/pages/, exposes $data as local variables, and exits.
 function render($view, $data = []) {
     extract($data);
     $file = BASE_PATH . '/app/views/pages/' . $view . '.php';
@@ -37,6 +35,7 @@ function render($view, $data = []) {
     exit;
 }
 
+// Sends a Location redirect. Prepends BASE_PREFIX when $url starts with '/' for sub-folder deployments.
 function redirect($url) {
     if (substr($url, 0, 1) === '/') {
         $url = BASE_PREFIX . $url;
@@ -45,26 +44,29 @@ function redirect($url) {
     exit;
 }
 
+// Sets the HTTP status, outputs JSON-encoded $data, and exits. Used by every API endpoint.
 function json_response($data, $status = 200) {
+    // Discard any stray output (PHP warnings/notices) that would corrupt JSON
+    while (ob_get_level()) ob_end_clean();
     http_response_code($status);
     header('Content-Type: application/json');
     echo json_encode($data);
     exit;
 }
 
+// Convenience check that compares the current $uri against a given path string.
 function request_is($path) {
     global $uri;
     return $uri === $path;
 }
 
-// ── Controllers ───────────────────────────────────────────────────────────────
-
+// Controllers
 require_once BASE_PATH . '/app/controllers/AuthController.php';
+require_once BASE_PATH . '/app/models/AuditLogModel.php';
+require_once BASE_PATH . '/app/controllers/PaymentController.php';
 require_once BASE_PATH . '/app/controllers/PatientController.php';
 require_once BASE_PATH . '/app/controllers/DoctorController.php';
 require_once BASE_PATH . '/app/controllers/PageController.php';
-<<<<<<< HEAD
-=======
 require_once BASE_PATH . '/app/controllers/AdminController.php';
 require_once BASE_PATH . '/app/controllers/SystemSettingsController.php';
 require_once BASE_PATH . '/app/controllers/ChatbotController.php';
@@ -74,58 +76,30 @@ require_once BASE_PATH . '/app/controllers/DepartmentController.php';
 require_once BASE_PATH . '/app/controllers/SupportTicketController.php';
 require_once BASE_PATH . '/app/controllers/AnnouncementController.php';
 require_once BASE_PATH . '/app/controllers/AppointmentAuditController.php';
->>>>>>> 6d104ef (Fixed: notification redirection for patient, doctor, admin and lab admin notification system)
 
-// ── Routing ───────────────────────────────────────────────────────────────────
-
+// URI normalisation
+// Strip the sub-folder prefix from REQUEST_URI so all routes can be written as root-relative paths.
 $rawUri = rtrim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/') ?: '/';
 $uri    = (BASE_PREFIX !== '' && strpos($rawUri, BASE_PREFIX) === 0)
     ? substr($rawUri, strlen(BASE_PREFIX))
     : $rawUri;
-
-// Support direct front-controller access when .htaccess rewrite is unavailable.
-if (strpos($uri, '/index.php') === 0) {
-    $uri = substr($uri, strlen('/index.php'));
-}
-
-if (isset($_GET['route']) && trim($_GET['route'], '/') !== '') {
-    $uri = '/' . trim($_GET['route'], '/');
-}
-
-$uri = $uri === '' ? '/' : $uri;
+$uri    = $uri === '' ? '/' : $uri;
 $method = $_SERVER['REQUEST_METHOD'];
 
-// Home — show about/home page by default
+
+// Public pages
 if ($uri === '/')                              { about_page(); }
 if ($uri === '/about'   && $method === 'GET') { about_page(); }
 if ($uri === '/contact' && $method === 'GET') { contact_page(); }
-if ($uri === '/admin'   && $method === 'GET') { admin_page(); }
-if ($uri === '/403'     && $method === 'GET') { http_response_code(403); render('403', ['user' => auth_user()]); }
 
-// Auth
-if ($uri === '/login'  && $method === 'GET')  { login_get();    }
-if ($uri === '/login'  && $method === 'POST') { login_post();   }
-if ($uri === '/signup' && $method === 'GET')  { signup_get();   }
-if ($uri === '/signup' && $method === 'POST') { signup_post();  }
-if ($uri === '/logout' && $method === 'GET')  { logout();       }
 
-// Patient pages
-if ($uri === '/categories'      && $method === 'GET')  { categories_page();      }
-if ($uri === '/dashboard'       && $method === 'GET')  { dashboard_page();       }
-if ($uri === '/profile'         && $method === 'GET')  { profile_page();         }
-if ($uri === '/booking/confirm' && $method === 'GET')  { booking_confirm_page(); }
-if (preg_match('#^/doctors/(\d+)$#', $uri, $m) && $method === 'GET') { doctor_booking_page((int)$m[1]); }
-if (preg_match('#^/appointments/(\d+)/reschedule$#', $uri, $m) && $method === 'GET') { reschedule_page((int)$m[1]); }
-if (preg_match('#^/chat/(\d+)$#', $uri, $m) && $method === 'GET') { chat_page((int)$m[1]); }
+// Authentication
+if ($uri === '/login'  && $method === 'GET')  { login_get();   }
+if ($uri === '/login'  && $method === 'POST') { login_post();  }
+if ($uri === '/signup' && $method === 'GET')  { signup_get();  }
+if ($uri === '/signup' && $method === 'POST') { signup_post(); }
+if ($uri === '/logout' && $method === 'GET')  { logout();      }
 
-<<<<<<< HEAD
-// Doctor portal pages
-if ($uri === '/doctor/dashboard'    && $method === 'GET') { doctor_dashboard_page();    }
-if ($uri === '/doctor/schedule'     && $method === 'GET') { doctor_schedule_page();     }
-if ($uri === '/doctor/patients'     && $method === 'GET') { doctor_patients_page();     }
-if ($uri === '/doctor/availability' && $method === 'GET') { doctor_availability_page(); }
-if ($uri === '/doctor/profile'      && $method === 'GET') { doctor_profile_page();      }
-=======
 // Signup email OTP verification
 if ($uri === '/signup/verify-email' && $method === 'GET')  { signup_verify_email_get();  }
 if ($uri === '/signup/verify-email' && $method === 'POST') { signup_verify_email_post(); }
@@ -137,53 +111,41 @@ if ($uri === '/forgot-password' && $method === 'POST') { forgot_password_post();
 if ($uri === '/reset-password'  && $method === 'GET')  { reset_password_get();   }
 if ($uri === '/reset-password'  && $method === 'POST') { reset_password_post();  }
 
-
-
-
 // Patient portal — pages
 if ($uri === '/categories'      && $method === 'GET') { categories_page();      }
 if ($uri === '/dashboard'       && $method === 'GET') { dashboard_page();       }
 if ($uri === '/profile'         && $method === 'GET') { profile_page();         }
 if ($uri === '/booking/confirm' && $method === 'GET') { booking_confirm_page(); }
->>>>>>> 6d104ef (Fixed: notification redirection for patient, doctor, admin and lab admin notification system)
 
-// Doctor chat page
-if (preg_match('#^/doctor/chat/(\d+)$#', $uri, $m) && $method === 'GET') { doctor_chat_page((int)$m[1]); }
+// Doctor id captured from URL to render that specific doctor's booking page.
+if (preg_match('#^/doctors/(\d+)$#', $uri, $m) && $method === 'GET') {
+    doctor_booking_page((int)$m[1]);
+}
 
-// Doctor API routes (/doctor/api/*)
-if ($uri === '/doctor/api/appointments'       && $method === 'GET')                { api_doctor_appointments();       }
-if ($uri === '/doctor/api/stats'              && $method === 'GET')                { api_doctor_stats();              }
-if ($uri === '/doctor/api/appointment-detail' && $method === 'GET')                { api_doctor_appointment_detail(); }
-if ($uri === '/doctor/api/update-status'      && $method === 'POST')               { api_doctor_update_status();      }
-if ($uri === '/doctor/api/availability'       && in_array($method, ['GET','POST'])) { api_doctor_availability();       }
-if ($uri === '/doctor/api/profile'            && in_array($method, ['GET','POST'])) { api_doctor_profile();            }
-if ($uri === '/doctor/api/patients'           && $method === 'GET')                { api_doctor_patients();           }
-if ($uri === '/doctor/api/comment'            && $method === 'POST')               { api_doctor_comment();            }
-if ($uri === '/doctor/api/slots'              && $method === 'GET')                { api_doctor_slots();              }
-if (preg_match('#^/doctor/api/messages/(\d+)$#', $uri, $m) && $method === 'GET')  { api_doctor_get_messages((int)$m[1]); }
-if (preg_match('#^/doctor/api/messages/(\d+)$#', $uri, $m) && $method === 'POST') { api_doctor_send_message((int)$m[1]); }
+// Appointment id captured to load the correct appointment for rescheduling.
+if (preg_match('#^/appointments/(\d+)/reschedule$#', $uri, $m) && $method === 'GET') {
+    reschedule_page((int)$m[1]);
+}
 
-// API routes
-if ($uri === '/api/categories'        && $method === 'GET')  { api_get_categories();  }
-if ($uri === '/api/slots'             && $method === 'GET')  { api_get_slots();        }
-if ($uri === '/api/doctors'           && $method === 'GET')  { api_get_doctors();      }
-if ($uri === '/api/appointments'      && $method === 'POST') { api_book_appointment(); }
-if ($uri === '/api/profile'           && $method === 'POST') { api_update_profile();   }
-if ($uri === '/api/settings/password' && $method === 'POST') { api_change_password();  }
+// Streams the lab-report file after verifying the requesting patient owns the appointment.
+if (preg_match('#^/lab-report/(\d+)$#', $uri, $m) && $method === 'GET') {
+    lab_report_download((int)$m[1]);
+}
 
-if (preg_match('#^/api/appointments/(\d+)/cancel$#',     $uri, $m) && $method === 'PATCH') { api_cancel_appointment((int)$m[1]);     }
-if (preg_match('#^/api/appointments/(\d+)/reschedule$#', $uri, $m) && $method === 'POST')  { api_reschedule_appointment((int)$m[1]); }
-if (preg_match('#^/api/appointments/(\d+)/comments$#',   $uri, $m) && $method === 'GET')   { api_get_comments((int)$m[1]);           }
-if (preg_match('#^/api/appointments/(\d+)/comments$#',   $uri, $m) && $method === 'POST')  { api_post_comment((int)$m[1]);            }
-if (preg_match('#^/api/appointments/(\d+)$#',            $uri, $m) && $method === 'GET')   { api_get_appointment_detail((int)$m[1]); }
-if ($uri === '/api/patient/appointments'                 && $method === 'GET') { api_patient_appointments(); }
+// Patient portal — API
+if ($uri === '/api/categories'           && $method === 'GET')  { api_get_categories();       }
+if ($uri === '/api/slots'                && $method === 'GET')  { api_get_slots();            }
+if ($uri === '/api/doctors'              && $method === 'GET')  { api_get_doctors();          }
+if ($uri === '/api/appointments'         && $method === 'POST') { api_book_appointment();     }
+if ($uri === '/api/profile'              && $method === 'POST') { api_update_profile();       }
+if ($uri === '/api/settings/password'    && $method === 'POST') { api_change_password();      }
+if ($uri === '/api/patient/appointments' && $method === 'GET')  { api_patient_appointments(); }
 
-if (preg_match('#^/api/messages/(\d+)$#', $uri, $m) && $method === 'GET')  { api_get_messages((int)$m[1]); }
-if (preg_match('#^/api/messages/(\d+)$#', $uri, $m) && $method === 'POST') { api_send_message((int)$m[1]); }
+// PATCH so only the status field is modified, not the whole appointment resource.
+if (preg_match('#^/api/appointments/(\d+)/cancel$#',     $uri, $m) && $method === 'PATCH') {
+    api_cancel_appointment((int)$m[1]);
+}
 
-<<<<<<< HEAD
-// 404
-=======
 // POST because rescheduling selects an entirely new slot, not a partial field update.
 if (preg_match('#^/api/appointments/(\d+)/reschedule$#', $uri, $m) && $method === 'POST') {
     api_reschedule_appointment((int)$m[1]);
@@ -282,7 +244,7 @@ if ($uri === '/lab-admin/api/appointment-by-id'    && $method === 'GET')  { api_
 if ($uri === '/lab-admin/notifications'            && $method === 'GET')  { lab_admin_notifications_page();       }
 
 
-// ── Admin: Department API (Dev2) ──────────────────────────────────────────────
+//  Admin: Department API (Dev2) 
 if ($uri === '/admin/api/departments'           && $method === 'GET')    { api_admin_departments_list();        }
 if ($uri === '/admin/api/departments'           && $method === 'POST')   { api_admin_department_create();       }
 if ($uri === '/admin/api/specializations'       && $method === 'GET')    { api_admin_specializations_list();    }
@@ -292,17 +254,17 @@ if (preg_match('#^/admin/api/departments/(\d+)$#',     $uri, $m) && $method === 
 if (preg_match('#^/admin/api/specializations/(\d+)$#', $uri, $m) && $method === 'PUT')    { api_admin_specialization_update((int)$m[1]); }
 if (preg_match('#^/admin/api/specializations/(\d+)$#', $uri, $m) && $method === 'DELETE') { api_admin_specialization_delete((int)$m[1]); }
 
-// ── Admin: Support Ticket API (Dev2) ─────────────────────────────────────────
+//  Admin: Support Ticket API (Dev2) 
 if ($uri === '/admin/api/support-tickets'                    && $method === 'GET')   { api_admin_support_tickets();                }
 if (preg_match('#^/admin/api/support-tickets/(\d+)$#', $uri, $m) && $method === 'GET')   { api_admin_support_ticket_detail((int)$m[1]); }
 if (preg_match('#^/admin/api/support-tickets/(\d+)$#', $uri, $m) && $method === 'PATCH') { api_admin_support_ticket_update((int)$m[1]); }
 
-// ── Admin: Appointment Audit API (Dev2) ──────────────────────────────────────
+//  Admin: Appointment Audit API (Dev2) 
 if ($uri === '/admin/api/appointments'         && $method === 'GET')  { api_admin_appointments_list(); }
 if ($uri === '/admin/api/appointments/doctors' && $method === 'GET')  { api_admin_doctors_list();      }
 if (preg_match('#^/admin/api/appointments/(\d+)/cancel$#', $uri, $m) && $method === 'POST') { api_admin_cancel_appointment((int)$m[1]); }
 
-// ── Admin: Announcement API (Dev2) ───────────────────────────────────────────
+//  Admin: Announcement API (Dev2) 
 if ($uri === '/admin/api/announcements'        && $method === 'GET')  { api_admin_announcements_list();  }
 if ($uri === '/admin/api/announcements'        && $method === 'POST') { api_admin_announcement_create(); }
 if (preg_match('#^/admin/api/announcements/(\d+)$#',        $uri, $m) && $method === 'PUT')    { api_admin_announcement_update((int)$m[1]); }
@@ -310,11 +272,10 @@ if (preg_match('#^/admin/api/announcements/(\d+)$#',        $uri, $m) && $method
 if (preg_match('#^/admin/api/announcements/(\d+)/toggle$#', $uri, $m) && $method === 'POST')   { api_admin_announcement_toggle((int)$m[1]); }
 if ($uri === '/api/announcements/active'       && $method === 'GET')  { api_active_announcements();      }
 
-// ── Patient: Support Ticket API (Dev2) ───────────────────────────────────────
+//  Patient: Support Ticket API (Dev2) 
 if ($uri === '/api/support-tickets' && $method === 'POST') { api_patient_submit_ticket(); }
 if ($uri === '/api/support-tickets' && $method === 'GET')  { api_patient_tickets();       }
 
 // 404 fallback
->>>>>>> 6d104ef (Fixed: notification redirection for patient, doctor, admin and lab admin notification system)
 http_response_code(404);
 echo '<h1>404 Not Found</h1>';

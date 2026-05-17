@@ -3,7 +3,7 @@ $title = 'Booking Confirmed';
 
 $extra_styles = <<<CSS
 <style>
-/* ── Screen styles ── */
+/*  Screen styles  */
 .confirm-wrap {
     min-height: calc(100vh - 60px - 64px);
     display: flex; align-items: flex-start; justify-content: center;
@@ -65,12 +65,12 @@ $extra_styles = <<<CSS
     .invoice-actions{flex-direction:column}
 }
 
-/* ════════════════════════════════════════════════════
+/* 
    PRINT / PDF  —  strict black & white, one page
    Strategy: hide the entire page, then un-hide only
    the invoice card using a fixed-position overlay.
    This avoids fighting the layout's wrapper divs.
-   ════════════════════════════════════════════════════ */
+    */
 @media print {
     /* 1. Silence absolutely everything */
     * {

@@ -1,14 +1,12 @@
 <?php
 
-// ============================================================
-//  AppointmentAuditController.php — D2-02
+//  AppointmentAuditController.php
 //  Admin: View and Cancel Appointments
-// ============================================================
 
 require_once BASE_PATH . '/app/models/AppointmentModel.php';
 require_once BASE_PATH . '/app/models/NotificationModel.php';
 
-// ── Admin Page ───────────────────────────────────────────────
+// Admin Page
 
 function admin_appointments_page(): void
 {
@@ -16,7 +14,7 @@ function admin_appointments_page(): void
     render('admin/appointments', ['user' => $user]);
 }
 
-// ── Admin API: List appointments with filters ────────────────
+// Admin API: List appointments with filters
 
 function api_admin_appointments_list(): void
 {
@@ -111,7 +109,7 @@ function api_admin_appointments_list(): void
     ]);
 }
 
-// ── Admin API: Get list of doctors (for filter dropdown) ─────
+// Admin API: Get list of doctors (for filter dropdown)
 
 function api_admin_doctors_list(): void
 {
@@ -126,7 +124,7 @@ function api_admin_doctors_list(): void
     json_response(['success' => true, 'doctors' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
 }
 
-// ── Admin API: Cancel appointment with reason ────────────────
+// Admin API: Cancel appointment with reason
 
 function api_admin_cancel_appointment(int $id): void
 {
@@ -202,8 +200,4 @@ function api_admin_cancel_appointment(int $id): void
     );
 
     json_response(['success' => true]);
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> 5353f4c (Final complete work)

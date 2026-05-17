@@ -53,11 +53,7 @@ ob_start();
     <div class="view-header" style="justify-content:space-between;">
         <div class="greeting">
             <h1>My Schedule</h1>
-<<<<<<< HEAD
-            <p>View your schedule by date</p>
-=======
             <p>Click an appointment to view details</p>
->>>>>>> 6d104ef (Fixed: notification redirection for patient, doctor, admin and lab admin notification system)
         </div>
         <div style="margin-right: 24px;">
             <input type="date" id="schedule-date-picker"
@@ -72,8 +68,6 @@ ob_start();
     </div>
 </div>
 
-<<<<<<< HEAD
-=======
 <!-- Side panel -->
 <div id="scheduleSidePanel" class="schedule-side-panel">
     <div class="ssp-header">
@@ -89,11 +83,10 @@ ob_start();
 </div>
 <div id="sspOverlay" onclick="closeSsp()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:499;"></div>
 
->>>>>>> 6d104ef (Fixed: notification redirection for patient, doctor, admin and lab admin notification system)
 <?php
 $content = ob_get_clean();
 
-$extra_scripts = <<<JS
+$extra_scripts = <<<'JS'
 <script>
 function loadScheduleAppointments() {
     const date = document.getElementById('schedule-date-picker').value;
@@ -110,11 +103,7 @@ function loadScheduleAppointments() {
             list.innerHTML = d.appointments.map(a => {
                 const badgeClass = a.status === 'Confirmed' ? 'badge-confirmed' : 'badge-pending';
                 const reason = a.visit_reason || 'General consultation';
-<<<<<<< HEAD
-                return '<div class="appointment-item" style="cursor:default;">'
-=======
                 return '<div class="appointment-item appt-clickable" onclick="openSsp(' + a.id + ',\'' + escHtml(a.patient_name) + '\',\'' + a.time + '\',\'' + a.status + '\')">'
->>>>>>> 6d104ef (Fixed: notification redirection for patient, doctor, admin and lab admin notification system)
                     + '<div class="appt-time">' + a.time + '</div>'
                     + '<div class="appt-details">'
                     + '<div class="appt-icon"><i class="fas fa-user"></i></div>'
@@ -122,14 +111,9 @@ function loadScheduleAppointments() {
                     + '<h4>' + escHtml(a.patient_name) + '</h4>'
                     + '<p>' + escHtml(reason) + ' &middot; ' + a.duration_minutes + ' min</p>'
                     + '</div></div>'
-                    + '<div class="appt-actions">'
+                    + '<div class="appt-actions" style="gap:8px;">'
                     + '<span class="badge ' + badgeClass + '">' + escHtml(a.status) + '</span>'
-<<<<<<< HEAD
-                    + '<a href="' + BASE_URL + '/doctor/chat/' + a.id + '" class="btn-sm btn-accept" style="text-decoration:none;">'
-                    + '<i class="fas fa-comment-dots"></i> Chat</a>'
-=======
                     + '<span style="font-size:12px;color:var(--muted);"><i class="fa fa-chevron-right"></i></span>'
->>>>>>> 6d104ef (Fixed: notification redirection for patient, doctor, admin and lab admin notification system)
                     + '</div>'
                     + '</div>';
             }).join('');
@@ -146,9 +130,6 @@ function openSsp(apptId, patientName, time, status) {
     document.getElementById('scheduleSidePanel').classList.add('open');
     document.getElementById('sspOverlay').style.display = 'block';
 
-<<<<<<< HEAD
-loadScheduleAppointments();
-=======
     fetch(BASE_URL + '/doctor/api/appointment-detail?id=' + apptId)
         .then(r => r.json())
         .then(d => {
@@ -256,7 +237,6 @@ function fmtDt(s) {
         })
         .catch(function() { loadScheduleAppointments(); });
 })();
->>>>>>> 6d104ef (Fixed: notification redirection for patient, doctor, admin and lab admin notification system)
 </script>
 JS;
 

@@ -180,7 +180,7 @@ $email   = $email   ?? ($_SESSION['signup_pending']['email'] ?? '');
 </div>
 
 <script>
-// ── OTP box helpers ──────────────────────────────────────────────────────────
+// OTP box helpers
 const boxes = Array.from({length: 6}, (_, i) => document.getElementById('otp' + i));
 const combined = document.getElementById('otp-combined');
 
@@ -221,7 +221,7 @@ document.getElementById('otp-form').addEventListener('submit', e => {
 const firstEmpty = boxes.find(b => !b.value);
 if (firstEmpty) firstEmpty.focus();
 
-// ── Resend cooldown ──────────────────────────────────────────────────────────
+// Resend cooldown
 const resendBtn   = document.getElementById('resend-btn');
 const resendTimer = document.getElementById('resend-timer');
 let cooldown = 60;

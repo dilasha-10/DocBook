@@ -2,11 +2,9 @@
 
 require_once BASE_PATH . '/config/database.php';
 
-// ════════════════════════════════════════════════════════════
 //  NotificationModel — core helpers for the notification system
-// ════════════════════════════════════════════════════════════
 
-// ── Low-level insert ─────────────────────────────────────────
+// Low-level insert
 
 /**
  * Insert a single notification row.
@@ -39,12 +37,12 @@ function notification_insert(
     return (int) $pdo->lastInsertId();
 }
 
-// ── Appointment-triggered notifications ──────────────────────
+// Appointment-triggered notifications
 
 /**
  * Called when a patient successfully books an appointment.
- * → Sends a notification to the doctor.
- * → Sends a confirmation notification to the patient.
+ *  Sends a notification to the doctor.
+ *  Sends a confirmation notification to the patient.
  */
 function notify_appointment_booked(array $appointment, array $patient, array $doctor): void
 {
@@ -117,8 +115,8 @@ function notify_appointment_confirmed(array $appointment, array $patient, array 
 
 /**
  * Called when a lab admin uploads a report for an appointment.
- * → Notifies the patient that their report is ready.
- * → Notifies the doctor that a report has been uploaded for their patient.
+ * Notifies the patient that their report is ready.
+ * Notifies the doctor that a report has been uploaded for their patient.
  */
 function notify_lab_report_uploaded(array $appointment, array $patient, array $doctor, string $labAdminName): void
 {
@@ -148,7 +146,7 @@ function notify_lab_report_uploaded(array $appointment, array $patient, array $d
     );
 }
 
-// ── Admin broadcast notifications ────────────────────────────
+// Admin broadcast notifications
 
 /**
  * Send a system-wide broadcast.
@@ -214,7 +212,7 @@ function notify_targeted(int $sender_id, int $recipient_id, string $title, strin
     );
 }
 
-// ── Fetch notifications for a user ───────────────────────────
+// Fetch notifications for a user
 
 /**
  * Get paginated notifications for a given user.
@@ -271,7 +269,7 @@ function notifications_mark_all_read(int $user_id): int
     return $stmt->rowCount();
 }
 
-// ── Admin analytics ──────────────────────────────────────────
+// Admin analytics
 
 /**
  * Get all broadcasts with delivery stats.

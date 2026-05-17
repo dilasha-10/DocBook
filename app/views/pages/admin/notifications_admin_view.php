@@ -3,7 +3,7 @@ $title = 'Notification Centre';
 
 $extra_styles = <<<CSS
 <style>
-/* ── Wrap ── */
+/* Wrap */
 .notif-wrap {
     padding: 28px 24px 60px;
     max-width: 1120px;
@@ -17,7 +17,7 @@ $extra_styles = <<<CSS
 .page-title    { font-size: 22px; font-weight: 800; color: var(--text); margin: 0; }
 .page-subtitle { font-size: 13px; color: var(--muted); margin: 4px 0 0; }
 
-/* ── Tab bar ── */
+/* Tab bar */
 .tab-bar {
     display: flex; gap: 6px;
     border-bottom: 2px solid var(--border);
@@ -33,14 +33,14 @@ $extra_styles = <<<CSS
 .tab-btn:hover  { color: var(--text); }
 .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
 
-/* ── Cards ── */
+/* Cards */
 .card {
     background: var(--surface); border: 1px solid var(--border);
     border-radius: 14px; padding: 24px 26px; margin-bottom: 20px;
 }
 .card-title { font-size: 15px; font-weight: 800; color: var(--text); margin: 0 0 18px; }
 
-/* ── Maintenance quick-send tiles ── */
+/* Maintenance quick-send tiles */
 .maint-grid {
     display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     gap: 12px; margin-bottom: 24px;
@@ -69,7 +69,7 @@ $extra_styles = <<<CSS
 
 .divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
 
-/* ── Form rows ── */
+/* Form rows */
 .form-row      { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
 .form-row.full { grid-template-columns: 1fr; }
 @media (max-width: 620px) { .form-row { grid-template-columns: 1fr; } }
@@ -91,7 +91,7 @@ $extra_styles = <<<CSS
 }
 .form-textarea { resize: vertical; min-height: 100px; }
 
-/* ── Role checkboxes ── */
+/* Role checkboxes */
 .role-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
 .role-chip  {
     display: flex; align-items: center; gap: 6px;
@@ -108,7 +108,7 @@ $extra_styles = <<<CSS
 }
 .role-chip i { font-size: 12px; }
 
-/* ── User search autocomplete ── */
+/* User search autocomplete */
 .search-wrapper { position: relative; }
 .user-dropdown  {
     position: absolute; z-index: 200; top: calc(100% + 4px); left: 0; right: 0;
@@ -142,7 +142,7 @@ $extra_styles = <<<CSS
     background: none; border: none; color: var(--muted); cursor: pointer; font-size: 14px; padding: 2px;
 }
 
-/* ── Buttons ── */
+/* Buttons */
 .btn-send {
     display: inline-flex; align-items: center; gap: 8px;
     padding: 11px 22px; border: none; border-radius: 9px;
@@ -158,7 +158,7 @@ $extra_styles = <<<CSS
     background: #f59e0b;
 }
 
-/* ── Toast ── */
+/* Toast */
 .toast-stack {
     position: fixed; bottom: 24px; right: 24px; z-index: 9999;
     display: flex; flex-direction: column; gap: 8px; pointer-events: none;
@@ -172,7 +172,7 @@ $extra_styles = <<<CSS
 .toast.error   { background: #ef4444; color: #fff; }
 @keyframes slideUp { from { opacity:0; transform: translateY(12px); } to { opacity:1; transform: translateY(0); } }
 
-/* ── History table ── */
+/* History table */
 .history-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .history-table th {
     text-align: left; padding: 10px 12px;
@@ -242,7 +242,7 @@ ob_start();
         </button>
     </div>
 
-    <!-- ── TAB: MAINTENANCE ── -->
+    <!-- TAB: MAINTENANCE -->
     <div id="tab-maintenance" class="tab-panel">
         <div class="card">
             <p class="card-title">Send Maintenance Notification</p>
@@ -322,7 +322,7 @@ ob_start();
         </div>
     </div>
 
-    <!-- ── TAB: BROADCAST ── -->
+    <!-- TAB: BROADCAST -->
     <div id="tab-broadcast" class="tab-panel" style="display:none;">
         <div class="card">
             <p class="card-title">Send System-Wide Notification</p>
@@ -372,7 +372,7 @@ ob_start();
         </div>
     </div>
 
-    <!-- ── TAB: TARGETED ── -->
+    <!-- TAB: TARGETED -->
     <div id="tab-targeted" class="tab-panel" style="display:none;">
         <div class="card">
             <p class="card-title">Send Notification to a Specific User</p>
@@ -410,7 +410,7 @@ ob_start();
         </div>
     </div>
 
-    <!-- ── TAB: HISTORY ── -->
+    <!-- TAB: HISTORY -->
     <div id="tab-history" class="tab-panel" style="display:none;">
         <div class="card" style="padding:0;overflow:hidden;">
             <div style="padding:20px 24px 0;display:flex;align-items:center;justify-content:space-between;">
@@ -433,7 +433,7 @@ ob_start();
 <script>
 const BASE = window.BASE_URL || '';
 
-// ── Tabs ─────────────────────────────────────────────────────
+// Tabs
 document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -445,7 +445,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     });
 });
 
-// ── Maintenance tile selection ────────────────────────────────
+// Maintenance tile selection
 document.querySelectorAll('.maint-tile').forEach(tile => {
     tile.addEventListener('click', () => {
         document.querySelectorAll('.maint-tile').forEach(t => t.classList.remove('selected'));
@@ -502,7 +502,7 @@ document.querySelectorAll('input[name="bc-role"]:not(#role-all)').forEach(cb => 
     });
 });
 
-// ── Toast ─────────────────────────────────────────────────────
+// Toast
 function showToast(msg, type = 'success') {
     const stack = document.getElementById('toast-stack');
     const t = document.createElement('div');
@@ -512,7 +512,7 @@ function showToast(msg, type = 'success') {
     setTimeout(() => t.remove(), 4000);
 }
 
-// ── Maintenance send ──────────────────────────────────────────
+// Maintenance send
 async function sendMaintenance() {
     const title = document.getElementById('maint-title').value.trim();
     const msg   = document.getElementById('maint-message').value.trim();
@@ -556,7 +556,7 @@ async function sendMaintenance() {
     }
 }
 
-// ── Broadcast send ────────────────────────────────────────────
+// Broadcast send
 async function sendBroadcast() {
     const title = document.getElementById('bc-title').value.trim();
     const msg   = document.getElementById('bc-message').value.trim();
@@ -594,7 +594,7 @@ async function sendBroadcast() {
     }
 }
 
-// ── Targeted: user search ─────────────────────────────────────
+// Targeted: user search
 let searchTimer    = null;
 let selectedUserId = null;
 
@@ -662,7 +662,7 @@ function clearSelectedUser() {
     document.getElementById('user-search').value = '';
 }
 
-// ── Targeted send ─────────────────────────────────────────────
+// Targeted send
 async function sendTargeted() {
     const uid   = selectedUserId;
     const title = document.getElementById('tg-title').value.trim();
@@ -699,7 +699,7 @@ async function sendTargeted() {
     }
 }
 
-// ── History load ──────────────────────────────────────────────
+// History load
 async function loadHistory() {
     const container = document.getElementById('history-container');
     container.innerHTML = '<div class="empty-state"><i class="fa fa-rotate fa-spin"></i><p>Loading…</p></div>';

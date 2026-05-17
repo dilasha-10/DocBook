@@ -5,7 +5,7 @@ ob_start();
 
 $extra_styles = <<<CSS
 <style>
-/* ── Page wrap ── */
+/* Page wrap */
 .audit-wrap {
     padding: 28px 24px 60px;
     max-width: 1200px;
@@ -19,7 +19,7 @@ $extra_styles = <<<CSS
 .page-title    { font-size: 22px; font-weight: 800; color: var(--text); margin: 0; }
 .page-subtitle { font-size: 13px; color: var(--muted); margin: 4px 0 0; }
 
-/* ── Summary strip ── */
+/* Summary strip */
 .audit-summary {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -46,7 +46,7 @@ $extra_styles = <<<CSS
     font-size: 12px; color: var(--muted); margin-top: 4px;
 }
 
-/* ── Filter bar ── */
+/* Filter bar */
 .filter-bar {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -73,7 +73,7 @@ $extra_styles = <<<CSS
 .filter-input:focus, .filter-select:focus { border-color: var(--primary); }
 .filter-actions { display: flex; gap: 8px; align-items: flex-end; }
 
-/* ── Buttons ── */
+/* Buttons */
 .btn {
     height: 36px; padding: 0 16px;
     border-radius: 8px; border: none; cursor: pointer;
@@ -89,7 +89,7 @@ $extra_styles = <<<CSS
 .btn-export   { background: #16a34a; color: #fff; }
 .btn-export:hover:not(:disabled) { opacity: .88; }
 
-/* ── Table card ── */
+/* Table card */
 .table-card {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -125,7 +125,7 @@ table.audit-table {
 .audit-table tr:last-child td { border-bottom: none; }
 .audit-table tr:hover td { background: var(--hover-bg, rgba(0,0,0,.025)); }
 
-/* ── Action badge ── */
+/* Action badge */
 .action-badge {
     display: inline-block;
     padding: 2px 9px; border-radius: 20px;
@@ -139,27 +139,27 @@ table.audit-table {
 .badge-user         { background: #ffe4e6; color: #be123c; }
 .badge-other        { background: var(--border); color: var(--muted); }
 
-/* ── Action label ── */
+/* Action label */
 .action-label { font-weight: 700; font-size: 12px; letter-spacing: .03em; }
 
-/* ── Detail text ── */
+/* Detail text */
 .detail-text { color: var(--muted); font-size: 12px; line-height: 1.4; max-width: 320px; }
 
-/* ── Timestamp ── */
+/* Timestamp */
 .ts { color: var(--muted); font-size: 12px; white-space: nowrap; }
 
-/* ── User cell ── */
+/* User cell */
 .user-cell-name { font-weight: 700; }
 .user-cell-role { font-size: 11px; color: var(--muted); margin-top: 2px; }
 
-/* ── Empty / loading ── */
+/* Empty / loading */
 .table-state {
     text-align: center; padding: 48px 20px;
     color: var(--muted); font-size: 14px;
 }
 .table-state i { font-size: 28px; display: block; margin-bottom: 10px; opacity: .4; }
 
-/* ── Pagination ── */
+/* Pagination */
 .pagination {
     display: flex; align-items: center; justify-content: space-between;
     padding: 12px 20px; border-top: 1px solid var(--border);
@@ -317,10 +317,10 @@ $extra_scripts = <<<JS
 <script>
 (function () {
 
-    /* ── State ── */
+    /* State */
     var state = { page: 1, perPage: 50, total: 0, totalPages: 1 };
 
-    /* ── DOM refs ── */
+    /* DOM refs */
     var filterFrom   = document.getElementById('filterDateFrom');
     var filterTo     = document.getElementById('filterDateTo');
     var filterGroup  = document.getElementById('filterGroup');
@@ -337,7 +337,7 @@ $extra_scripts = <<<JS
     var pageInfo     = document.getElementById('pageInfo');
     var pageBtns     = document.getElementById('pageBtns');
 
-    /* ── Badge styling ── */
+    /* Badge styling */
     var groupClass = {
         auth:         'badge-auth',
         notification: 'badge-notification',
@@ -346,7 +346,7 @@ $extra_scripts = <<<JS
         user:         'badge-user',
     };
 
-    /* ── Load filter options once ── */
+    /* Load filter options once */
     fetch(BASE_URL + '/admin/api/audit-trail/filters')
         .then(function(r){ return r.json(); })
         .then(function(data){
@@ -369,7 +369,7 @@ $extra_scripts = <<<JS
             });
         });
 
-    /* ── Build URL params ── */
+    /* Build URL params */
     function buildParams(page) {
         var p = new URLSearchParams();
         if (filterFrom.value)   p.set('date_from',    filterFrom.value);
@@ -383,7 +383,7 @@ $extra_scripts = <<<JS
         return p;
     }
 
-    /* ── Load data ── */
+    /* Load data */
     function load(page) {
         page = page || 1;
         state.page = page;
@@ -455,7 +455,7 @@ $extra_scripts = <<<JS
             });
     }
 
-    /* ── Pagination ── */
+    /* Pagination */
     function renderPagination() {
         if (state.totalPages <= 1) { paginationBar.style.display = 'none'; return; }
 
@@ -500,13 +500,13 @@ $extra_scripts = <<<JS
         if (next) next.addEventListener('click', function() { if (state.page < state.totalPages) load(state.page + 1); });
     }
 
-    /* ── Export CSV ── */
+    /* Export CSV */
     document.getElementById('btnExport').addEventListener('click', function() {
         var url = BASE_URL + '/admin/api/audit-trail/export?' + buildParams(1).toString();
         window.location.href = url;
     });
 
-    /* ── Filter controls ── */
+    /* Filter controls */
     document.getElementById('btnApply').addEventListener('click', function() { load(1); });
     document.getElementById('btnReset').addEventListener('click', function() {
         filterFrom.value   = '';
@@ -519,7 +519,7 @@ $extra_scripts = <<<JS
     });
     filterSearch.addEventListener('keydown', function(e) { if (e.key === 'Enter') load(1); });
 
-    /* ── HTML escape helper ── */
+    /* HTML escape helper */
     function esc(s) {
         if (s == null) return '';
         return String(s)
@@ -529,7 +529,7 @@ $extra_scripts = <<<JS
             .replace(/"/g,'&quot;');
     }
 
-    /* ── Initial load ── */
+    /* Initial load */
     load(1);
 
 })();

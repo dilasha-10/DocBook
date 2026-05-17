@@ -7,7 +7,7 @@ if (!isset($user) || ($user['role'] ?? '') !== 'patient') return;
 
 <!-- CHATBOT FLOATING WIDGET -->
 <style>
-/* ── Launcher button ── */
+/*  Launcher button  */
 #cbLauncher {
     position: fixed;
     bottom: 28px;
@@ -50,7 +50,7 @@ if (!isset($user) || ($user['role'] ?? '') !== 'patient') return;
 }
 #cbBadge.visible { display: flex; }
 
-/* ── Chat window ── */
+/*  Chat window  */
 #cbWindow {
     position: fixed;
     bottom: 92px;

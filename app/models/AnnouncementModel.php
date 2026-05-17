@@ -1,9 +1,7 @@
 <?php
 
-// ============================================================
 //  AnnouncementModel.php
 //  CRUD for system-wide announcements (D2-03).
-// ============================================================
 
 require_once __DIR__ . '/../../config/database.php';
 
@@ -136,8 +134,4 @@ function toggle_announcement(int $id): bool
     $stmt = $pdo->prepare("UPDATE announcements SET is_active = NOT is_active WHERE id = ?");
     $stmt->execute([$id]);
     return $stmt->rowCount() > 0;
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> 5353f4c (Final complete work)

@@ -1,38 +1,3 @@
-<?php
-$role = $user['role'] ?? 'guest';
-$isAdmin = $role === 'admin';
-$isDoctor = $role === 'doctor';
-$isPatient = $role === 'patient' || $role === 'guest';
-
-$navLinks = [];
-if ($isAdmin) {
-    $navLinks = [
-        ['href' => '/admin', 'label' => 'Dashboard'],
-        ['href' => '/about', 'label' => 'About'],
-        ['href' => '/contact', 'label' => 'Contact'],
-    ];
-} elseif ($isDoctor) {
-    $navLinks = [
-        ['href' => '/doctor/dashboard', 'label' => 'Dashboard'],
-        ['href' => '/doctor/schedule', 'label' => 'Schedule'],
-        ['href' => '/doctor/patients', 'label' => 'Patients'],
-    ];
-} else {
-    $navLinks = [
-        ['href' => '/about', 'label' => 'About'],
-        ['href' => '/dashboard', 'label' => 'My Appointments'],
-        ['href' => '/categories', 'label' => 'Find Doctors'],
-        ['href' => '/contact', 'label' => 'Contact'],
-    ];
-}
-
-$userHome = '/dashboard';
-if ($isAdmin) {
-    $userHome = '/admin';
-} elseif ($isDoctor) {
-    $userHome = '/doctor/dashboard';
-}
-?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -53,12 +18,196 @@ if ($isAdmin) {
             }
         })();
     </script>
+    <style>
+    /* Notification Bell */
+    .notif-bell-btn {
+        position: relative;
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: var(--muted);
+        font-size: 17px;
+        padding: 6px 8px;
+        border-radius: 8px;
+        transition: color .15s, background .15s;
+        display: flex;
+        align-items: center;
+    }
+    .notif-bell-btn:hover { color: var(--text); background: var(--hover-bg, rgba(0,0,0,.06)); }
+    .notif-badge {
+        position: absolute;
+        top: 2px; right: 2px;
+        min-width: 16px; height: 16px;
+        background: #ef4444;
+        color: #fff;
+        font-size: 10px;
+        font-weight: 800;
+        border-radius: 8px;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 0 3px;
+        line-height: 1;
+        pointer-events: none;
+    }
+    .notif-badge.visible { display: flex; }
+
+    /* Notification Dropdown */
+    .notif-dropdown {
+        position: absolute;
+        top: calc(100% + 8px);
+        right: 0;
+        width: 340px;
+        max-height: 420px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        box-shadow: 0 12px 40px rgba(0,0,0,.15);
+        z-index: 9999;
+        display: none;
+        flex-direction: column;
+        overflow: hidden;
+    }
+    .notif-dropdown.open { display: flex; }
+
+    .notif-dropdown-header {
+        padding: 14px 16px 10px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-shrink: 0;
+    }
+    .notif-dropdown-header h4 {
+        font-size: 14px;
+        font-weight: 800;
+        color: var(--text);
+        margin: 0;
+    }
+    .notif-mark-all-btn {
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--primary);
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 3px 6px;
+        border-radius: 5px;
+        transition: background .12s;
+    }
+    .notif-mark-all-btn:hover { background: var(--hover-bg, rgba(0,0,0,.05)); }
+
+    .notif-list {
+        overflow-y: auto;
+        flex: 1;
+    }
+    .notif-item {
+        display: flex;
+        gap: 10px;
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--border);
+        cursor: pointer;
+        transition: background .1s;
+        text-decoration: none;
+    }
+    .notif-item:last-child { border-bottom: none; }
+    .notif-item:hover { background: var(--hover-bg, rgba(0,0,0,.04)); }
+    .notif-item.unread { background: color-mix(in srgb, var(--primary) 6%, transparent); }
+    .notif-item.unread:hover { background: color-mix(in srgb, var(--primary) 10%, transparent); }
+
+    .notif-icon {
+        width: 34px; height: 34px;
+        border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 13px;
+        flex-shrink: 0;
+        margin-top: 1px;
+    }
+    .notif-icon.type-appointment_booked    { background: #d1fae5; color: #065f46; }
+    .notif-icon.type-appointment_cancelled { background: #fee2e2; color: #991b1b; }
+    .notif-icon.type-appointment_confirmed { background: #dbeafe; color: #1e40af; }
+    .notif-icon.type-lab_report_uploaded   { background: #f3e8ff; color: #7e22ce; }
+    .notif-icon.type-system_maintenance    { background: #fef3c7; color: #92400e; }
+    .notif-icon.type-targeted              { background: #ede9fe; color: #5b21b6; }
+
+    .notif-body { flex: 1; min-width: 0; }
+    .notif-title {
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--text);
+        margin-bottom: 2px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .notif-msg {
+        font-size: 12px;
+        color: var(--muted);
+        line-height: 1.4;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+    .notif-time {
+        font-size: 10px;
+        color: var(--hint);
+        margin-top: 4px;
+        white-space: nowrap;
+    }
+    .notif-dot {
+        width: 7px; height: 7px;
+        border-radius: 50%;
+        background: var(--primary);
+        flex-shrink: 0;
+        margin-top: 6px;
+        display: none;
+    }
+    .notif-item.unread .notif-dot { display: block; }
+
+    .notif-empty {
+        padding: 32px 16px;
+        text-align: center;
+        color: var(--muted);
+        font-size: 13px;
+    }
+    .notif-empty i { font-size: 28px; margin-bottom: 8px; display: block; opacity: .35; }
+
+    .notif-dropdown-footer {
+        padding: 10px 16px;
+        border-top: 1px solid var(--border);
+        text-align: center;
+        flex-shrink: 0;
+    }
+    .notif-dropdown-footer a {
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--primary);
+        text-decoration: none;
+    }
+
+    /* Wrapper for bell + dropdown positioning */
+    .notif-wrap-btn {
+        position: relative;
+    }
+
+    /* Sidebar bell link badge */
+    .sidebar-notif-badge {
+        margin-left: auto;
+        background: #ef4444;
+        color: #fff;
+        border-radius: 10px;
+        font-size: 10px;
+        font-weight: 800;
+        padding: 1px 6px;
+        display: none;
+        line-height: 1.4;
+    }
+    .sidebar-notif-badge.visible { display: inline-block; }
+    </style>
 </head>
 <body>
 
-<<<<<<< HEAD
-<!-- ══ TOP NAVBAR ══════════════════════════════════════════ -->
-=======
 <!-- Broadcast Notification Banner -->
 <?php if (isset($user)): ?>
 <div id="broadcastBanner" style="display:none; background:#fef08a; color:#713f12; padding:10px 48px 10px 20px; text-align:center; font-size:14px; font-weight:600; position:relative; z-index:1000; border-bottom:1px solid #fde047;"><i class="fa fa-bullhorn" style="margin-right:8px;opacity:.8;"></i>
@@ -68,10 +217,9 @@ if ($isAdmin) {
 <?php endif; ?>
 
 <!-- TOP NAVBAR -->
->>>>>>> 6d104ef (Fixed: notification redirection for patient, doctor, admin and lab admin notification system)
 <nav class="navbar">
     <div class="navbar-inner">
-        <!-- Sidebar toggle (desktop only — collapses sidebar) -->
+        <!-- Sidebar toggle (desktop only - collapses sidebar) -->
         <button class="sidebar-toggle desktop-only" id="sidebarToggle" aria-label="Toggle sidebar">
             <i class="fa fa-bars"></i>
         </button>
@@ -80,30 +228,44 @@ if ($isAdmin) {
 
         <!-- Desktop nav links -->
         <div class="nav-links">
-<<<<<<< HEAD
-            <?php foreach ($navLinks as $link): ?>
-                <a href="<?= BASE_URL . $link['href'] ?>" class="nav-link <?php echo request_is($link['href']) ? 'active' : ''; ?>">
-                    <?= htmlspecialchars($link['label']) ?>
-                </a>
-            <?php endforeach; ?>
-=======
             <a href="<?= BASE_URL ?>/about"      class="nav-link <?php echo request_is('/about')      ? 'active' : ''; ?>">About</a>
             <?php if (($user['role'] ?? '') !== 'admin'): ?>
             <a href="<?= BASE_URL ?>/dashboard"  class="nav-link <?php echo request_is('/dashboard')  ? 'active' : ''; ?>">My Appointments</a>
             <a href="<?= BASE_URL ?>/categories" class="nav-link <?php echo request_is('/categories') ? 'active' : ''; ?>">Find Doctors</a>
             <?php endif; ?>
             <a href="<?= BASE_URL ?>/contact"    class="nav-link <?php echo request_is('/contact')    ? 'active' : ''; ?>">Contact</a>
->>>>>>> 6d104ef (Fixed: notification redirection for patient, doctor, admin and lab admin notification system)
         </div>
 
         <!-- Right actions (always visible) -->
         <div class="nav-actions">
-            <!-- Theme toggle (single, always in navbar) -->
+            <!-- Theme toggle -->
             <button class="theme-toggle" id="themeToggleBtn" aria-label="Toggle dark mode" title="Toggle dark mode">
                 <i class="fa fa-moon" id="themeIcon"></i>
             </button>
+
             <?php if (isset($user)): ?>
-                <a href="<?= BASE_URL . $userHome ?>" class="user-chip" style="text-decoration:none;cursor:pointer;">
+                <!-- Notification Bell -->
+                <div class="notif-wrap-btn" id="notifWrap">
+                    <button class="notif-bell-btn" id="notifBellBtn" aria-label="Notifications">
+                        <i class="fa fa-bell"></i>
+                        <span class="notif-badge" id="notifBadge"></span>
+                    </button>
+                    <!-- Dropdown -->
+                    <div class="notif-dropdown" id="notifDropdown">
+                        <div class="notif-dropdown-header">
+                            <h4>Notifications</h4>
+                            <button class="notif-mark-all-btn" id="notifMarkAll">Mark all read</button>
+                        </div>
+                        <div class="notif-list" id="notifList">
+                            <div class="notif-empty"><i class="fa fa-bell-slash"></i>No notifications yet</div>
+                        </div>
+                        <div class="notif-dropdown-footer">
+                            <a href="<?= BASE_URL ?>/notifications">View all notifications</a>
+                        </div>
+                    </div>
+                </div>
+
+                <a href="<?= BASE_URL ?>/profile" class="user-chip" style="text-decoration:none;cursor:pointer;">
                     <div class="avatar-circle"><?php echo strtoupper(substr($user['name'] ?? 'U', 0, 2)); ?></div>
                     <span class="user-chip-name"><?php echo htmlspecialchars($user['name'] ?? ''); ?></span>
                 </a>
@@ -113,7 +275,7 @@ if ($isAdmin) {
                 <a href="<?= BASE_URL ?>/signup" class="btn-signup">Sign up</a>
             <?php endif; ?>
 
-            <!-- Hamburger (mobile only — opens nav drawer on RIGHT) -->
+            <!-- Hamburger (mobile only) -->
             <button class="hamburger" id="hamburgerBtn" aria-label="Toggle menu">
                 <span></span><span></span><span></span>
             </button>
@@ -121,14 +283,12 @@ if ($isAdmin) {
     </div>
 </nav>
 
-<!-- ══ PAGE SHELL (sidebar + content) ══════════════════════ -->
+<!-- PAGE SHELL (sidebar + content) -->
 <div class="page-shell">
 
-    <!-- ── SIDEBAR ─────────────────────────────────────────── -->
+    <!-- SIDEBAR -->
     <aside class="sidebar" id="sidebar">
         <nav class="sidebar-nav">
-<<<<<<< HEAD
-=======
             <?php
             $_sidebarRole = $user['role'] ?? '';
             if ($_sidebarRole === 'admin'): ?>
@@ -166,59 +326,50 @@ if ($isAdmin) {
                 <span>Support Tickets</span>
             </a>
             <?php else: ?>
->>>>>>> 6d104ef (Fixed: notification redirection for patient, doctor, admin and lab admin notification system)
             <div class="sidebar-section-label">Main</div>
-            <?php if ($isAdmin): ?>
-                <a href="<?= BASE_URL ?>/admin" class="sidebar-link <?php echo request_is('/admin') ? 'active' : ''; ?>">
-                    <i class="fa fa-th-large sidebar-icon"></i>
-                    <span>Dashboard</span>
-                </a>
-            <?php elseif ($isDoctor): ?>
-                <a href="<?= BASE_URL ?>/doctor/dashboard" class="sidebar-link <?php echo request_is('/doctor/dashboard') ? 'active' : ''; ?>">
-                    <i class="fa fa-th-large sidebar-icon"></i>
-                    <span>Dashboard</span>
-                </a>
-                <a href="<?= BASE_URL ?>/doctor/schedule" class="sidebar-link <?php echo request_is('/doctor/schedule') ? 'active' : ''; ?>">
-                    <i class="fa fa-calendar-check sidebar-icon"></i>
-                    <span>Schedule</span>
-                </a>
-                <a href="<?= BASE_URL ?>/doctor/patients" class="sidebar-link <?php echo request_is('/doctor/patients') ? 'active' : ''; ?>">
-                    <i class="fa fa-user-group sidebar-icon"></i>
-                    <span>Patients</span>
-                </a>
-            <?php else: ?>
-                <a href="<?= BASE_URL ?>/dashboard" class="sidebar-link <?php echo request_is('/dashboard') ? 'active' : ''; ?>">
-                    <i class="fa fa-th-large sidebar-icon"></i>
-                    <span>Dashboard</span>
-                </a>
-                <a href="<?= BASE_URL ?>/dashboard#upcoming" class="sidebar-link sidebar-sub-link">
-                    <i class="fa fa-calendar-check sidebar-icon"></i>
-                    <span>Appointments</span>
-                </a>
-                <a href="<?= BASE_URL ?>/dashboard#past" class="sidebar-link sidebar-sub-link">
-                    <i class="fa fa-clock-rotate-left sidebar-icon"></i>
-                    <span>History</span>
-                </a>
-                <?php if (isset($user)): ?>
-                <div class="sidebar-section-label">Account</div>
-                <a href="<?= BASE_URL ?>/profile" class="sidebar-link <?php echo request_is('/profile') ? 'active' : ''; ?>">
-                    <i class="fa fa-user sidebar-icon"></i>
-                    <span>My Profile</span>
-                </a>
-                <?php endif; ?>
+            <a href="<?= BASE_URL ?>/dashboard" class="sidebar-link <?php echo request_is('/dashboard') ? 'active' : ''; ?>">
+                <i class="fa fa-th-large sidebar-icon"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="<?= BASE_URL ?>/dashboard#upcoming" class="sidebar-link sidebar-sub-link">
+                <i class="fa fa-calendar-check sidebar-icon"></i>
+                <span>Appointments</span>
+            </a>
+            <a href="<?= BASE_URL ?>/dashboard#past" class="sidebar-link sidebar-sub-link">
+                <i class="fa fa-clock-rotate-left sidebar-icon"></i>
+                <span>History</span>
+            </a>
+            <?php if (isset($user)): ?>
+            <div class="sidebar-section-label">Account</div>
+            <a href="<?= BASE_URL ?>/notifications" class="sidebar-link <?php echo request_is('/notifications') ? 'active' : ''; ?>">
+                <i class="fa fa-bell sidebar-icon"></i>
+                <span>Notifications</span>
+                <span class="sidebar-notif-badge" id="sidebarNotifBadge"></span>
+            </a>
+            <a href="<?= BASE_URL ?>/profile" class="sidebar-link <?php echo request_is('/profile') ? 'active' : ''; ?>">
+                <i class="fa fa-user sidebar-icon"></i>
+                <span>My Profile</span>
+            </a>
+            <?php endif; ?>
             <?php endif; ?>
         </nav>
-        <!-- Sidebar footer: NO theme toggle here — only one toggle lives in the navbar -->
         <div class="sidebar-footer">
             <?php if (isset($user)): ?>
+            <?php
+            $_roleLabel = match($user['role'] ?? '') {
+                'admin'     => 'Admin',
+                'doctor'    => 'Doctor',
+                'lab_admin' => 'Lab Admin',
+                default     => 'Patient',
+            };
+            ?>
             <div class="sidebar-user">
                 <div class="avatar-circle"><?php echo strtoupper(substr($user['name'] ?? 'U', 0, 2)); ?></div>
                 <div class="sidebar-user-info">
                     <div class="sidebar-user-name"><?php echo htmlspecialchars($user['name'] ?? ''); ?></div>
-                    <div class="sidebar-user-role"><?php echo htmlspecialchars(strtoupper($role)); ?></div>
+                    <div class="sidebar-user-role"><?php echo $_roleLabel; ?></div>
                 </div>
             </div>
-            <a href="<?= BASE_URL ?>/logout" class="sidebar-logout" title="Sign out"><i class="fa fa-right-from-bracket"></i></a>
             <?php endif; ?>
         </div>
     </aside>
@@ -226,14 +377,14 @@ if ($isAdmin) {
     <!-- Sidebar overlay (mobile) -->
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
-    <!-- ── MAIN CONTENT ────────────────────────────────────── -->
+    <!-- MAIN CONTENT -->
     <main class="main-wrap">
         <?php echo $content; ?>
     </main>
 
 </div><!-- /.page-shell -->
 
-<!-- ══ MOBILE NAV DRAWER (slides from RIGHT) ══════════════ -->
+<!-- MOBILE NAV DRAWER (slides from RIGHT) -->
 <div class="mobile-drawer" id="mobileDrawer">
     <div class="mobile-drawer-header">
         <span class="mobile-drawer-brand">Doc<span>Book</span></span>
@@ -242,15 +393,13 @@ if ($isAdmin) {
         </button>
     </div>
     <ul class="mobile-nav-links">
-        <?php foreach ($navLinks as $link): ?>
-            <li>
-                <a href="<?= BASE_URL . $link['href'] ?>" class="<?php echo request_is($link['href']) ? 'active' : ''; ?>">
-                    <i class="fa fa-circle-info"></i> <?= htmlspecialchars($link['label']) ?>
-                </a>
-            </li>
-        <?php endforeach; ?>
-        <?php if (isset($user) && $isPatient): ?>
-        <li><a href="<?= BASE_URL ?>/profile" class="<?php echo request_is('/profile') ? 'active' : ''; ?>"><i class="fa fa-user"></i> Profile &amp; Settings</a></li>
+        <li><a href="<?= BASE_URL ?>/about"          class="<?php echo request_is('/about')          ? 'active' : ''; ?>"><i class="fa fa-circle-info"></i> About</a></li>
+        <li><a href="<?= BASE_URL ?>/dashboard"      class="<?php echo request_is('/dashboard')      ? 'active' : ''; ?>"><i class="fa fa-th-large"></i> My Appointments</a></li>
+        <li><a href="<?= BASE_URL ?>/categories"     class="<?php echo request_is('/categories')     ? 'active' : ''; ?>"><i class="fa fa-stethoscope"></i> Find Doctors</a></li>
+        <li><a href="<?= BASE_URL ?>/contact"        class="<?php echo request_is('/contact')        ? 'active' : ''; ?>"><i class="fa fa-envelope"></i> Contact</a></li>
+        <?php if (isset($user)): ?>
+        <li><a href="<?= BASE_URL ?>/notifications"  class="<?php echo request_is('/notifications')  ? 'active' : ''; ?>"><i class="fa fa-bell"></i> Notifications</a></li>
+        <li><a href="<?= BASE_URL ?>/profile"        class="<?php echo request_is('/profile')        ? 'active' : ''; ?>"><i class="fa fa-user"></i> Profile &amp; Settings</a></li>
         <?php endif; ?>
     </ul>
     <div class="mobile-nav-actions">
@@ -271,7 +420,7 @@ if ($isAdmin) {
 <script src="<?= BASE_URL ?>/js/main.js"></script>
 <script>
 (function(){
-    // ── Single theme toggle (navbar only)
+    // Theme toggle
     var themeBtn  = document.getElementById('themeToggleBtn');
     var themeIcon = document.getElementById('themeIcon');
 
@@ -297,30 +446,20 @@ if ($isAdmin) {
         });
     }
 
-    // ── Mobile drawer (slides from RIGHT) — hamburger in nav-actions
-    var hamburger    = document.getElementById('hamburgerBtn');
-    var drawer       = document.getElementById('mobileDrawer');
-    var drawerClose  = document.getElementById('mobileDrawerClose');
-    var mobileOvly   = document.getElementById('mobileOverlay');
+    // Mobile drawer
+    var hamburger   = document.getElementById('hamburgerBtn');
+    var drawer      = document.getElementById('mobileDrawer');
+    var drawerClose = document.getElementById('mobileDrawerClose');
+    var mobileOvly  = document.getElementById('mobileOverlay');
 
-    function openDrawer() {
-        drawer.classList.add('open');
-        mobileOvly.classList.add('open');
-        hamburger && hamburger.classList.add('open');
-        document.body.style.overflow = 'hidden';
-    }
-    function closeDrawer() {
-        drawer.classList.remove('open');
-        mobileOvly.classList.remove('open');
-        hamburger && hamburger.classList.remove('open');
-        document.body.style.overflow = '';
-    }
+    function openDrawer()  { drawer.classList.add('open'); mobileOvly.classList.add('open'); hamburger && hamburger.classList.add('open'); document.body.style.overflow = 'hidden'; }
+    function closeDrawer() { drawer.classList.remove('open'); mobileOvly.classList.remove('open'); hamburger && hamburger.classList.remove('open'); document.body.style.overflow = ''; }
 
     if (hamburger)   hamburger.addEventListener('click', function(){ drawer.classList.contains('open') ? closeDrawer() : openDrawer(); });
     if (drawerClose) drawerClose.addEventListener('click', closeDrawer);
     if (mobileOvly)  mobileOvly.addEventListener('click', closeDrawer);
 
-    // ── Sidebar toggle (desktop: collapse/expand)
+    // Sidebar toggle (desktop collapse)
     var sidebarToggle  = document.getElementById('sidebarToggle');
     var sidebar        = document.getElementById('sidebar');
     var sidebarOverlay = document.getElementById('sidebarOverlay');
@@ -328,11 +467,7 @@ if ($isAdmin) {
     var collapsed = localStorage.getItem('sidebarCollapsed') === 'true';
     if (collapsed) { document.body.classList.add('sidebar-collapsed'); }
 
-    function closeSidebarMobile() {
-        sidebar.classList.remove('open');
-        sidebarOverlay.classList.remove('open');
-        document.body.style.overflow = '';
-    }
+    function closeSidebarMobile() { sidebar.classList.remove('open'); sidebarOverlay.classList.remove('open'); document.body.style.overflow = ''; }
 
     if (sidebarToggle) {
         sidebarToggle.addEventListener('click', function(){
@@ -346,10 +481,8 @@ if ($isAdmin) {
         });
         sidebarOverlay.addEventListener('click', closeSidebarMobile);
     }
-<<<<<<< HEAD
-=======
 
-    // ── Notification Bell ─────────────────────────────────────
+    // Notification Bell
     <?php if (isset($user)): ?>
     var bellBtn     = document.getElementById('notifBellBtn');
     var dropdown    = document.getElementById('notifDropdown');
@@ -515,7 +648,7 @@ if ($isAdmin) {
     });
 
 
-    // ── Broadcast Banner ─────────────────────────────────────
+    // Broadcast Banner
     (function() {
         var DISMISS_HOURS = 24;
         fetch(BASE_URL + '/api/notifications?limit=10')
@@ -555,10 +688,20 @@ if ($isAdmin) {
         return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     }
     <?php endif; ?>
->>>>>>> 6d104ef (Fixed: notification redirection for patient, doctor, admin and lab admin notification system)
 })();
 </script>
 <?php if (isset($extra_scripts)) echo $extra_scripts; ?>
+
+<?php
+// Chatbot floating widget - only for logged-in patients AND when feature is enabled
+$_cbRole = $user['role'] ?? '';
+if ($_cbRole === 'patient') {
+    require_once BASE_PATH . '/app/models/SystemSettingsModel.php';
+    if (get_setting('chatbot', true)) {
+        include BASE_PATH . '/app/views/partials/chatbot-widget.php';
+    }
+}
+?>
 
 </body>
 </html>

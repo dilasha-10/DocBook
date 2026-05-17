@@ -72,6 +72,7 @@ function payment_success_page()
     // The session is frequently lost after the browser round-trips through eSewa's
     // payment page because the cross-domain redirect causes the session cookie to
     // be dropped or a new session to be started. The DB row is the reliable source.
+
     $pending = $_SESSION['pending_booking'] ?? null;
     if (!$pending || ($pending['transaction_uuid'] ?? '') !== $transaction_uuid) {
         $pb = $pdo->prepare("SELECT * FROM pending_bookings WHERE transaction_uuid = ?");
@@ -148,7 +149,7 @@ function payment_success_page()
     $docStmt->execute([$pending['doctor_id']]);
     $doc = $docStmt->fetch(PDO::FETCH_ASSOC);
 
-    // ── Fire appointment notifications ────────────────────────
+    // Fire appointment notifications
     // Notify the doctor (new booking) and confirm to the patient.
     try {
         require_once BASE_PATH . '/app/models/NotificationModel.php';
@@ -168,7 +169,6 @@ function payment_success_page()
         // Notification failure must never break the booking flow
         error_log('notify_appointment_booked error: ' . $e->getMessage());
     }
-    // ─────────────────────────────────────────────────────────
 
     $h       = (int) substr($pending['start_time'], 0, 2);
     $hEnd    = (int) substr($pending['end_time'],   0, 2);

@@ -4,7 +4,7 @@
  * This file contains only doctor-specific UI components.
  */
 
-/* ── Dashboard ─────────────────────────────────────────────── */
+/*  Dashboard  */
 
 .view-container {
     padding: 30px;
@@ -29,7 +29,7 @@
     font-size: 14px;
 }
 
-/* ── Buttons ───────────────────────────────────────────────── */
+/*  Buttons  */
 
 .btn-primary {
     background-color: var(--blue);
@@ -61,7 +61,7 @@
 .btn-secondary:hover { background-color: var(--surface2); }
 .btn-secondary.btn-small { padding: 7px 14px; font-size: 13px; }
 
-/* ── Stats Grid ────────────────────────────────────────────── */
+/*  Stats Grid  */
 
 .stats-grid {
     display: grid;
@@ -107,7 +107,7 @@
 .status-track     { background: rgba(46,158,110,0.12); color: var(--green); }
 .status-all       { background: var(--blue-light);     color: var(--blue); }
 
-/* ── Schedule / Appointment List ───────────────────────────── */
+/*  Schedule / Appointment List  */
 
 .schedule-section h3 {
     margin-bottom: 18px;
@@ -196,7 +196,7 @@
 .btn-reject  { background: rgba(201,64,64,0.08);  color: var(--red);   border-color: rgba(201,64,64,0.25); }
 .btn-sm:hover { opacity: 0.85; }
 
-/* ── Patient Detail Panel ──────────────────────────────────── */
+/*  Patient Detail Panel  */
 
 .patient-panel {
     position: fixed;
@@ -329,7 +329,7 @@
 .comment-input::placeholder { color: var(--hint); }
 .add-comment-section .btn-primary { width: 100%; }
 
-/* ── Patient Card (Patients list page) ──────────────────────── */
+/*  Patient Card (Patients list page)  */
 
 .patient-card {
     background: var(--surface);
@@ -343,7 +343,7 @@
 .patient-card:hover { box-shadow: var(--shadow-md); border-color: var(--border2); transform: translateY(-2px); }
 .patient-card.selected { border-color: var(--blue); }
 
-/* ── Availability Page ─────────────────────────────────────── */
+/*  Availability Page  */
 
 .availability-container {
     display: grid;
@@ -515,7 +515,7 @@
 }
 .btn-save:hover { background: var(--blue-dark); }
 
-/* ── Toggle Switch ─────────────────────────────────────────── */
+/*  Toggle Switch  */
 
 .switch {
     position: relative;
@@ -544,7 +544,7 @@
 input:checked + .slider { background: var(--blue); }
 input:checked + .slider:before { transform: translateX(18px); }
 
-/* ── Profile Page ──────────────────────────────────────────── */
+/*  Profile Page  */
 
 .profile-header {
     background: var(--surface);
@@ -668,7 +668,7 @@ input:checked + .slider:before { transform: translateX(18px); }
     border-top: 1px solid var(--border);
 }
 
-/* ── Toast Notifications ───────────────────────────────────── */
+/*  Toast Notifications  */
 
 .toast-container {
     position: fixed;
@@ -697,11 +697,11 @@ input:checked + .slider:before { transform: translateX(18px); }
     to   { transform: translateX(0);    opacity: 1; }
 }
 
-/* ── Utility ───────────────────────────────────────────────── */
+/*  Utility  */
 
 .hidden { display: none !important; }
 
-/* ── Responsive ────────────────────────────────────────────── */
+/*  Responsive  */
 
 @media (max-width: 900px) {
     .availability-container { grid-template-columns: 1fr; }
@@ -730,10 +730,10 @@ input:checked + .slider:before { transform: translateX(18px); }
     .form-actions button { width: 100%; }
 }
 
-/* ── Dark mode: time & date picker fixes ── */
+/*  Dark mode: time & date picker fixes  */
 [data-theme="dark"] .time-input-group input[type="time"] {
     color-scheme: dark;
-    background: var(--surface2, #1e2130);
+    background: var(--surface2, #404040);
     color: var(--text);
     border-color: var(--border2);
 }
@@ -744,7 +744,7 @@ input:checked + .slider:before { transform: translateX(18px); }
 }
 [data-theme="dark"] input[type="date"] {
     color-scheme: dark;
-    background: var(--surface2, #1e2130);
+    background: var(--surface2, #404040);
     color: var(--text);
     border-color: var(--border2);
 }
@@ -753,10 +753,10 @@ input:checked + .slider:before { transform: translateX(18px); }
     opacity: 0.9;
     cursor: pointer;
 }
-/* ── Dark mode: time input stronger override ── */
+/*  Dark mode: time input stronger override  */
 [data-theme="dark"] input[type="time"] {
     color-scheme: dark !important;
-    background: var(--surface2, #1e2130) !important;
+    background: var(--surface2, #404040) !important;
     color: var(--text) !important;
     border-color: var(--border2) !important;
 }
@@ -764,4 +764,16 @@ input:checked + .slider:before { transform: translateX(18px); }
     filter: invert(1) brightness(1.8) !important;
     opacity: 0.9;
     cursor: pointer;
+}
+/* Kill browser autofill light-blue override */
+[data-theme="dark"] input:-webkit-autofill,
+[data-theme="dark"] input:-webkit-autofill:hover,
+[data-theme="dark"] input:-webkit-autofill:focus,
+[data-theme="dark"] textarea:-webkit-autofill,
+[data-theme="dark"] select:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0px 1000px var(--surface2) inset !important;
+  -webkit-text-fill-color: var(--text) !important;
+  caret-color: var(--text);
+  border-color: var(--border2) !important;
+  transition: background-color 5000s ease-in-out 0s;
 }

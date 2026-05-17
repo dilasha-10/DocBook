@@ -15,7 +15,6 @@ function get_filtered_doctors(?string $category = null, ?string $search = null):
             d.specialty,
             d.bio,
             d.experience_years,
-            d.consultation_fee,
             c.name                              AS category_name,
             c.slug                              AS category_slug,
             MIN(
@@ -55,7 +54,7 @@ function get_filtered_doctors(?string $category = null, ?string $search = null):
     $sql .= "
         GROUP BY
             d.id, u.name, d.photo, d.specialty, d.bio, d.experience_years,
-            d.consultation_fee, c.name, c.slug
+            c.name, c.slug
         ORDER BY u.name ASC
     ";
     
@@ -83,7 +82,6 @@ function get_doctor_by_id(int $id): ?array
             d.specialty,
             d.experience_years,
             d.photo,
-            d.consultation_fee,
             u.name          AS name,
             c.name          AS category_name,
             c.slug          AS category_slug,

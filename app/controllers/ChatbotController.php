@@ -1,14 +1,11 @@
 <?php
 
-// ═══════════════════════════════════════════════════════════════════
-
 if (!function_exists('chatbot_faq_match')):
 
 //  ChatbotController.php
-// ═══════════════════════════════════════════════════════════════════
 
 
-// ── FAQ knowledge base ───────────────────────────────────────────────
+// FAQ knowledge base
 
 function chatbot_faq_match(string $input): ?string
 {
@@ -79,7 +76,7 @@ function chatbot_faq_match(string $input): ?string
 }
 
 
-// ── Groq fallback ────────────────────────────────────────────────────
+// Groq fallback
 // Returns:
 //   string         — real answer to show patient
 //   'ESCALATE'     — DocBook question Groq cannot answer → flag admin
@@ -175,12 +172,12 @@ function chatbot_groq_fallback(string $userMessage, array $history): ?string
     $firstWord = strtoupper(preg_replace('/[\s\W]+/', '', explode(' ', trim($reply))[0]));
 
     if ($firstWord === 'OUTOFSCOPE') {
-        // Truly off-topic — return nothing so caller shows the decline message
+        // Truly off-topic: return nothing so caller shows the decline message
         return 'OUT_OF_SCOPE';
     }
 
     if ($firstWord === 'ESCALATE') {
-        // Had an answer after the sentinel — return it instead of flagging admin
+        // Had an answer after the sentinel: return it instead of flagging admin
         $remaining = trim($stripped);
         return $remaining !== '' ? $remaining : 'ESCALATE';
     }
@@ -189,7 +186,7 @@ function chatbot_groq_fallback(string $userMessage, array $history): ?string
 }
 
 
-// ── API: POST /api/chatbot/message ───────────────────────────────────
+// API: POST /api/chatbot/message
 
 function api_chatbot_message(): void
 {
@@ -241,7 +238,7 @@ function api_chatbot_message(): void
 }
 
 
-// ── API: POST /api/chatbot/escalate ──────────────────────────────────
+// API: POST /api/chatbot/escalate
 
 function api_chatbot_escalate(): void
 {
@@ -274,7 +271,7 @@ function api_chatbot_escalate(): void
 }
 
 
-// ── API: GET /admin/api/chatbot/escalations ──────────────────────────
+// API: GET /admin/api/chatbot/escalations
 
 function api_admin_chatbot_escalations(): void
 {
@@ -324,7 +321,7 @@ function api_admin_chatbot_escalations(): void
 }
 
 
-// ── API: PATCH /admin/api/chatbot/escalations/{id} ───────────────────
+// API: PATCH /admin/api/chatbot/escalations/{id}
 
 function api_admin_chatbot_update(int $id): void
 {

@@ -2,7 +2,6 @@
 // app/models/SystemSettingsModel.php
 // D3-05 – Manage Appointment Slots and System Availability
 
-// ── Helpers ─────────────────────────────────────────────────────────────────
 
 /**
  * Return all settings as an associative array  [ key => value ].
@@ -114,7 +113,7 @@ function save_settings_batch(array $data): void
     }
 }
 
-// ── Holidays ─────────────────────────────────────────────────────────────────
+// Holidays
 
 /**
  * All holidays, ordered by date ascending.
@@ -187,7 +186,7 @@ function delete_holiday(int $id): bool
     return $stmt->rowCount() > 0;
 }
 
-// ── Internal helpers ─────────────────────────────────────────────────────────
+// Internal helpers
 
 function cast_setting(string $raw, string $type): mixed
 {

@@ -1,13 +1,11 @@
 <?php
 
-// ============================================================
-//  DepartmentController.php — D2-01
+//  DepartmentController.php
 //  Admin: Manage Departments & Specializations
-// ============================================================
 
 require_once BASE_PATH . '/app/models/DepartmentModel.php';
 
-// ── Page ─────────────────────────────────────────────────────
+// Page
 
 function admin_departments_page(): void
 {
@@ -15,7 +13,7 @@ function admin_departments_page(): void
     render('admin/departments', ['user' => $user]);
 }
 
-// ── API: Departments ─────────────────────────────────────────
+// API: Departments
 
 function api_admin_departments_list(): void
 {
@@ -86,7 +84,7 @@ function api_admin_department_delete(int $id): void
     json_response(['success' => true]);
 }
 
-// ── API: Specializations ─────────────────────────────────────
+// API: Specializations
 
 function api_admin_specializations_list(): void
 {
@@ -147,8 +145,4 @@ function api_admin_specialization_delete(int $id): void
 
     audit_log((int)$user['id'], $user['name'], $user['role'], 'SPECIALIZATION_DELETED', 'admin', "Deleted specialization #{$id}");
     json_response(['success' => true]);
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> 5353f4c (Final complete work)

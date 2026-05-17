@@ -2,11 +2,9 @@
 
 require_once BASE_PATH . '/app/models/NotificationModel.php';
 
-// ════════════════════════════════════════════════════════════
-//  NotificationController — routes & API handlers
-// ════════════════════════════════════════════════════════════
+//  NotificationController - routes & API handlers
 
-// ── Admin page ───────────────────────────────────────────────
+// Admin page
 
 /**
  * GET /admin/notifications
@@ -18,7 +16,7 @@ function admin_notifications_page(): void
     render('admin/notifications_admin_view', ['user' => $user]);
 }
 
-// ── Admin API: send broadcast ─────────────────────────────────
+// Admin API: send broadcast
 
 /**
  * POST /admin/api/notifications/broadcast
@@ -62,7 +60,7 @@ function api_admin_notifications_broadcast(): void
     json_response(['success' => true, 'broadcast_id' => $result['broadcast_id'], 'total_sent' => $result['total_sent']]);
 }
 
-// ── Admin API: send targeted notification ────────────────────
+// Admin API: send targeted notification
 
 /**
  * POST /admin/api/notifications/targeted
@@ -100,7 +98,7 @@ function api_admin_notifications_targeted(): void
     json_response(['success' => true, 'notification_id' => $notif_id]);
 }
 
-// ── Admin API: user search (for targeted UI) ─────────────────
+// Admin API: user search (for targeted UI)
 
 /**
  * GET /admin/api/notifications/search-users?q=...
@@ -115,7 +113,7 @@ function api_admin_notifications_search_users(): void
     json_response(['users' => notification_search_users($q)]);
 }
 
-// ── Admin API: broadcast history ─────────────────────────────
+// Admin API: broadcast history
 
 /**
  * GET /admin/api/notifications/broadcasts
@@ -126,7 +124,7 @@ function api_admin_notifications_broadcasts(): void
     json_response(['broadcasts' => notification_broadcasts_list(100)]);
 }
 
-// ── User API: fetch my notifications ─────────────────────────
+// User API: fetch my notifications
 
 /**
  * GET /api/notifications?limit=30&offset=0
@@ -146,7 +144,7 @@ function api_user_notifications(): void
     ]);
 }
 
-// ── User API: mark read ───────────────────────────────────────
+// User API: mark read
 
 /**
  * POST /api/notifications/read
@@ -171,7 +169,7 @@ function api_user_notifications_read(): void
     }
 }
 
-// ── Unread badge count (called by layout header) ─────────────
+// Unread badge count (called by layout header)
 
 /**
  * GET /api/notifications/unread-count

@@ -187,15 +187,15 @@ $oldEmail = htmlspecialchars(trim($_POST['email'] ?? ''));
             --text-dark:   #f0f0f0;
             --text-mid:    #888888;
             --text-light:  #555555;
-            --white:       #111111;
+            --white:       #2c2c2c;
             --error:       #d06060;
             --success:     #50a878;
         }
         [data-theme="dark"] html,
-        [data-theme="dark"] body { background: #111111; }
+        [data-theme="dark"] body { background: #2c2c2c; }
 
         [data-theme="dark"] .auth-navbar {
-            background: #0a0a0a;
+            background: #242424;
             border-bottom-color: rgba(255,255,255,0.07);
         }
         [data-theme="dark"] .auth-navbar .nav-logo { color: #f0f0f0; }
@@ -220,7 +220,7 @@ $oldEmail = htmlspecialchars(trim($_POST['email'] ?? ''));
         }
 
         [data-theme="dark"] .form-panel,
-        [data-theme="dark"] .right-panel { background: #111111; }
+        [data-theme="dark"] .right-panel { background: #2c2c2c; }
 
         [data-theme="dark"] .logo,
         [data-theme="dark"] .auth-content h1,
@@ -320,6 +320,14 @@ $oldEmail = htmlspecialchars(trim($_POST['email'] ?? ''));
             border-color: #4a8fc4;
             color: #4a8fc4;
         }
+        [data-theme="dark"] input:-webkit-autofill,
+        [data-theme="dark"] input:-webkit-autofill:hover,
+        [data-theme="dark"] input:-webkit-autofill:focus {
+            -webkit-box-shadow: 0 0 0px 1000px #404040 inset !important;
+            -webkit-text-fill-color: #eeeeee !important;
+            border-color: #555555 !important;
+            transition: background-color 5000s ease-in-out 0s;
+        }
     </style>
 
 <script>
@@ -365,10 +373,6 @@ $oldEmail = htmlspecialchars(trim($_POST['email'] ?? ''));
 
             <?php if (!empty($_GET['registered'])): ?>
                 <div class="alert-success">✓ Account created successfully! Please sign in below.</div>
-            <?php endif; ?>
-
-            <?php if (!empty($_GET['reset'])): ?>
-                <div class="alert-success">✓ Your password has been updated. Please sign in with your new password.</div>
             <?php endif; ?>
 
             <?php if (!empty($errors['general'])): ?>
