@@ -8,6 +8,7 @@ $category   = htmlspecialchars($doc['category_name'] ?? '');
 $experience = (int) ($doc['experience_years']  ?? 0);
 $bio        = htmlspecialchars($doc['bio']      ?? '');
 $slotMins   = (int) ($doc['avg_slot_minutes']   ?? 30);
+$fee        = number_format((float)($doc['consultation_fee'] ?? 500), 2);
 
 $nameParts = explode(' ', preg_replace('/^Dr\.\s*/i', '', $doc['name'] ?? 'Doctor'));
 $initials  = strtoupper(substr($nameParts[0] ?? 'D', 0, 1) . substr($nameParts[1] ?? '', 0, 1));
@@ -95,6 +96,7 @@ ob_start();
 (function () {
     var AVAIL  = <?= $availJson ?>;
     var DOCTOR = <?= $doctorJson ?>;
+    var CONSULTATION_FEE = 'Rs <?= $fee ?>';
     var DAY_SHORT   = ['Su','Mo','Tu','We','Th','Fr','Sa'];
     var DAY_NAMES   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
     var MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -259,6 +261,11 @@ ob_start();
             pendingEsewaData = res;
             var modal = document.getElementById('payModal');
             document.body.appendChild(modal);
+            // Update the fee display with the actual amount from the server response
+            var feeEl = document.getElementById('modalFeeDisplay');
+            if (feeEl && res.consultation_fee) {
+                feeEl.textContent = 'Rs ' + parseFloat(res.consultation_fee).toLocaleString('en-IN', {minimumFractionDigits: 2});
+            }
             modal.style.display = 'flex';
             modal.onclick = function(e) { if (e.target === modal) closePaymentModal(); };
         })
@@ -293,7 +300,7 @@ $content = ob_get_clean();
 
 // Modal rendered outside .main-wrap via extra_scripts so position:fixed
 // is not clipped by main-wrap's overflow:hidden stacking context
-$extra_scripts = <<<HTML
+$extra_scripts = '
 <div id="payModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:10000;align-items:center;justify-content:center;padding:16px;">
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:32px 28px;max-width:360px;width:100%;box-shadow:0 8px 40px rgba(0,0,0,.18);text-align:center;">
         <div style="font-size:40px;margin-bottom:12px;">&#x1F4B3;</div>
@@ -301,7 +308,7 @@ $extra_scripts = <<<HTML
         <div style="font-size:13px;color:var(--muted);margin-bottom:24px;line-height:1.5;">Your slot is reserved. Pay now to confirm your appointment.</div>
         <div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;">
             <span style="font-size:13px;color:var(--muted);">Consultation fee</span>
-            <span style="font-size:16px;font-weight:700;color:var(--text);">Rs 500.00</span>
+            <span style="font-size:16px;font-weight:700;color:var(--text);" id="modalFeeDisplay"></span>
         </div>
         <button onclick="submitToEsewa()" style="width:100%;padding:13px;background:#60BB46;color:#fff;border:none;border-radius:9px;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:10px;">
             <svg width="20" height="20" viewBox="0 0 100 100" fill="none"><circle cx="50" cy="50" r="50" fill="#fff"/><text x="50" y="67" text-anchor="middle" font-size="52" font-weight="900" fill="#60BB46" font-family="Arial">e</text></svg>
@@ -312,6 +319,11 @@ $extra_scripts = <<<HTML
         </button>
     </div>
 </div>
-HTML;
+<script>
+    // Set the fee display in the modal from the PHP-injected JS variable
+    var feeEl = document.getElementById("modalFeeDisplay");
+    if (feeEl) feeEl.textContent = CONSULTATION_FEE;
+</script>
+';
 
 include __DIR__ . '/../../layouts/app.php';

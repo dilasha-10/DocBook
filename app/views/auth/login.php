@@ -437,7 +437,7 @@ function validateEmail(val) {
 }
 function validatePassword(val) {
     if (!val) return 'Password is required.';
-    if (val.length < 8) return 'Password must be at least 8 characters.';
+    if (val.length < 12) return 'Password must be at least 12 characters.';
     return '';
 }
 function setFieldState(input, feedbackEl, msg) {

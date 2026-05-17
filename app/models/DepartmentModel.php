@@ -150,4 +150,8 @@ function delete_specialization(int $id): array
     $stmt = $pdo->prepare("DELETE FROM specializations WHERE id = ?");
     $stmt->execute([$id]);
     return ['success' => true];
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> 5353f4c (Final complete work)

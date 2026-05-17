@@ -198,6 +198,38 @@ function api_reschedule_appointment($id)
     // Must not be in the past
     if ($new_date < date('Y-m-d')) {
         json_response(['success' => false, 'message' => 'Cannot reschedule to a past date.'], 422);
+<<<<<<< HEAD
+=======
+        exit;
+    }
+
+    // Business Logic: Must reschedule at least 2 hours before current appointment
+    $currentAppt = get_appointment_by_id((int)$id);
+    if ($currentAppt) {
+        $apptDateTime = $currentAppt['appointment_date'] . ' ' . $currentAppt['start_time'];
+        $apptTimestamp = strtotime($apptDateTime);
+        $twoHoursBefore = $apptTimestamp - (2 * 60 * 60);
+        if (time() > $twoHoursBefore) {
+            json_response(['success' => false, 'message' => 'Rescheduling is not allowed within 2 hours of your appointment time.'], 422);
+            exit;
+        }
+    }
+
+    // Business Logic: Max 2 reschedules per appointment
+    if ($currentAppt && (int)($currentAppt['reschedule_count'] ?? 0) >= 2) {
+        json_response(['success' => false, 'message' => 'This appointment has already been rescheduled the maximum number of times (2).'], 422);
+        exit;
+    }
+
+    // Block rescheduling to an admin-marked holiday / blocked date
+    require_once BASE_PATH . '/app/models/SystemSettingsModel.php';
+    if (is_holiday($new_date)) {
+        json_response([
+            'success' => false,
+            'message' => 'Cannot reschedule to this date — it has been marked as a holiday or blocked day.',
+        ], 422);
+        exit;
+>>>>>>> 5353f4c (Final complete work)
     }
 
     // Validate time format (HH:MM or HH:MM:SS)
@@ -287,7 +319,88 @@ function api_book_appointment()
         'status'           => 'Confirmed',
     ];
 
+<<<<<<< HEAD
     json_response(['success' => true, 'redirect' => BASE_URL . '/booking/confirm']);
+=======
+    // If online payments are disabled, confirm the appointment directly without eSewa
+    $paymentsEnabled = get_setting('payments', true);
+    if (!$paymentsEnabled) {
+        // Generate a unique reference number
+        $refChk = $pdo->prepare("SELECT id FROM appointments WHERE reference_number = :r");
+        do {
+            $ref = 'DBK-' . date('Y') . '-' . str_pad(random_int(1, 9999), 4, '0', STR_PAD_LEFT);
+            $refChk->execute([':r' => $ref]);
+        } while ($refChk->fetch());
+
+        $ins = $pdo->prepare("
+            INSERT INTO appointments
+                (patient_id, doctor_id, appointment_date, start_time, end_time, reference_number, status, visit_reason)
+            VALUES
+                (:pid, :did, :date, :start, :end, :ref, 'Confirmed', :reason)
+        ");
+        $ins->execute([
+            ':pid'    => $patient_id,
+            ':did'    => $doctor_id,
+            ':date'   => $date,
+            ':start'  => $start_time,
+            ':end'    => $end_time,
+            ':ref'    => $ref,
+            ':reason' => $reason ?: null,
+        ]);
+        $appt_id = (int)$pdo->lastInsertId();
+
+        // Clean up pending booking
+        $pdo->prepare("DELETE FROM pending_bookings WHERE transaction_uuid = ?")->execute([$transaction_uuid]);
+
+        // Store confirmation in session for the confirm page
+        $_SESSION['booking_confirmation'] = [
+            'reference_number' => $ref,
+            'appointment_id'   => $appt_id,
+            'doctor_id'        => $doctor_id,
+            'date'             => $date,
+            'start_time'       => $start_time,
+            'end_time'         => $end_time,
+        ];
+
+        json_response([
+            'success'          => true,
+            'payment_required' => false,
+            'redirect'         => BASE_URL . '/booking/confirm',
+            'reference_number' => $ref,
+        ]);
+        exit;
+    }
+
+    // Fetch the doctor's consultation fee
+    $feeStmt = $pdo->prepare("SELECT consultation_fee FROM doctors WHERE id = :did");
+    $feeStmt->execute([':did' => $doctor_id]);
+    $consultationFee = (float)($feeStmt->fetchColumn() ?: 500.00);
+
+    // Build eSewa payment fields
+    $amount    = number_format($consultationFee, 2, '.', '');
+    $tax       = number_format(0.00,             2, '.', '');
+    $total     = number_format($consultationFee, 2, '.', '');
+    $signature = esewa_signature($total, $transaction_uuid);
+
+    json_response([
+        'success'              => true,
+        'consultation_fee'     => $total,   // sent so the modal can display the real fee
+        'esewa_url'            => ESEWA_GATEWAY_URL,
+        'fields'               => [
+            'amount'                  => $amount,
+            'tax_amount'              => $tax,
+            'total_amount'            => $total,
+            'transaction_uuid'        => $transaction_uuid,
+            'product_code'            => ESEWA_PRODUCT_CODE,
+            'product_service_charge'  => '0.00',
+            'product_delivery_charge' => '0.00',
+            'success_url'             => BASE_URL . '/payment/success',
+            'failure_url'             => BASE_URL . '/payment/failure',
+            'signed_field_names'      => 'total_amount,transaction_uuid,product_code',
+            'signature'               => $signature,
+        ],
+    ]);
+>>>>>>> 5353f4c (Final complete work)
 }
 //  Page: /appointments/{id}/reschedule 
 function reschedule_page(int $appt_id)
@@ -415,6 +528,7 @@ function api_post_comment(int $id)
 //  API: GET /api/messages/:appointment_id 
 function api_get_messages(int $appointment_id): void
 {
+<<<<<<< HEAD
     $authUser   = require_patient_api();
     $patient_id = (int) $authUser['id'];
 
@@ -492,6 +606,35 @@ function chat_page(int $appointment_id): void
 
     $appt = get_appointment_by_id($appointment_id);
     if (!$appt || (int)$appt['patient_id'] !== (int)$user['id']) {
+=======
+    $user    = require_auth();
+    $user_id = (int)$user['id'];
+    $role    = $user['role'] ?? '';
+
+    $pdo  = db_connect();
+    $stmt = $pdo->prepare("
+        SELECT lr.file_path, lr.original_name, a.patient_id, d.user_id AS doctor_user_id
+        FROM lab_reports lr
+        JOIN appointments a ON a.id  = lr.appointment_id
+        JOIN doctors      d ON d.id  = a.doctor_id
+        WHERE lr.appointment_id = ?
+    ");
+    $stmt->execute([$appointment_id]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$row) {
+        http_response_code(404);
+        echo '<h1>File not found</h1>';
+        exit;
+    }
+
+    // Allow: the patient who owns the appointment, the doctor assigned to it, admin, lab_admin
+    $isPatient  = $role === 'patient'   && (int)$row['patient_id']     === $user_id;
+    $isDoctor   = $role === 'doctor'    && (int)$row['doctor_user_id'] === $user_id;
+    $isAdmin    = in_array($role, ['admin', 'lab_admin']);
+
+    if (!$isPatient && !$isDoctor && !$isAdmin) {
+>>>>>>> 5353f4c (Final complete work)
         http_response_code(403);
         echo '<h1>Forbidden</h1>';
         exit;

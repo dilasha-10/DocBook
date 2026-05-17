@@ -413,6 +413,31 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('detailPanel').addEventListener('click', function(e){ if (e.target === this) closeDetailPanel(); });
     document.getElementById('detailCloseBtn').addEventListener('click', closeDetailPanel);
     document.addEventListener('keydown', function(e){ if (e.key === 'Escape') { closeDetailPanel(); closeCancelModal(); } });
+
+    // ── Deep link from notification click ────────────────────────────────────
+    var params  = new URLSearchParams(window.location.search);
+    var apptId  = params.get('appt');
+    var labId   = params.get('lab');
+
+    if (labId) {
+        // lab=123 → open detail panel and scroll to lab report section
+        openDetailPanel(parseInt(labId, 10));
+        // After panel renders, scroll to the lab report section inside it
+        setTimeout(function() {
+            var labSection = document.getElementById('detailPanelBody');
+            if (labSection) {
+                var labEl = labSection.querySelector('[data-section="lab"]');
+                if (labEl) labEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }, 600);
+    } else if (apptId) {
+        // appt=123 → open detail panel for that appointment
+        openDetailPanel(parseInt(apptId, 10));
+    }
+    // Clean up URL so refreshing doesn't re-open the panel
+    if (apptId || labId) {
+        window.history.replaceState({}, '', window.location.pathname);
+    }
 });
 </script>
 

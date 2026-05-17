@@ -202,4 +202,8 @@ function api_admin_cancel_appointment(int $id): void
     );
 
     json_response(['success' => true]);
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> 5353f4c (Final complete work)

@@ -122,8 +122,10 @@ function payment_success_page()
     ]);
     $appt_id = (int) $pdo->lastInsertId();
 
-    // Record the paid transaction
-    $amount = number_format(500.00, 2, '.', '');
+    // Fetch amount from pending_bookings or fall back to doctor's fee
+    $amtStmt = $pdo->prepare("SELECT consultation_fee FROM doctors WHERE id = ?");
+    $amtStmt->execute([$pending['doctor_id']]);
+    $amount = number_format((float)($amtStmt->fetchColumn() ?: 500.00), 2, '.', '');
     $pdo->prepare("
         INSERT INTO transactions
             (appointment_id, patient_id, transaction_id, amount, tax_amount, total_amount, status, payment_method, esewa_ref_id, paid_at)

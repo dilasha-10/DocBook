@@ -147,4 +147,8 @@ function api_admin_specialization_delete(int $id): void
 
     audit_log((int)$user['id'], $user['name'], $user['role'], 'SPECIALIZATION_DELETED', 'admin', "Deleted specialization #{$id}");
     json_response(['success' => true]);
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> 5353f4c (Final complete work)

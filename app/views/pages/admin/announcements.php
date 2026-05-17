@@ -312,4 +312,8 @@ loadAnnouncements();
 
 <?php
 $content = ob_get_clean();
+<<<<<<< HEAD
 include BASE_PATH . '/app/views/layouts/app.php';
+=======
+include BASE_PATH . '/app/views/layouts/app.php';
+>>>>>>> 5353f4c (Final complete work)

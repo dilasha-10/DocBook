@@ -31,7 +31,21 @@ function require_admin_api(): array
 function admin_dashboard_page()
 {
     $user = require_admin();
-    render('admin/dashboard', ['user' => $user]);
+    $pdo  = db_connect();
+
+    // Overall platform stats
+    $stats = $pdo->query("
+        SELECT
+            (SELECT COUNT(*) FROM users WHERE role = 'patient') AS total_patients,
+            (SELECT COUNT(*) FROM users WHERE role = 'doctor')  AS total_doctors,
+            (SELECT COUNT(*) FROM appointments)                 AS total_appointments,
+            (SELECT COUNT(*) FROM appointments WHERE status = 'confirmed') AS confirmed_appointments,
+            (SELECT COUNT(*) FROM appointments WHERE status = 'cancelled') AS cancelled_appointments,
+            (SELECT COUNT(*) FROM appointments WHERE DATE(created_at) = CURDATE()) AS todays_appointments,
+            (SELECT COALESCE(SUM(total_amount),0) FROM transactions WHERE status = 'paid') AS total_revenue
+    ")->fetch(PDO::FETCH_ASSOC);
+
+    render('admin/dashboard', ['user' => $user, 'stats' => $stats]);
 }
 
 // Page: GET /admin/transactions

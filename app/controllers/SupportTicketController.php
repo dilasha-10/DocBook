@@ -121,4 +121,8 @@ function api_patient_tickets(): void
     $user = require_auth_api();
     $tickets = get_patient_tickets((int)$user['id']);
     json_response(['success' => true, 'tickets' => $tickets]);
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> 5353f4c (Final complete work)

@@ -24,7 +24,11 @@ function render_password_reset_email(string $name, string $otp, string $expiresA
             <p style="font-size:15px;line-height:1.7;margin:0 0 18px;">Hello {$safeName},</p>
             <p style="font-size:15px;line-height:1.7;margin:0 0 18px;">Use this one-time password to verify your password reset request:</p>
             <div style="font-size:34px;letter-spacing:6px;font-weight:700;text-align:center;padding:18px 16px;background:#eef8fc;border:1px dashed #5ab8d0;border-radius:14px;margin:22px 0;color:#1a2a3a;">{$safeOtp}</div>
+<<<<<<< HEAD
             <p style="font-size:14px;line-height:1.7;margin:0 0 8px;">This code expires at {$safeExpiry}.</p>
+=======
+            <p style="font-size:14px;line-height:1.7;margin:0 0 8px;">This code expires in 15 minutes.</p>
+>>>>>>> 5353f4c (Final complete work)
             <p style="font-size:14px;line-height:1.7;margin:0;">If you did not request this reset, you can safely ignore this email.</p>
         </div>
     </div>
@@ -173,3 +177,80 @@ function smtp_format_address(string $email, string $name): string
 {
     return sprintf('%s <%s>', $name, $email);
 }
+<<<<<<< HEAD
+=======
+// ─────────────────────────────────────────────────────────────────────────────
+// Email templates — added for magic-link reset and signup OTP
+// ─────────────────────────────────────────────────────────────────────────────
+
+function render_signup_otp_email(string $firstName, string $otp, string $expiresAt): string
+{
+    $safeName   = htmlspecialchars($firstName, ENT_QUOTES, 'UTF-8');
+    $safeOtp    = htmlspecialchars($otp, ENT_QUOTES, 'UTF-8');
+    $safeExpiry = htmlspecialchars(
+        (new DateTimeImmutable($expiresAt))->format('g:i A, F j, Y'),
+        ENT_QUOTES, 'UTF-8'
+    );
+
+    return <<<HTML
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DocBook — Verify Your Email</title></head>
+<body style="margin:0;background:#eef8fc;font-family:Arial,Helvetica,sans-serif;color:#1a2a3a;">
+<div style="max-width:640px;margin:0 auto;padding:32px 18px;">
+  <div style="background:#fff;border:1px solid #cce8f0;border-radius:16px;padding:28px;box-shadow:0 10px 30px rgba(42,143,168,.08);">
+    <div style="font-size:24px;font-weight:700;margin-bottom:18px;color:#2a8fa8;">DocBook</div>
+    <h1 style="font-size:22px;line-height:1.3;margin:0 0 14px;">Verify your email address</h1>
+    <p style="font-size:15px;line-height:1.7;margin:0 0 18px;">Hello {$safeName},</p>
+    <p style="font-size:15px;line-height:1.7;margin:0 0 18px;">Use this one-time code to complete your DocBook registration:</p>
+    <div style="font-size:38px;letter-spacing:10px;font-weight:700;text-align:center;padding:18px 16px;background:#eef8fc;border:1px dashed #5ab8d0;border-radius:14px;margin:22px 0;color:#1a2a3a;">{$safeOtp}</div>
+    <p style="font-size:14px;line-height:1.7;margin:0 0 8px;">This code expires in 1 hour.</p>
+    <p style="font-size:14px;line-height:1.7;margin:0;">If you did not sign up for DocBook, you can safely ignore this email.</p>
+  </div>
+</div>
+</body>
+</html>
+HTML;
+}
+
+function render_magic_link_reset_email(string $name, string $resetUrl, string $expiresAt): string
+{
+    $safeName   = htmlspecialchars($name, ENT_QUOTES, 'UTF-8');
+    $safeUrl    = htmlspecialchars($resetUrl, ENT_QUOTES, 'UTF-8');
+    $safeExpiry = htmlspecialchars(
+        (new DateTimeImmutable($expiresAt))->format('g:i A, F j, Y'),
+        ENT_QUOTES, 'UTF-8'
+    );
+
+    return <<<HTML
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DocBook — Reset Your Password</title></head>
+<body style="margin:0;background:#eef8fc;font-family:Arial,Helvetica,sans-serif;color:#1a2a3a;">
+<div style="max-width:640px;margin:0 auto;padding:32px 18px;">
+  <div style="background:#fff;border:1px solid #cce8f0;border-radius:16px;padding:28px;box-shadow:0 10px 30px rgba(42,143,168,.08);">
+    <div style="font-size:24px;font-weight:700;margin-bottom:18px;color:#2a8fa8;">DocBook</div>
+    <h1 style="font-size:22px;line-height:1.3;margin:0 0 14px;">Reset your password</h1>
+    <p style="font-size:15px;line-height:1.7;margin:0 0 18px;">Hello {$safeName},</p>
+    <p style="font-size:15px;line-height:1.7;margin:0 0 22px;">Click the button below to set a new password. This link is single-use and expires in 1 hour.</p>
+    <div style="text-align:center;margin:28px 0;">
+      <a href="{$safeUrl}"
+         style="display:inline-block;background:#2a8fa8;color:#fff;font-weight:700;font-size:16px;
+                padding:14px 36px;border-radius:10px;text-decoration:none;letter-spacing:.3px;">
+        Reset Password
+      </a>
+    </div>
+    <p style="font-size:13px;color:#8aa3b8;line-height:1.6;margin:0 0 6px;">
+      Or paste this URL into your browser:
+    </p>
+    <p style="font-size:12px;word-break:break-all;color:#5ab8d0;margin:0 0 18px;">{$safeUrl}</p>
+    <p style="font-size:14px;line-height:1.7;margin:0;">If you did not request a password reset, you can safely ignore this email — your password will not change.</p>
+  </div>
+</div>
+</body>
+</html>
+HTML;
+}
+>>>>>>> 5353f4c (Final complete work)

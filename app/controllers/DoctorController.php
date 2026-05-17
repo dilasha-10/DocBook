@@ -258,11 +258,13 @@ function api_doctor_appointment_detail(): void
 
     $stmt = $pdo->prepare("
         SELECT a.id, a.appointment_date, a.start_time, a.end_time,
-               a.status, a.visit_reason, a.patient_id,
-               d.id AS doctor_id, u.name AS doctor_name, d.specialty AS doctor_specialty
+               a.status, a.visit_reason, a.reference_number, a.patient_id,
+               d.id AS doctor_id, u.name AS doctor_name, d.specialty AS doctor_specialty,
+               pu.name AS patient_name
         FROM appointments a
-        JOIN doctors d ON a.doctor_id = d.id
-        JOIN users   u ON d.user_id   = u.id
+        JOIN doctors d  ON a.doctor_id   = d.id
+        JOIN users   u  ON d.user_id     = u.id
+        JOIN users   pu ON a.patient_id  = pu.id
         WHERE a.id = ? AND a.doctor_id = ?
     ");
     $stmt->execute([$appointmentId, $doctorId]);
@@ -288,6 +290,8 @@ function api_doctor_appointment_detail(): void
         'time'             => date('g:i A', $startTs),
         'status'           => $appt['status'],
         'visit_reason'     => $appt['visit_reason'],
+        'reference_number' => $appt['reference_number'],
+        'patient_name'     => $appt['patient_name'],
         'duration_minutes' => (int)(($endTs - $startTs) / 60),
         'doctor'           => ['id' => (int)$appt['doctor_id'], 'name' => $appt['doctor_name'], 'specialty' => $appt['doctor_specialty']],
         'comments'         => $comments,
@@ -550,6 +554,20 @@ function api_doctor_comment(): void
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
+<<<<<<< HEAD
+=======
+// API: POST /doctor/api/lab-report  — DISABLED: only lab admin may upload reports
+// FormData: appointment_id, report (file)
+// Uploads a lab report for an appointment. Only the doctor assigned to the
+// appointment may upload. One report per appointment (upsert).
+// ══════════════════════════════════════════════════════════════════════════════
+function api_doctor_lab_report(): void
+{
+    require_doctor_auth_api();
+    json_response(['error' => 'Lab report upload is restricted to Lab Admin only.'], 403);
+}
+// ══════════════════════════════════════════════════════════════════════════════
+>>>>>>> 5353f4c (Final complete work)
 // API: GET /doctor/api/slots?doctor_id=N&date=YYYY-MM-DD
 // No doctor auth required — also called by the patient booking side.
 // ══════════════════════════════════════════════════════════════════════════════

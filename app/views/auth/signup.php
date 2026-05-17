@@ -435,9 +435,9 @@ function old(string $key, string $default = ''): string {
 
             <div class="row-2">
                 <div class="field">
-                    <label class="input-label" for="su-phone">Phone (optional)</label>
+                    <label class="input-label" for="su-phone">Phone Number <span style="color:var(--error)">*</span></label>
                     <input type="tel" name="phone" id="su-phone" placeholder="+977 98XXXXXXXX"
-                        class="input" value="<?= old('phone') ?>" autocomplete="tel">
+                        class="input" value="<?= old('phone') ?>" autocomplete="tel" required>
                     <div id="phone-fb" class="error" style="display:none;"></div>
                 </div>
                 <div class="field">
@@ -502,7 +502,7 @@ function old(string $key, string $default = ''): string {
             </div>
             <div id="terms-fb" class="error" style="display:none;margin-bottom:10px;"></div>
 
-            <button type="submit" id="submitBtn" class="signup-btn" disabled>Create Account</button>
+            <button type="submit" id="submitBtn" class="signup-btn" disabled>Send Verification Code</button>
         </form>
 
         <div class="already">
@@ -589,7 +589,7 @@ function validateEmail(v) {
     return '';
 }
 function validatePhone(v) {
-    if (!v.trim()) return ''; // optional
+    if (!v.trim()) return 'Phone number is required.'; // mandatory
     if (!/^[\+]?[\d\s\-\(\)]{7,15}$/.test(v.trim())) return 'Enter a valid phone number.';
     return '';
 }
@@ -625,8 +625,13 @@ const fConfirm = document.getElementById('su-confirm');
 const fTerms   = document.getElementById('terms');
 const submitBtn = document.getElementById('submitBtn');
 
+<<<<<<< HEAD
 // ── State
 const state = { first: false, last: false, email: false, dob: false, pw: false, confirm: false, terms: false };
+=======
+// State
+const state = { first: false, last: false, email: false, phone: false, dob: false, pw: false, confirm: false, terms: false };
+>>>>>>> 5353f4c (Final complete work)
 function checkSubmit() { submitBtn.disabled = !Object.values(state).every(Boolean); }
 
 // ── Bindings
@@ -660,7 +665,9 @@ fEmail.addEventListener('blur', () => fEmail.dispatchEvent(new Event('input')));
 fPhone.addEventListener('input', () => {
     const e = validatePhone(fPhone.value);
     setField(fPhone, document.getElementById('phone-fb'), e);
+    state.phone = !e; checkSubmit();
 });
+fPhone.addEventListener('blur', () => fPhone.dispatchEvent(new Event('input')));
 
 fDob.addEventListener('change', () => {
     const e = validateDob(fDob.value);

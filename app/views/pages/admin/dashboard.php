@@ -10,14 +10,49 @@ $extra_styles = <<<CSS
     max-width: 900px;
     margin: 0 auto;
 }
+<<<<<<< HEAD
 .page-header { margin-bottom: 32px; }
 .page-title    { font-size: 22px; font-weight: 800; color: var(--text); margin: 0; }
 .page-subtitle { font-size: 13px; color: var(--muted); margin: 4px 0 0; }
 
+=======
+.page-header { margin-bottom: 24px; }
+.page-title    { font-size: 22px; font-weight: 800; color: var(--text); margin: 0; }
+.page-subtitle { font-size: 13px; color: var(--muted); margin: 4px 0 0; }
+
+/* Stats row */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-bottom: 32px;
+}
+@media (max-width: 768px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 480px) { .stats-grid { grid-template-columns: 1fr; } }
+
+.stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px 18px;
+    display: flex; align-items: center; gap: 14px;
+}
+.stat-icon {
+    width: 42px; height: 42px; border-radius: 11px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; flex-shrink: 0;
+}
+.stat-body {}
+.stat-value { font-size: 22px; font-weight: 800; color: var(--text); line-height: 1; }
+.stat-label { font-size: 11px; color: var(--muted); margin-top: 3px; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; }
+
+.section-label { font-size: 12px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: .6px; margin-bottom: 14px; }
+
+>>>>>>> 5353f4c (Final complete work)
 .nav-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 16px;
+    gap: 14px;
 }
 @media (max-width: 560px) { .nav-grid { grid-template-columns: 1fr; } }
 
@@ -25,9 +60,13 @@ $extra_styles = <<<CSS
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 16px;
-    padding: 28px 26px;
+    padding: 22px 20px;
     text-decoration: none;
+<<<<<<< HEAD
     display: flex; align-items: flex-start; gap: 18px;
+=======
+    display: flex; align-items: flex-start; gap: 16px;
+>>>>>>> 5353f4c (Final complete work)
     transition: border-color .15s, box-shadow .15s;
 }
 .nav-tile:hover {
@@ -35,15 +74,16 @@ $extra_styles = <<<CSS
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--blue) 10%, transparent);
 }
 .nav-tile-icon {
-    width: 46px; height: 46px; border-radius: 12px;
+    width: 44px; height: 44px; border-radius: 12px;
     display: flex; align-items: center; justify-content: center;
-    font-size: 20px; flex-shrink: 0;
+    font-size: 19px; flex-shrink: 0;
 }
 .icon-blue   { background: #dbeafe; color: #1d4ed8; }
 .icon-yellow { background: #fef9c3; color: #854d0e; }
 .icon-purple { background: #f3e8ff; color: #7e22ce; }
 .icon-teal   { background: #ccfbf1; color: #0f766e; }
 .icon-rose   { background: #ffe4e6; color: #be123c; }
+<<<<<<< HEAD
 .icon-orange { background: #ffedd5; color: #c2410c; }
 .icon-green  { background: #dcfce7; color: #15803d; }
 .icon-indigo { background: #e0e7ff; color: #4338ca; }
@@ -52,6 +92,14 @@ $extra_styles = <<<CSS
 .nav-tile-label { font-size: 15px; font-weight: 800; color: var(--text); margin-bottom: 5px; }
 .nav-tile-desc  { font-size: 13px; color: var(--muted); line-height: 1.5; }
 .nav-tile-arrow { font-size: 12px; color: var(--blue); font-weight: 700; margin-top: 10px; display: block; }
+=======
+.icon-green  { background: #dcfce7; color: #15803d; }
+.icon-indigo { background: #e0e7ff; color: #4338ca; }
+
+.nav-tile-label { font-size: 14px; font-weight: 800; color: var(--text); margin-bottom: 4px; }
+.nav-tile-desc  { font-size: 12px; color: var(--muted); line-height: 1.5; }
+.nav-tile-arrow { font-size: 12px; color: var(--blue); font-weight: 700; margin-top: 8px; display: block; }
+>>>>>>> 5353f4c (Final complete work)
 </style>
 CSS;
 
@@ -66,9 +114,43 @@ ob_start();
             <i class="fa fa-th-large" style="color:var(--blue);margin-right:8px;"></i>
             Admin Dashboard
         </h1>
-        <p class="page-subtitle">Select a section to manage</p>
+        <p class="page-subtitle">Platform overview and management</p>
     </div>
 
+    <!-- Stats -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon" style="background:#dbeafe;color:#1d4ed8;"><i class="fa fa-users"></i></div>
+            <div class="stat-body">
+                <div class="stat-value"><?= number_format($stats['total_patients'] ?? 0) ?></div>
+                <div class="stat-label">Total Patients</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon" style="background:#dcfce7;color:#15803d;"><i class="fa fa-user-doctor"></i></div>
+            <div class="stat-body">
+                <div class="stat-value"><?= number_format($stats['total_doctors'] ?? 0) ?></div>
+                <div class="stat-label">Total Doctors</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon" style="background:#ccfbf1;color:#0f766e;"><i class="fa fa-calendar-check"></i></div>
+            <div class="stat-body">
+                <div class="stat-value"><?= number_format($stats['total_appointments'] ?? 0) ?></div>
+                <div class="stat-label">Total Appointments</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon" style="background:#fef9c3;color:#854d0e;"><i class="fa fa-calendar-day"></i></div>
+            <div class="stat-body">
+                <div class="stat-value"><?= number_format($stats['todays_appointments'] ?? 0) ?></div>
+                <div class="stat-label">Today's Appointments</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Management tiles -->
+    <div class="section-label">Management</div>
     <div class="nav-grid">
 
         <a href="<?= BASE_URL ?>/admin/transactions" class="nav-tile">
@@ -84,7 +166,7 @@ ob_start();
             <div class="nav-tile-icon icon-yellow"><i class="fa fa-bullhorn"></i></div>
             <div class="nav-tile-body">
                 <div class="nav-tile-label">Notification Centre</div>
-                <div class="nav-tile-desc">Send broadcast or targeted notifications to users by role.</div>
+                <div class="nav-tile-desc">Send broadcast or targeted notifications to users by role. Broadcasts appear as banners.</div>
                 <span class="nav-tile-arrow">Go to Notifications →</span>
             </div>
         </a>
@@ -125,6 +207,7 @@ ob_start();
             </div>
         </a>
 
+<<<<<<< HEAD
         <a href="<?= BASE_URL ?>/admin/announcements" class="nav-tile">
             <div class="nav-tile-icon icon-orange"><i class="fa fa-megaphone"></i></div>
             <div class="nav-tile-body">
@@ -134,6 +217,8 @@ ob_start();
             </div>
         </a>
 
+=======
+>>>>>>> 5353f4c (Final complete work)
         <a href="<?= BASE_URL ?>/admin/support-tickets" class="nav-tile">
             <div class="nav-tile-icon icon-rose"><i class="fa fa-headset"></i></div>
             <div class="nav-tile-body">

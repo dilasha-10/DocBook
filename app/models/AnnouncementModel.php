@@ -136,4 +136,8 @@ function toggle_announcement(int $id): bool
     $stmt = $pdo->prepare("UPDATE announcements SET is_active = NOT is_active WHERE id = ?");
     $stmt->execute([$id]);
     return $stmt->rowCount() > 0;
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> 5353f4c (Final complete work)

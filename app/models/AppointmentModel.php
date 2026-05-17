@@ -61,6 +61,19 @@ function get_past_appointments($patient_id) {
 }
 
 // Fetch a single appointment by ID (with doctor info)
+
+// Auto-mark confirmed appointments as Completed if their date has passed
+function auto_complete_past_appointments(): void
+{
+    $pdo = db_connect();
+    $pdo->prepare("
+        UPDATE appointments
+        SET status = 'Completed'
+        WHERE status = 'Confirmed'
+          AND CONCAT(appointment_date, ' ', end_time) < NOW()
+    ")->execute();
+}
+
 function get_appointment_by_id(int $id): ?array
 {
     $pdo  = db_connect();
@@ -135,12 +148,15 @@ function reschedule_appointment(int $id, string $new_date, string $new_start, st
         $upd = $pdo->prepare("UPDATE appointments SET status = 'Rescheduled' WHERE id = :id");
         $upd->execute([':id' => $id]);
 
-        // Create new appointment with Pending status
+        // Carry forward reschedule count (max 2 enforced in controller)
+        $newRescheduleCount = (int)($appt['reschedule_count'] ?? 0) + 1;
+
+        // Create new appointment carrying reschedule_count forward
         $ins = $pdo->prepare("
             INSERT INTO appointments
-                (patient_id, doctor_id, appointment_date, start_time, end_time, reference_number, status, visit_reason)
+                (patient_id, doctor_id, appointment_date, start_time, end_time, reference_number, status, visit_reason, reschedule_count)
             VALUES
-                (:pid, :did, :date, :start, :end, :ref, 'Confirmed', :reason)
+                (:pid, :did, :date, :start, :end, :ref, 'Confirmed', :reason, :rcount)
         ");
         $ins->execute([
             ':pid'    => $appt['patient_id'],
@@ -150,6 +166,7 @@ function reschedule_appointment(int $id, string $new_date, string $new_start, st
             ':end'    => $new_end,
             ':ref'    => $ref,
             ':reason' => $appt['visit_reason'],
+            ':rcount' => $newRescheduleCount,
         ]);
 
         $pdo->commit();
@@ -281,13 +298,6 @@ function get_appointment_comments(int $appointment_id): array
 function create_appointment_comment(int $appointment_id, int $user_id, string $message, ?int $parent_id = null): array
 {
     $pdo = db_connect();
-
-    // Check lab report exists
-    $lr = $pdo->prepare("SELECT id FROM lab_reports WHERE appointment_id = ?");
-    $lr->execute([$appointment_id]);
-    if (!$lr->fetch()) {
-        return ['error' => 'Lab report not yet uploaded. You can reply once the lab report is available.'];
-    }
 
     // Enforce max 2 patient replies
     $cnt = $pdo->prepare("SELECT COUNT(*) FROM appointment_comments WHERE appointment_id = ? AND author_role = 'patient'");

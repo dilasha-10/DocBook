@@ -105,4 +105,8 @@ function api_active_announcements(): void
     $user = auth_user();
     $role = $user['role'] ?? 'patient';
     json_response(['success' => true, 'announcements' => get_active_announcements($role)]);
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> 5353f4c (Final complete work)
