@@ -27,10 +27,12 @@ function require_doctor_auth(): array
 
     $pdo  = db_connect();
     $stmt = $pdo->prepare("
-        SELECT d.id, d.photo, d.specialty, d.experience_years, d.bio,
+        SELECT d.id, d.photo, d.specialty, d.experience_years, d.bio, d.category_id,
+               c.name AS category_name,
                u.name, u.email, u.phone
         FROM doctors d
         JOIN users u ON d.user_id = u.id
+        LEFT JOIN categories c ON d.category_id = c.id
         WHERE d.user_id = ?
     ");
     $stmt->execute([(int)$_SESSION['user_id']]);
@@ -153,7 +155,9 @@ function doctor_availability_page(): void
 function doctor_profile_page(): void
 {
     $doctor = require_doctor_auth();
-    render_doctor('drprofile', compact('doctor'));
+    require_once BASE_PATH . '/app/models/CategoryModel.php';
+    $categories = get_all_categories();
+    render_doctor('drprofile', compact('doctor', 'categories'));
 }
 
 // API: GET /doctor/api/appointments?date=YYYY-MM-DD
@@ -394,17 +398,18 @@ function api_doctor_profile(): void
     $method   = $_SERVER['REQUEST_METHOD'];
 
     if ($method === 'GET') {
-        $stmt = $pdo->prepare("SELECT d.id, u.name, u.email, u.phone, d.specialty, d.experience_years, d.bio, d.photo FROM doctors d JOIN users u ON d.user_id = u.id WHERE d.id = ?");
+        $stmt = $pdo->prepare("SELECT d.id, u.name, u.email, u.phone, d.specialty, d.experience_years, d.bio, d.photo, d.category_id, c.name AS category_name FROM doctors d JOIN users u ON d.user_id = u.id LEFT JOIN categories c ON c.id = d.category_id WHERE d.id = ?");
         $stmt->execute([$doctorId]);
         $doc = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$doc) { json_response(['error' => true, 'message' => 'Doctor not found'], 404); }
-        json_response(['success' => true, 'doctor' => ['id' => (int)$doc['id'], 'name' => $doc['name'], 'email' => $doc['email'], 'phone' => $doc['phone'], 'specialty' => $doc['specialty'], 'experience_years' => (int)$doc['experience_years'], 'bio' => $doc['bio'], 'photo' => $doc['photo']]]);
+        json_response(['success' => true, 'doctor' => ['id' => (int)$doc['id'], 'name' => $doc['name'], 'email' => $doc['email'], 'phone' => $doc['phone'], 'specialty' => $doc['specialty'], 'experience_years' => (int)$doc['experience_years'], 'bio' => $doc['bio'], 'photo' => $doc['photo'], 'category_id' => $doc['category_id'], 'category_name' => $doc['category_name']]]);
 
     } elseif ($method === 'POST') {
         $name             = trim($_POST['name']             ?? '');
         $email            = trim($_POST['email']            ?? '');
         $phone            = trim($_POST['phone']            ?? '');
         $specialty        = trim($_POST['specialty']        ?? '');
+        $category_id      = isset($_POST['category_id']) ? (int)$_POST['category_id'] : null;
         $experience_years = (int)($_POST['experience_years'] ?? 0);
         $bio              = trim($_POST['bio']              ?? '');
 
@@ -438,16 +443,16 @@ function api_doctor_profile(): void
         $pdo->prepare("UPDATE users SET name = ?, email = ?, phone = ? WHERE id = ?")
             ->execute([$name, $email ?: null, $phone ?: null, (int)$row['user_id']]);
 
-        $fields = ['specialty = ?', 'experience_years = ?', 'bio = ?'];
-        $params = [$specialty, $experience_years, $bio ?: null];
+        $fields = ['specialty = ?', 'experience_years = ?', 'bio = ?', 'category_id = ?'];
+        $params = [$specialty, $experience_years, $bio ?: null, $category_id];
         if ($photo) { $fields[] = 'photo = ?'; $params[] = $photo; }
         $params[] = $doctorId;
         $pdo->prepare("UPDATE doctors SET " . implode(', ', $fields) . " WHERE id = ?")->execute($params);
 
-        $stmt = $pdo->prepare("SELECT d.id, u.name, u.email, u.phone, d.specialty, d.experience_years, d.bio, d.photo FROM doctors d JOIN users u ON d.user_id = u.id WHERE d.id = ?");
+        $stmt = $pdo->prepare("SELECT d.id, u.name, u.email, u.phone, d.specialty, d.experience_years, d.bio, d.photo, d.category_id, c.name AS category_name FROM doctors d JOIN users u ON d.user_id = u.id LEFT JOIN categories c ON c.id = d.category_id WHERE d.id = ?");
         $stmt->execute([$doctorId]);
         $doc = $stmt->fetch(PDO::FETCH_ASSOC);
-        json_response(['success' => true, 'message' => 'Profile updated successfully', 'doctor' => ['id' => (int)$doc['id'], 'name' => $doc['name'], 'email' => $doc['email'], 'phone' => $doc['phone'], 'specialty' => $doc['specialty'], 'experience_years' => (int)$doc['experience_years'], 'bio' => $doc['bio'], 'photo' => $doc['photo']]]);
+        json_response(['success' => true, 'message' => 'Profile updated successfully', 'doctor' => ['id' => (int)$doc['id'], 'name' => $doc['name'], 'email' => $doc['email'], 'phone' => $doc['phone'], 'specialty' => $doc['specialty'], 'experience_years' => (int)$doc['experience_years'], 'bio' => $doc['bio'], 'photo' => $doc['photo'], 'category_id' => $doc['category_id'], 'category_name' => $doc['category_name']]]);
 
     } else {
         json_response(['error' => true, 'message' => 'Method not allowed'], 405);

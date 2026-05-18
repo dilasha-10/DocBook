@@ -77,7 +77,10 @@ CSS;
             <h1 style="font-size:24px;font-weight:700;margin-bottom:4px;">Welcome back, <?= htmlspecialchars($patient_name) ?></h1>
             <p style="color:var(--muted);font-size:14px;">Here&rsquo;s a summary of your appointments</p>
         </div>
-        <a href="<?= BASE_URL ?>/categories" class="btn-primary">Book appointment</a>
+        <div style="display:flex;gap:10px;align-items:center;">
+            <a href="<?= BASE_URL ?>/support-tickets" class="btn-outline" style="padding:10px 16px;border-radius:10px;"><i class="fa fa-headset" style="margin-right:6px;"></i>Support</a>
+            <a href="<?= BASE_URL ?>/categories" class="btn-primary">Book appointment</a>
+        </div>
     </div>
 
     <!-- Stat cards -->

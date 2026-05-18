@@ -14,6 +14,17 @@ function admin_support_tickets_page(): void
     render('admin/support_tickets', ['user' => $user]);
 }
 
+// Patient Pages
+
+function patient_support_tickets_page(): void
+{
+    $user = require_auth();
+    if (($user['role'] ?? '') !== 'patient') {
+        redirect('/dashboard');
+    }
+    render('patient/support-tickets', ['user' => $user]);
+}
+
 // Admin API
 
 function api_admin_support_tickets(): void

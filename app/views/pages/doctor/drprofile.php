@@ -27,6 +27,9 @@ ob_start();
                         <p class="profile-specialty" id="view-specialty">
                             <?= htmlspecialchars($doctor['specialty'] ?? '') ?>
                         </p>
+                        <p class="profile-department" id="view-department" style="color: var(--brand-deep); font-weight: 600; font-size: 0.9rem; margin-top: 4px;">
+                            <?= htmlspecialchars($doctor['category_name'] ?? 'No Department Assigned') ?>
+                        </p>
                         <div class="profile-stats">
                             <div class="profile-stat">
                                 <i class="fas fa-briefcase"></i>
@@ -101,6 +104,17 @@ ob_start();
                            value="<?= htmlspecialchars($doctor['specialty'] ?? '') ?>">
                 </div>
 
+                <div class="form-group">
+                    <label for="category-input">Department</label>
+                    <select id="category-input" name="category_id" class="input">
+                        <option value="">Select a Department</option>
+                        <?php foreach ($categories ?? [] as $cat): ?>
+                            <option value="<?= $cat['id'] ?>" <?= (($doctor['category_id'] ?? '') == $cat['id']) ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($cat['name']) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
                 <div class="form-row">
                     <div class="form-group">
                         <label for="email-input">Email</label>
@@ -220,6 +234,8 @@ $extra_scripts = <<<'JS'
                     var specEl = document.getElementById('view-specialty');
                     if (specEl) specEl.textContent = doc.specialty || '';
 
+                    var deptEl = document.getElementById('view-department');
+                    if (deptEl) deptEl.textContent = doc.category_name || 'No Department Assigned';
                     var expEl = document.getElementById('view-experience');
                     if (expEl) expEl.textContent = (doc.experience_years || 0) + ' years exp.';
 

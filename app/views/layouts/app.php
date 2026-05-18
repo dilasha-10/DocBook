@@ -350,6 +350,10 @@
                 <i class="fa fa-user sidebar-icon"></i>
                 <span>My Profile</span>
             </a>
+            <a href="<?= BASE_URL ?>/support-tickets" class="sidebar-link <?php echo request_is('/support-tickets') ? 'active' : ''; ?>">
+                <i class="fa fa-headset sidebar-icon"></i>
+                <span>Support Tickets</span>
+            </a>
             <?php endif; ?>
             <?php endif; ?>
         </nav>
@@ -400,6 +404,7 @@
         <?php if (isset($user)): ?>
         <li><a href="<?= BASE_URL ?>/notifications"  class="<?php echo request_is('/notifications')  ? 'active' : ''; ?>"><i class="fa fa-bell"></i> Notifications</a></li>
         <li><a href="<?= BASE_URL ?>/profile"        class="<?php echo request_is('/profile')        ? 'active' : ''; ?>"><i class="fa fa-user"></i> Profile &amp; Settings</a></li>
+        <li><a href="<?= BASE_URL ?>/support-tickets" class="<?php echo request_is('/support-tickets') ? 'active' : ''; ?>"><i class="fa fa-headset"></i> Support Tickets</a></li>
         <?php endif; ?>
     </ul>
     <div class="mobile-nav-actions">

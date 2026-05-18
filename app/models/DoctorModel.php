@@ -30,7 +30,7 @@ function get_filtered_doctors(?string $category = null, ?string $search = null):
             )                                   AS next_available_date
         FROM      doctors             d
         JOIN      users               u   ON u.id  = d.user_id
-        JOIN      categories          c   ON c.id  = d.category_id
+        LEFT JOIN categories          c   ON c.id  = d.category_id
         LEFT JOIN doctor_availability da  ON da.doctor_id = d.id
         WHERE 1 = 1
     ";
@@ -88,7 +88,7 @@ function get_doctor_by_id(int $id): ?array
             c.avg_slot_minutes
         FROM  doctors     d
         JOIN  users       u  ON u.id = d.user_id
-        JOIN  categories  c  ON c.id = d.category_id
+        LEFT JOIN  categories  c  ON c.id = d.category_id
         WHERE d.id = :id
         LIMIT 1
     ");

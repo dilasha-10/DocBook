@@ -1,6 +1,7 @@
 Options -MultiViews
 RewriteEngine On
 
+<<<<<<< HEAD
 # Set the base to the public/ folder
 RewriteBase /docbook/public/
 
@@ -10,3 +11,13 @@ RewriteCond %{REQUEST_FILENAME} !-d
 
 # Route everything else through index.php
 RewriteRule ^ index.php [QSA,L]
+=======
+# Redirect uppercase DocBook URLs to lowercase (global fix)
+RewriteCond %{REQUEST_URI} [A-Z]
+RewriteRule ^(.*)$ /docbook$1 [R=301,L]
+
+# Allow everything else through
+RewriteBase /docbook/
+RewriteRule ^public/.*$ - [L]
+RewriteRule ^(.+?)/?$ public/$1 [L]
+>>>>>>> e044e80 (Solved bugs from support-tickets and department management)
