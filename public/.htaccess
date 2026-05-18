@@ -1,18 +1,7 @@
 Options +FollowSymLinks -MultiViews
 RewriteEngine On
-<<<<<<< HEAD
-RewriteBase /docbook2/public/
-
-# Serve existing files and directories directly
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-
-# Route everything else through index.php
-RewriteRule ^ index.php [L,QSA]
-=======
 
 # Always route through index.php, except for actual files
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^(.*)$ index.php [L,QSA]
->>>>>>> e044e80 (Solved bugs from support-tickets and department management)
