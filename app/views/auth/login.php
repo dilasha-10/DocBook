@@ -410,7 +410,7 @@ $oldEmail = htmlspecialchars(trim($_POST['email'] ?? ''));
                 </div>
 
                 <button type="submit" class="login-btn" id="loginBtn">Sign In</button>
-                <a href="#" class="forgot-pass">Forgot password?</a>
+                <a href="<?= BASE_URL ?>/forgot-password" class="forgot-pass">Forgot password?</a>
             </form>
 
             <div class="divider"><span>New here?</span></div>
@@ -441,7 +441,7 @@ function validateEmail(val) {
 }
 function validatePassword(val) {
     if (!val) return 'Password is required.';
-    if (val.length < 8) return 'Password must be at least 8 characters.';
+    if (val.length < 12) return 'Password must be at least 12 characters.';
     return '';
 }
 function setFieldState(input, feedbackEl, msg) {
