@@ -116,10 +116,7 @@ if ($uri === '/categories'      && $method === 'GET') { categories_page();      
 if ($uri === '/dashboard'       && $method === 'GET') { dashboard_page();       }
 if ($uri === '/profile'         && $method === 'GET') { profile_page();         }
 if ($uri === '/booking/confirm' && $method === 'GET') { booking_confirm_page(); }
-<<<<<<< HEAD
-=======
 if ($uri === '/support-tickets' && $method === 'GET') { patient_support_tickets_page(); }
->>>>>>> e044e80 (Solved bugs from support-tickets and department management)
 
 // Doctor id captured from URL to render that specific doctor's booking page.
 if (preg_match('#^/doctors/(\d+)$#', $uri, $m) && $method === 'GET') {
